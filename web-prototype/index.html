@@ -1,0 +1,1015 @@
+<meta charset="utf-8">
+<title>Big Head Party</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Baloo+2:wght@500;700;800&display=swap">
+<style>
+/* Layout: one phone-width column. A live 3D "stage" on top, a game-show control panel below. */
+:root {
+  --stage: #1b0e26;      /* backstage plum */
+  --curtain: #34113f;    /* panel velvet */
+  --velvet-hi: #4a1a57;
+  --bulb: #ffcf4a;       /* marquee bulb gold */
+  --cream: #fff3df;      /* whipped cream */
+  --cherry: #ec3a57;     /* cherry on top */
+  --teal: #43d3c7;       /* correct-answer teal */
+  --ink: #f7ead8;
+  --ink-dim: #cdb8c9;
+  --font-display: "Bungee", "Arial Black", Impact, sans-serif;
+  --font-body: "Baloo 2", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--stage); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.45; }
+.app { max-width: 540px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px 40px; display: flex; flex-direction: column; gap: 14px; }
+.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.logo { font-family: var(--font-display); font-size: 1.35rem; letter-spacing: .02em; color: var(--bulb); text-shadow: 3px 3px 0 var(--cherry); }
+.tag { font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); border: 1.5px solid var(--velvet-hi); border-radius: 999px; padding: 2px 10px; }
+.viewport { position: relative; width: 100%; aspect-ratio: 4 / 4.3; max-width: 100%; border-radius: 26px; overflow: hidden; background: radial-gradient(120% 90% at 50% 30%, var(--velvet-hi), var(--stage) 70%); box-shadow: 0 0 0 3px var(--bulb), 0 0 0 7px var(--curtain); touch-action: none; }
+.viewport canvas { width: 100%; height: 100%; display: block; }
+.caption { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); max-width: calc(100% - 24px); text-align: center; font-weight: 800; padding: 4px 14px; border-radius: 999px; background: color-mix(in srgb, var(--stage) 78%, transparent); color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.caption:empty { display: none; }
+.hud { position: absolute; inset: 10px 10px auto 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; }
+.score { display: flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border-radius: 999px; background: color-mix(in srgb, var(--stage) 80%, transparent); font-weight: 800; }
+.score.right { flex-direction: row-reverse; padding: 4px 4px 4px 10px; }
+.score img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2.5px solid var(--ink); }
+.score.turn img { border-color: var(--bulb); box-shadow: 0 0 0 3px color-mix(in srgb, var(--bulb) 40%, transparent); }
+.score small { display: block; font-size: .72rem; color: var(--ink-dim); line-height: 1; }
+.react { position: absolute; left: 0; right: 0; bottom: 10px; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; padding-inline: 8px; }
+.react button { font: 800 .8rem var(--font-body); color: var(--cream); background: color-mix(in srgb, var(--stage) 75%, transparent); border: 1.5px solid color-mix(in srgb, var(--cream) 30%, transparent); border-radius: 12px; padding: 6px 10px; cursor: pointer; }
+.react button:active { transform: translateY(2px); }
+.panel { background: var(--curtain); border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.5rem, 6.4vw, 2.05rem); line-height: 1.08; margin: 0; text-wrap: balance; color: var(--cream); }
+h1 em { font-style: normal; color: var(--bulb); }
+h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; margin: 0; color: var(--bulb); letter-spacing: .02em; }
+p { margin: 0; color: var(--ink-dim); }
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; font: 800 1.08rem var(--font-body); padding: 13px 18px; border-radius: 16px; border: 0; cursor: pointer; color: var(--stage); background: var(--bulb); box-shadow: 0 5px 0 color-mix(in srgb, var(--bulb) 45%, #000); transition: transform .08s; text-align: center; }
+.btn:active { transform: translateY(4px); box-shadow: 0 1px 0 color-mix(in srgb, var(--bulb) 45%, #000); }
+.btn.hot { background: var(--cherry); color: var(--cream); box-shadow: 0 5px 0 color-mix(in srgb, var(--cherry) 45%, #000); }
+.btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--velvet-hi); }
+.btn:focus-visible, .react button:focus-visible, .chip:focus-visible, .opt:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > * { flex: 1 1 140px; min-width: 0; }
+input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: s; }
+.steps li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; counter-increment: s; }
+.steps li::before { content: counter(s); font-family: var(--font-display); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--velvet-hi); color: var(--bulb); }
+.steps b { color: var(--cream); display: block; }
+.steps span { color: var(--ink-dim); font-size: .92rem; }
+.fine { font-size: .82rem; color: var(--ink-dim); }
+.photo-wrap { position: relative; border-radius: 16px; overflow: hidden; background: var(--stage); }
+.photo-wrap canvas { display: block; width: 100%; height: auto; max-width: 100%; }
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-weight: 700; }
+.checklist li { display: flex; gap: 10px; align-items: center; color: var(--ink-dim); }
+.checklist li::before { content: ""; width: 16px; height: 16px; border-radius: 50%; border: 2px dashed var(--ink-dim); flex: none; }
+.checklist li.done { color: var(--cream); }
+.checklist li.done::before { border: 0; background: var(--teal); box-shadow: inset 0 0 0 4px var(--curtain); }
+.note { font-weight: 700; color: var(--bulb); font-size: .9rem; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { font: 800 .88rem var(--font-body); padding: 7px 13px; border-radius: 999px; border: 0; cursor: pointer; background: var(--velvet-hi); color: var(--ink); }
+.chip[aria-pressed=true] { background: var(--cherry); color: var(--cream); }
+label.field { display: grid; gap: 6px; font-weight: 800; color: var(--cream); }
+input[type=text] { font: 700 1rem var(--font-body); padding: 11px 14px; border-radius: 12px; border: 2px solid var(--velvet-hi); background: var(--stage); color: var(--ink); width: 100%; }
+.timer { height: 8px; border-radius: 99px; background: var(--velvet-hi); overflow: hidden; }
+.timer i { display: block; height: 100%; background: var(--bulb); width: 100%; transition: width .1s linear; }
+.timer.low i { background: var(--cherry); }
+.host { background: var(--cream); color: var(--stage); border-radius: 14px; padding: 10px 14px; font-weight: 800; }
+.host::before { content: "Host · "; color: var(--cherry); }
+.q { font-family: var(--font-display); font-weight: 400; font-size: 1.1rem; color: var(--cream); margin: 0; text-wrap: balance; }
+.opts { display: grid; gap: 8px; }
+.opt { font: 800 1rem var(--font-body); padding: 12px; border-radius: 14px; border: 0; cursor: pointer; background: var(--velvet-hi); color: var(--cream); text-align: center; }
+.opt:disabled { cursor: default; }
+.opt.right { background: var(--teal); color: var(--stage); }
+.opt.wrong { background: var(--cherry); }
+.meta { display: flex; justify-content: space-between; font-weight: 800; color: var(--ink-dim); font-size: .85rem; }
+@media (prefers-reduced-motion: reduce) { .btn, .timer i { transition: none; } }
+</style>
+
+<div class="app">
+  <header class="top">
+    <span class="logo">BIG HEAD PARTY</span>
+    <span class="tag">Prototype</span>
+  </header>
+
+  <div class="viewport" id="viewport">
+    <canvas id="gl" aria-label="3D stage"></canvas>
+    <div class="hud" id="hud" hidden>
+      <div class="score" id="score0"><img alt=""><div><small id="name0"></small><span id="pies0">0 pies</span></div></div>
+      <div class="score right" id="score1"><img alt=""><div><small id="name1"></small><span id="pies1">0 pies</span></div></div>
+    </div>
+    <div class="react" id="react" hidden>
+      <button data-r="pie">Pie</button><button data-r="squish">Squish</button><button data-r="bonk">Bonk</button>
+      <button data-r="puff">Puff</button><button data-r="yell">Yell</button><button data-r="clean">Clean</button>
+    </div>
+    <div class="caption" id="caption"></div>
+  </div>
+
+  <!-- Start: attract mode + how it works -->
+  <section class="panel" id="panel-demo">
+    <h1>Your friends on <em>3D heads.</em> Getting pied.</h1>
+    <p>Upload a photo of a friend or family member. AI maps their face, sculpts a 3D head to match, and drops them onto a game show where wrong answers get a cream pie to the face.</p>
+    <label class="btn hot" for="file">Make a Big Head from a photo</label>
+    <input type="file" id="file" accept="image/*">
+    <button class="btn ghost" id="play-cast">Play The Pie-Q Test with the house cast</button>
+    <ol class="steps">
+      <li><div><b>Pick a photo</b><span>Front-facing, good light, eyes open.</span></div></li>
+      <li><div><b>AI maps the face</b><span>478 landmarks and a background cutout, computed right here in your browser.</span></div></li>
+      <li><div><b>A head is sculpted</b><span>Jaw, nose, lips and chin follow the real face. The photo is wrapped on so their nose lands on the 3D nose.</span></div></li>
+      <li><div><b>Pie it</b><span>Answer trivia right and your opponent gets the pie. Answer wrong and you do.</span></div></li>
+    </ol>
+    <p class="fine">Photos never leave this tab. Only use photos of people who are in on the joke.</p>
+  </section>
+
+  <!-- Face studio -->
+  <section class="panel" id="panel-studio" hidden>
+    <h2 id="studio-title">Face Studio</h2>
+    <div class="photo-wrap" id="photo-wrap"><canvas id="photo"></canvas></div>
+    <ul class="checklist" id="checklist"></ul>
+    <p class="note" id="studio-note" hidden></p>
+    <div id="studio-edit" hidden>
+      <div class="panel" style="padding:0;background:none;gap:12px">
+        <label class="field" for="name">Who is this?<input type="text" id="name" placeholder="Uncle Ray" maxlength="24"></label>
+        <div>
+          <h2 style="font-size:.9rem;margin-bottom:8px">Hat</h2>
+          <div class="chips" id="hats"></div>
+        </div>
+        <div class="chips"><button class="chip" id="googly" aria-pressed="false">Googly eyes</button></div>
+        <button class="btn hot" id="to-show">Put them on The Pie-Q Test</button>
+        <div class="row">
+          <label class="btn ghost" for="file2">Try another photo</label>
+          <button class="btn ghost" id="studio-home">Back to start</button>
+        </div>
+        <input type="file" id="file2" accept="image/*">
+      </div>
+    </div>
+  </section>
+
+  <!-- The Pie-Q Test -->
+  <section class="panel" id="panel-show" hidden>
+    <div class="meta"><span id="round">Question 1 of 6</span><span id="turn"></span></div>
+    <div class="host" id="host">Welcome to The Pie-Q Test!</div>
+    <div id="qbox">
+      <div class="timer" id="timer"><i></i></div>
+      <p class="q" id="prompt" style="margin-top:12px"></p>
+      <div class="opts" id="opts" style="margin-top:12px"></div>
+    </div>
+    <div id="results" hidden>
+      <div class="row">
+        <button class="btn hot" id="rematch">Rematch</button>
+        <button class="btn ghost" id="show-home">Back to start</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.min.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =====================================================================================
+   FACE LAYOUT + HEAD SCULPTOR (a direct port of the iOS HeadMeshBuilder.swift)
+   ===================================================================================== */
+const TEX = 1024, S = 1.5, YC = -0.2, TOP_Y = 1.28, CRANIUM = 54, JAW = 70, SEG = 104;
+const LEFT_EYE = { x: 0.36, y: 0.40 }, RIGHT_EYE = { x: 0.64, y: 0.40 };
+const MORPHS = ['squish', 'mouthOpen', 'puff', 'skewLeft', 'skewRight'];
+const modelY = v => YC + (0.5 - v) * 2 * S;
+const modelX = u => (u - 0.5) * 2 * S;
+const clamp = (x, a, b) => Math.min(Math.max(x, a), b);
+const lerp = (a, b, t) => a + (b - a) * t;
+const smoothStep = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+
+function standardShape({ jaw = 1, chinDrop = 0, nose = 0, mouthW = 0.19 } = {}) {
+  const chinV = 0.80 + chinDrop, contour = [];
+  for (let i = 0; i < 17; i++) {
+    const th = (i / 16) * Math.PI, halfW = 0.31 * jaw * (1 - 0.18 * Math.sin(th));
+    contour.push({ x: 0.5 - halfW * Math.cos(th), y: 0.43 + (chinV - 0.43) * Math.pow(Math.sin(th), 0.8) });
+  }
+  return { le: { ...LEFT_EYE }, re: { ...RIGHT_EYE }, nose: { x: 0.5, y: 0.555 + nose },
+           mouth: { x: 0.5, y: 0.675 + chinDrop * 0.4 }, mouthW, chin: { x: 0.5, y: chinV }, contour };
+}
+
+function sanitize(s) {
+  const o = structuredClone(s);
+  o.nose.x = clamp(s.nose.x, 0.42, 0.58); o.nose.y = clamp(s.nose.y, 0.48, 0.62);
+  o.mouth.x = clamp(s.mouth.x, 0.42, 0.58); o.mouth.y = clamp(s.mouth.y, o.nose.y + 0.05, 0.76);
+  o.mouthW = clamp(s.mouthW, 0.12, 0.30);
+  o.chin.x = clamp(s.chin.x, 0.40, 0.60); o.chin.y = clamp(s.chin.y, o.mouth.y + 0.06, 0.92);
+  if (s.contour.length < 5) o.contour = standardShape().contour;
+  return o;
+}
+
+const g2 = (u, v, cu, cv, su, sv) => { const du = (u - cu) / su, dv = (v - cv) / sv; return Math.exp(-0.5 * (du * du + dv * dv)); };
+function relief(u, v, s) {
+  const { le, re, nose: n, mouth: m, mouthW: mw, chin: c } = s;
+  const eyeU = (le.x + re.x) / 2, eyeV = (le.y + re.y) / 2;
+  let z = 0;
+  z -= 0.11 * g2(u, v, le.x, le.y, 0.055, 0.035); z -= 0.11 * g2(u, v, re.x, re.y, 0.055, 0.035);
+  z += 0.05 * g2(u, v, le.x, le.y, 0.028, 0.017); z += 0.05 * g2(u, v, re.x, re.y, 0.028, 0.017);
+  z += 0.07 * g2(u, v, le.x, le.y - 0.065, 0.07, 0.025); z += 0.07 * g2(u, v, re.x, re.y - 0.065, 0.07, 0.025);
+  const t = clamp((v - eyeV) / Math.max(n.y - eyeV, 0.05), 0, 1);
+  const ridgeU = eyeU + (n.x - eyeU) * t, sigma = 0.024 + 0.026 * t;
+  let ridge = (0.05 + 0.15 * Math.pow(t, 1.4)) * Math.exp(-0.5 * ((u - ridgeU) / sigma) ** 2);
+  if (v < eyeV - 0.03) ridge *= Math.exp(-0.5 * ((v - (eyeV - 0.03)) / 0.02) ** 2);
+  if (v > n.y) ridge *= Math.exp(-0.5 * ((v - n.y) / 0.016) ** 2);
+  z += ridge;
+  z += 0.07 * g2(u, v, n.x, n.y - 0.008, 0.03, 0.024);
+  z += 0.05 * g2(u, v, n.x - 0.04, n.y + 0.002, 0.02, 0.018); z += 0.05 * g2(u, v, n.x + 0.04, n.y + 0.002, 0.02, 0.018);
+  z += 0.07 * g2(u, v, m.x, m.y, mw * 0.5, 0.024); z -= 0.03 * g2(u, v, m.x, m.y, mw * 0.45, 0.006);
+  z += 0.05 * g2(u, v, le.x - 0.02, eyeV + 0.10, 0.06, 0.05); z += 0.05 * g2(u, v, re.x + 0.02, eyeV + 0.10, 0.06, 0.05);
+  z += 0.07 * g2(u, v, c.x, c.y - 0.045, 0.06, 0.035);
+  return z;
+}
+
+function buildHead(rawShape) {
+  const shape = sanitize(rawShape);
+  const eyeV = (shape.le.y + shape.re.y) / 2, chinV = shape.chin.y, midU = (shape.le.x + shape.re.x) / 2;
+  const yEye = modelY(eyeV), yChin = modelY(chinV);
+  const left = [], right = [];
+  for (const p of shape.contour) {
+    const s = (p.y - eyeV) / Math.max(chinV - eyeV, 0.05), dx = (p.x - midU) * 2 * S;
+    if (dx <= 0.05) left.push({ s, w: -dx });
+    if (dx >= -0.05) right.push({ s, w: dx });
+  }
+  const interp = (side, s) => {
+    const pts = [...side, { s: 1, w: 0 }].sort((a, b) => a.s - b.s);
+    if (s <= pts[0].s) return Math.max(pts[0].w, 0);
+    for (let k = 1; k < pts.length; k++) if (s <= pts[k].s) {
+      const a = pts[k - 1], b = pts[k], t = (s - a.s) / Math.max(b.s - a.s, 1e-4);
+      return Math.max(0, a.w + (b.w - a.w) * t);
+    }
+    return 0;
+  };
+  const halfW = s => (interp(left, s) + interp(right, s)) / 2;
+  const templeW = clamp(halfW(0.05) * 1.08, 0.85, 1.18);
+
+  const rings = [];
+  for (let k = 0; k <= CRANIUM; k++) {
+    const psi = Math.PI / 2 * (1 - k / CRANIUM), c = Math.cos(psi);
+    rings.push({ y: yEye + (TOP_Y - yEye) * Math.sin(psi), w: templeW * Math.pow(c, 0.8), cz: -0.05, front: Math.pow(c, 0.85), back: 1.15 * Math.pow(c, 0.7) });
+  }
+  let jw = [];
+  for (let k = 1; k <= JAW; k++) { const s = k / JAW; jw.push(lerp(templeW, halfW(s) * 1.05, smoothStep(0, 0.35, s))); }
+  for (let pass = 0; pass < 4; pass++) { const nx = jw.slice(); for (let k = 1; k < jw.length - 1; k++) nx[k] = (jw[k - 1] + 2 * jw[k] + jw[k + 1]) / 4; jw = nx; }
+  for (let k = 1; k <= JAW; k++) {
+    const s = k / JAW, tc = clamp((s - 0.8) / 0.2, 0, 1);
+    const w = Math.max(jw[k - 1], 0.30 * Math.sqrt(Math.max(0, 1 - tc * tc)));
+    const narrow = Math.sqrt(Math.min(1, w / 0.45)), e = Math.pow(s, 1.6);
+    rings.push({ y: yEye + (yChin - yEye) * s, w, cz: lerp(-0.05, 0.45, e), front: lerp(1, 0.32, e) * narrow, back: lerp(1.15, 0.30, Math.pow(s, 1.2)) * narrow });
+  }
+
+  const cols = SEG + 1, n = rings.length * cols;
+  const pos = new Float32Array(n * 3), uv = new Float32Array(n * 2), fwA = new Float32Array(n), czA = new Float32Array(n);
+  let i = 0;
+  for (const r of rings) for (let j = 0; j < cols; j++, i++) {
+    const a = -Math.PI + 2 * Math.PI * j / SEG, ca = Math.cos(a), sa = Math.sin(a);
+    const x = r.w * sa, y = r.y;
+    let z = r.cz + (ca >= 0 ? r.front : r.back) * ca;
+    const uF = 0.5 + x / (2 * S), v = 0.5 - (y - YC) / (2 * S);
+    const fw = Math.pow(Math.max(0, ca), 1.5);
+    if (fw > 0) z += relief(uF, v, shape) * fw;
+    let u = uF;
+    if (ca < 0) { const side = (sa > 0 || (sa === 0 && a > 0)) ? 1 : -1, edge = r.w / (2 * S); u = 0.5 + side * (edge + (0.49 - edge) * (-ca)); }
+    pos.set([x, y, z], i * 3);
+    uv.set([u, 1 - clamp(v, 0.005, 0.995)], i * 2);           // three.js textures are flipped (v up)
+    fwA[i] = fw * (1 - smoothStep(yEye + 0.5, yEye + 1.0, y));
+    czA[i] = r.cz;
+  }
+  const idx = [];
+  for (let r = 0; r < rings.length - 1; r++) for (let j = 0; j < SEG; j++) {
+    const a = r * cols + j, b = (r + 1) * cols + j; idx.push(a, b, a + 1, a + 1, b, b + 1);
+  }
+  const index = new Uint32Array(idx);
+  const normals = p => {
+    const nrm = new Float32Array(p.length);
+    for (let k = 0; k < index.length; k += 3) {
+      const A = index[k] * 3, B = index[k + 1] * 3, C = index[k + 2] * 3;
+      const ux = p[B] - p[A], uy = p[B + 1] - p[A + 1], uz = p[B + 2] - p[A + 2];
+      const vx = p[C] - p[A], vy = p[C + 1] - p[A + 1], vz = p[C + 2] - p[A + 2];
+      const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      for (const q of [A, B, C]) { nrm[q] += nx; nrm[q + 1] += ny; nrm[q + 2] += nz; }
+    }
+    for (let r = 0; r < rings.length; r++) {
+      const f = r * cols * 3, l = (r * cols + cols - 1) * 3;
+      for (let d = 0; d < 3; d++) { const s = nrm[f + d] + nrm[l + d]; nrm[f + d] = s; nrm[l + d] = s; }
+    }
+    for (let k = 0; k < nrm.length; k += 3) {
+      const len = Math.hypot(nrm[k], nrm[k + 1], nrm[k + 2]);
+      if (len > 1e-8) { nrm[k] /= len; nrm[k + 1] /= len; nrm[k + 2] /= len; } else { nrm[k + 1] = p[k + 1] > 0 ? 1 : -0.6; nrm[k + 2] = p[k + 1] > 0 ? 0 : 0.8; }
+    }
+    return nrm;
+  };
+
+  const geo = new THREE.BufferGeometry();
+  geo.setIndex(new THREE.BufferAttribute(index, 1));
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(normals(pos), 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+
+  const mouthY = modelY(shape.mouth.y), cheekY = modelY(shape.mouth.y - 0.05), faceMidY = (yEye + yChin) / 2;
+  const mPos = [], mNrm = [];
+  for (const m of MORPHS) {
+    const q = pos.slice();
+    for (let k = 0; k < n; k++) {
+      const x = pos[k * 3], y = pos[k * 3 + 1], z = pos[k * 3 + 2], fw = fwA[k];
+      let X = x, Y = y, Z = z;
+      if (m === 'squish') { Z = czA[k] + (z - czA[k]) * (1 - 0.45 * fw); X = x * (1 + 0.12 * fw); Y = y + (y - faceMidY) * 0.05 * fw; }
+      else if (m === 'mouthOpen') { const drop = smoothStep(mouthY + 0.02, mouthY - 0.14, y), lat = Math.max(0, 1 - Math.pow(Math.abs(x) / 1.05, 4)); Y = y - 0.32 * drop * lat; Z = z + 0.05 * drop * fw; }
+      else if (m === 'puff') { for (const side of [-1, 1]) { const dx = x - side * 0.5, dy = y - cheekY, g = Math.exp(-(dx * dx + dy * dy) / (2 * 0.09)); X += side * 0.22 * g * fw; Z += 0.14 * g * fw; } }
+      else { const dir = m === 'skewLeft' ? -1 : 1, band = Math.exp(-(((y - faceMidY) / 0.75) ** 2)); X = x + dir * 0.30 * fw * fw * band; Z = z - 0.18 * fw * Math.max(0, -dir * x) * band; }
+      q[k * 3] = X; q[k * 3 + 1] = Y; q[k * 3 + 2] = Z;
+    }
+    mPos.push(new THREE.BufferAttribute(q, 3)); mNrm.push(new THREE.BufferAttribute(normals(q), 3));
+  }
+  geo.morphAttributes.position = mPos;
+  geo.morphAttributes.normal = mNrm;
+  geo.computeBoundingSphere();
+  return { geo, eyeY: yEye, chinY: yChin, foreheadY: yEye + 0.45 };
+}
+
+/* =====================================================================================
+   TEXTURES: painted house cast + photo pipeline
+   ===================================================================================== */
+const canvas2d = (w, h = w) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+const rgb = a => `rgb(${a.map(x => Math.round(x * 255)).join(',')})`;
+const rgba = (a, al) => `rgba(${a.map(x => Math.round(x * 255)).join(',')},${al})`;
+const darker = (a, f) => a.map(x => x * f);
+
+function paintFace(spec) {
+  const c = canvas2d(TEX), g = c.getContext('2d'), sh = spec.shape;
+  const P = (u, v) => [u * TEX, v * TEX];
+  const ell = (u, v, w, h, col) => { g.fillStyle = col; g.beginPath(); g.ellipse(u * TEX, v * TEX, w * TEX / 2, h * TEX / 2, 0, 0, Math.PI * 2); g.fill(); };
+  const radial = (u, v, r, inner, outer, sy = 1) => {
+    g.save(); g.scale(1, sy);
+    const gr = g.createRadialGradient(u * TEX, v * TEX / sy, 0, u * TEX, v * TEX / sy, r * TEX);
+    gr.addColorStop(0, inner); gr.addColorStop(1, outer); g.fillStyle = gr; g.fillRect(0, 0, TEX, TEX / sy); g.restore();
+  };
+  let seed = [...spec.name].reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+
+  g.fillStyle = rgb(spec.skin); g.fillRect(0, 0, TEX, TEX);
+  radial(0.5, 0.47, 0.40, rgba(spec.skin, 0), rgb(darker(spec.skin, 0.82)), 1.3);
+  const eyeV = (sh.le.y + sh.re.y) / 2;
+  if (spec.hair2D === 'full' || spec.hair2D === 'buzz') {
+    g.fillStyle = spec.hair2D === 'buzz' ? rgba(spec.hair, 0.75) : rgb(spec.hair);
+    const hl = eyeV - (spec.hair2D === 'buzz' ? 0.17 : 0.19);
+    g.beginPath(); g.moveTo(...P(0, 0)); g.lineTo(...P(1, 0)); g.lineTo(...P(1, 0.64)); g.lineTo(...P(0.8, 0.64)); g.lineTo(...P(0.79, eyeV - 0.02));
+    g.quadraticCurveTo(...P(0.77, hl - 0.01), ...P(0.5, hl)); g.quadraticCurveTo(...P(0.23, hl - 0.01), ...P(0.21, eyeV - 0.02));
+    g.lineTo(...P(0.2, 0.64)); g.lineTo(...P(0, 0.64)); g.closePath(); g.fill();
+  } else if (spec.hair2D === 'bald') {
+    g.fillStyle = rgb(spec.hair); g.fillRect(0, 0.30 * TEX, 0.22 * TEX, 0.34 * TEX); g.fillRect(0.78 * TEX, 0.30 * TEX, 0.22 * TEX, 0.34 * TEX);
+    radial(0.44, 0.10, 0.12, 'rgba(255,255,255,.35)', 'rgba(255,255,255,0)');
+  } else if (spec.hair2D === 'curl') {
+    g.strokeStyle = rgb(spec.hair); g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(...P(0.5, 0.13));
+    for (let a = 0; a < 4 * Math.PI; a += 0.15) { const r = 0.004 + 0.0035 * a; g.lineTo(...P(0.5 + r * Math.cos(a), 0.10 + r * Math.sin(a))); }
+    g.stroke();
+  }
+  const ex = spec.extras || [];
+  if (ex.includes('blush')) for (const u of [sh.le.x - 0.02, sh.re.x + 0.02]) radial(u, eyeV + 0.14, 0.06, 'rgba(255,90,100,.45)', 'rgba(255,90,100,0)');
+  if (ex.includes('freckles')) for (let k = 0; k < 38; k++) { const sd = rnd() < 0.5 ? -1 : 1; ell(0.5 + sd * (0.05 + rnd() * 0.11), eyeV + 0.07 + rnd() * 0.08, 0.006, 0.006, 'rgba(158,97,64,.55)'); }
+  if (ex.includes('stubble')) for (let k = 0; k < 1500; k++) {
+    const a = rnd() * Math.PI, r = 0.62 + rnd() * 0.38, u = 0.5 + Math.cos(a) * 0.27 * r, v = sh.mouth.y - 0.06 + Math.sin(a) * (sh.chin.y - sh.mouth.y + 0.06) * r;
+    if (Math.abs(u - sh.mouth.x) < sh.mouthW * 0.55 && Math.abs(v - sh.mouth.y) < 0.03) continue;
+    ell(u, v, 0.0035, 0.0035, 'rgba(31,20,15,.28)');
+  }
+  for (const e of [sh.le, sh.re]) {
+    const s = spec.eyeScale || 1;
+    if (ex.includes('eyeshadow')) radial(e.x, e.y - 0.018, 0.05, 'rgba(77,140,242,.75)', 'rgba(77,140,242,0)');
+    ell(e.x, e.y, 0.075 * s, 0.038 * s, '#fff'); ell(e.x, e.y, 0.032 * s, 0.032 * s, rgb(spec.iris));
+    ell(e.x, e.y, 0.014 * s, 0.014 * s, '#000'); ell(e.x + 0.007 * s, e.y - 0.007 * s, 0.008 * s, 0.008 * s, 'rgba(255,255,255,.9)');
+    g.strokeStyle = rgb(darker(spec.skin, 0.45)); g.lineWidth = 5; g.beginPath(); g.moveTo(...P(e.x - 0.039 * s, e.y + 0.002));
+    g.quadraticCurveTo(...P(e.x, e.y - 0.034 * s), ...P(e.x + 0.039 * s, e.y + 0.002)); g.stroke();
+    const bw = 0.09 * (0.8 + 0.2 * spec.brow), bh = 0.012 * spec.brow, outer = e.x < 0.5 ? -1 : 1;
+    g.save(); g.translate(e.x * TEX, (e.y - 0.06) * TEX); g.rotate(outer * 0.10); g.fillStyle = rgb(spec.browColor);
+    g.beginPath(); g.roundRect(-bw / 2 * TEX, -bh / 2 * TEX, bw * TEX, bh * TEX, bh * TEX / 2); g.fill(); g.restore();
+  }
+  const n = sh.nose; radial(n.x, n.y + 0.012, 0.04, rgba(darker(spec.skin, 0.75), 0.6), rgba(spec.skin, 0));
+  ell(n.x - 0.02, n.y + 0.01, 0.016, 0.009, rgb(darker(spec.skin, 0.45))); ell(n.x + 0.02, n.y + 0.01, 0.016, 0.009, rgb(darker(spec.skin, 0.45)));
+  const m = sh.mouth, mw = sh.mouthW;
+  ell(m.x, m.y + 0.009, mw * 0.8, 0.030, rgb(spec.lips)); ell(m.x, m.y - 0.006, mw * 0.85, 0.022, rgb(darker(spec.lips, 0.85)));
+  g.strokeStyle = rgb(darker(spec.lips, 0.4)); g.lineWidth = 5; g.lineCap = 'round'; g.beginPath(); g.moveTo(...P(m.x - mw / 2, m.y - 0.006));
+  g.quadraticCurveTo(...P(m.x, m.y + 0.018), ...P(m.x + mw / 2, m.y - 0.006)); g.stroke();
+  if (ex.includes('walrus')) { for (const sd of [-1, 1]) ell(n.x + sd * 0.045, n.y + 0.045, 0.11, 0.05, rgb(spec.hair)); ell(n.x, n.y + 0.038, 0.06, 0.04, rgb(spec.hair)); }
+  if (ex.includes('glasses')) {
+    g.strokeStyle = '#1a1a1a'; g.lineWidth = 9;
+    for (const e of [sh.le, sh.re]) { g.beginPath(); g.ellipse(e.x * TEX, (e.y + 0.004) * TEX, 0.055 * TEX, 0.0425 * TEX, 0, 0, Math.PI * 2); g.stroke(); }
+    g.lineWidth = 8; g.beginPath(); g.moveTo(...P(sh.le.x + 0.055, sh.le.y)); g.quadraticCurveTo(...P(0.5, eyeV - 0.02), ...P(sh.re.x - 0.055, sh.re.y)); g.stroke();
+  }
+  return c;
+}
+
+const HOUSE = [
+  { name: 'Grandpa Gus', skin: [0.94, 0.78, 0.68], hair: [0.88, 0.88, 0.88], shirt: [0.55, 0.40, 0.30], iris: [0.30, 0.50, 0.75], lips: [0.78, 0.52, 0.48],
+    hair2D: 'bald', brow: 1.9, browColor: [0.95, 0.95, 0.95], eyeScale: 0.95, extras: ['glasses', 'walrus'], shape: standardShape({ chinDrop: 0.015, nose: 0.012 }), hat: 'none' },
+  { name: 'Aunt Linda', skin: [0.98, 0.84, 0.74], hair: [0.72, 0.24, 0.10], shirt: [0.55, 0.25, 0.65], iris: [0.25, 0.55, 0.30], lips: [0.85, 0.10, 0.20],
+    hair2D: 'full', brow: 0.9, browColor: [0.5, 0.18, 0.08], eyeScale: 1.05, extras: ['eyeshadow', 'freckles', 'blush'], shape: standardShape({ jaw: 0.95, mouthW: 0.2 }), hat: 'none', bun: true },
+  { name: 'Coach Brick', skin: [0.80, 0.57, 0.42], hair: [0.15, 0.11, 0.08], shirt: [0.80, 0.12, 0.12], iris: [0.35, 0.22, 0.12], lips: [0.62, 0.38, 0.32],
+    hair2D: 'buzz', brow: 1.6, browColor: [0.12, 0.08, 0.06], eyeScale: 0.9, extras: ['stubble'], shape: standardShape({ jaw: 1.18, chinDrop: 0.025, mouthW: 0.22 }), hat: 'headband' },
+  { name: 'Baby Benny', skin: [1.0, 0.87, 0.78], hair: [0.62, 0.45, 0.25], shirt: [0.35, 0.62, 0.95], iris: [0.30, 0.45, 0.70], lips: [0.95, 0.55, 0.55],
+    hair2D: 'curl', brow: 0.5, browColor: [0.7, 0.55, 0.4], eyeScale: 1.3, extras: ['blush'], shape: standardShape({ jaw: 1.12, chinDrop: -0.05, nose: -0.02, mouthW: 0.13 }), hat: 'party' },
+].map(s => ({ ...s, texture: paintFace(s) }));
+
+function avatarURL(ch) {
+  const c = canvas2d(160), g = c.getContext('2d');
+  g.drawImage(ch.texture, 0.18 * TEX, 0.12 * TEX, 0.64 * TEX, 0.64 * TEX, 0, 0, 160, 160);
+  return c.toDataURL('image/jpeg', 0.85);
+}
+HOUSE.forEach(h => h.avatar = avatarURL(h));
+
+// --- Photo → face texture (mirrors FaceTextureBuilder.swift) ---------------------------
+const JAWLINE = [454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234];
+
+function similarity(a1, a2, b1, b2) {
+  const da = { x: a2.x - a1.x, y: a2.y - a1.y }, db = { x: b2.x - b1.x, y: b2.y - b1.y };
+  const s = Math.hypot(db.x, db.y) / Math.max(Math.hypot(da.x, da.y), 1), th = Math.atan2(db.y, db.x) - Math.atan2(da.y, da.x);
+  const a = s * Math.cos(th), b = s * Math.sin(th);
+  const e = b1.x - (a * a1.x - b * a1.y), f = b1.y - (b * a1.x + a * a1.y);
+  return { a, b, c: -b, d: a, e, f, apply: p => ({ x: a * p.x - b * p.y + e, y: b * p.x + a * p.y + f }) };
+}
+
+function averageColor(ctx, rects, mask) {
+  let r = 0, g = 0, b = 0, n = 0;
+  for (const [u, v, w, h] of rects) {
+    const d = ctx.getImageData(u * TEX, v * TEX, w * TEX, h * TEX).data;
+    const md = mask ? mask.getImageData(u * TEX, v * TEX, w * TEX, h * TEX).data : null;
+    for (let k = 0; k < d.length; k += 4) {
+      const wt = (d[k + 3] / 255) * (md ? md[k + 3] / 255 : 1);
+      if (wt < 0.5) continue;
+      r += d[k]; g += d[k + 1]; b += d[k + 2]; n++;
+    }
+  }
+  return n > 20 ? [r / n / 255, g / n / 255, b / n / 255] : null;
+}
+
+/** Hair = pixels above the brows that belong to the person but clearly aren't skin. Bald if too few. */
+function hairColor(pg, mg, skin) {
+  const x = 0.2 * TEX, w = 0.6 * TEX, h = 0.3 * TEX;
+  const d = pg.getImageData(x, 0, w, h).data, md = mg ? mg.getImageData(x, 0, w, h).data : null;
+  const sl = 0.3 * skin[0] + 0.59 * skin[1] + 0.11 * skin[2];
+  let r = 0, g = 0, b = 0, n = 0, person = 0;
+  for (let k = 0; k < d.length; k += 16) {
+    if (d[k + 3] < 128 || (md && md[k + 3] < 128)) continue;
+    person++;
+    const R = d[k] / 255, G = d[k + 1] / 255, B = d[k + 2] / 255, l = 0.3 * R + 0.59 * G + 0.11 * B;
+    if (Math.hypot(R - skin[0], G - skin[1], B - skin[2]) > 0.22 && Math.abs(l - sl) > 0.12) { r += R; g += G; b += B; n++; }
+  }
+  return n > Math.max(30, person * 0.04) ? [r / n, g / n, b / n] : darker(skin, 0.8);
+}
+
+/** points: {eyes:[p,p], nose, mouth, mouthW pair, chin, contour[]} in image pixels. personMask: canvas (alpha = person) or null. */
+function buildPhotoFace(img, pts, personMask) {
+  let [e1, e2] = pts.eyes; if (e1.x > e2.x) [e1, e2] = [e2, e1];
+  const T = similarity(e1, e2, { x: LEFT_EYE.x * TEX, y: LEFT_EYE.y * TEX }, { x: RIGHT_EYE.x * TEX, y: RIGHT_EYE.y * TEX });
+  const uv = p => { const q = T.apply(p); return { x: q.x / TEX, y: q.y / TEX }; };
+  const ml = uv(pts.mouthL), mr = uv(pts.mouthR);
+  const shape = sanitize({ le: { ...LEFT_EYE }, re: { ...RIGHT_EYE }, nose: uv(pts.nose), mouth: uv(pts.mouth),
+    mouthW: Math.abs(mr.x - ml.x), chin: uv(pts.chin), contour: pts.contour.map(uv) });
+
+  const photo = canvas2d(TEX), pg = photo.getContext('2d', { willReadFrequently: true });
+  pg.setTransform(T.a, T.b, T.c, T.d, T.e, T.f); pg.drawImage(img, 0, 0); pg.setTransform(1, 0, 0, 1, 0, 0);
+
+  const mask = canvas2d(TEX), mg = mask.getContext('2d', { willReadFrequently: true });
+  if (personMask) { mg.setTransform(T.a, T.b, T.c, T.d, T.e, T.f); mg.drawImage(personMask, 0, 0, img.width, img.height); mg.setTransform(1, 0, 0, 1, 0, 0); }
+  else { mg.fillStyle = '#fff'; mg.fillRect(0, 0, TEX, TEX); }
+
+  const skin = averageColor(pg, [[0.33, 0.53, 0.06, 0.05], [0.61, 0.53, 0.06, 0.05]]) || [0.85, 0.68, 0.56];
+  const hair = hairColor(pg, personMask ? mg : null, skin);
+
+  // Feathered oval keeps face + hair; person mask drops the background.
+  mg.globalCompositeOperation = 'destination-in';
+  mg.setTransform(0.31 * TEX, 0, 0, 0.44 * TEX, 0.5 * TEX, 0.41 * TEX);
+  const gr = mg.createRadialGradient(0, 0, 0.78, 0, 0, 1); gr.addColorStop(0, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  mg.fillStyle = gr; mg.fillRect(-2, -2, 4, 4); mg.setTransform(1, 0, 0, 1, 0, 0);
+  pg.globalCompositeOperation = 'destination-in'; pg.drawImage(mask, 0, 0);
+
+  const out = canvas2d(TEX), og = out.getContext('2d');
+  const hard = canvas2d(TEX), hg = hard.getContext('2d');
+  hg.fillStyle = rgb(skin); hg.fillRect(0, 0, TEX, TEX); hg.fillStyle = rgb(hair);
+  hg.fillRect(0, 0, TEX, 0.16 * TEX); hg.fillRect(0, 0, 0.17 * TEX, 0.62 * TEX); hg.fillRect(0.83 * TEX, 0, 0.17 * TEX, 0.62 * TEX);
+  og.fillStyle = rgb(skin); og.fillRect(0, 0, TEX, TEX);
+  og.filter = 'blur(28px)'; og.drawImage(hard, 0, 0); og.filter = 'none';
+  og.drawImage(photo, 0, 0);
+  return { texture: out, shape, skin, hair };
+}
+
+/* =====================================================================================
+   AI: MediaPipe face landmarks + selfie segmentation (falls back to tap-to-place)
+   ===================================================================================== */
+const MP_VERSION = '0.10.14';
+let mpPromise = null;
+async function firstReachable(urls) {
+  for (const u of urls) { try { const r = await fetch(u, { method: 'HEAD' }); if (r.ok) return u; } catch (e) {} }
+  throw new Error('asset unavailable');
+}
+async function fetchBytes(urls) {
+  for (const u of urls) {
+    try {
+      const r = await fetch(u); if (!r.ok) continue;
+      if (u.endsWith('.b64.txt')) { const bin = atob((await r.text()).trim()), out = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i); return out; }
+      return new Uint8Array(await r.arrayBuffer());
+    } catch (e) {}
+  }
+  throw new Error('asset unavailable');
+}
+function loadAI() {
+  if (mpPromise) return mpPromise;
+  mpPromise = (async () => {
+    const vision = await import(`https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/vision_bundle.mjs`);
+    const cdn = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${MP_VERSION}/wasm`;
+    const wasmURL = await firstReachable([new URL('mp/vision_wasm_internal.wasm', location.href).href, `${cdn}/vision_wasm_internal.wasm`]);
+    const fileset = { wasmLoaderPath: `${cdn}/vision_wasm_internal.js`, wasmBinaryPath: wasmURL };
+    const faceModel = await fetchBytes(['mp/face_landmarker.task', 'mp/face_landmarker.task.b64.txt', 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task']);
+    const landmarker = await vision.FaceLandmarker.createFromOptions(fileset, { baseOptions: { modelAssetBuffer: faceModel }, runningMode: 'IMAGE', numFaces: 4 });
+    let segmenter = null;
+    try {
+      const segModel = await fetchBytes(['mp/selfie_segmenter.tflite', 'mp/selfie_segmenter.tflite.b64.txt', 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite']);
+      segmenter = await vision.ImageSegmenter.createFromOptions(fileset, { baseOptions: { modelAssetBuffer: segModel }, runningMode: 'IMAGE', outputConfidenceMasks: true, outputCategoryMask: false });
+    } catch (e) { console.warn('segmenter unavailable', e); }
+    return { landmarker, segmenter };
+  })();
+  return mpPromise;
+}
+
+function segment(segmenter, img) {
+  if (!segmenter) return null;
+  let out = null;
+  segmenter.segment(img, res => {
+    const m = res.confidenceMasks && res.confidenceMasks[0]; if (!m) return;
+    const data = m.getAsFloat32Array(), c = canvas2d(m.width, m.height), g = c.getContext('2d'), id = g.createImageData(m.width, m.height);
+    for (let k = 0; k < data.length; k++) { id.data[k * 4] = id.data[k * 4 + 1] = id.data[k * 4 + 2] = 255; id.data[k * 4 + 3] = Math.round(data[k] * 255); }
+    g.putImageData(id, 0, 0); out = c;
+  });
+  return out;
+}
+
+/* =====================================================================================
+   3D: renderer, stage, rigs, pies, particles
+   ===================================================================================== */
+const glCanvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({ canvas: glCanvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.35;
+renderer.toneMappingExposure = 0.92;
+const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+scene.add(new THREE.HemisphereLight(0xfff1e6, 0x2a1438, 0.9));
+const key = new THREE.DirectionalLight(0xfff4e8, 2.0); key.position.set(3, 5, 6); scene.add(key);
+const rim = new THREE.PointLight(0xff5fa2, 30, 20); rim.position.set(3, 5, -4); scene.add(rim);
+const fill = new THREE.PointLight(0x8fb4ff, 14, 20); fill.position.set(-5, 3, 5); scene.add(fill);
+
+const mat = (color, roughness = 0.5, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
+const mesh = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); return o; };
+
+// Game-show set
+const stageSet = new THREE.Group(); scene.add(stageSet);
+{
+  const floor = mesh(new THREE.CircleGeometry(12, 48), mat(0x2a1238, 0.35)); floor.rotation.x = -Math.PI / 2; stageSet.add(floor);
+  const sb = canvas2d(1024, 512), sg = sb.getContext('2d'); sg.fillStyle = '#5a1470'; sg.fillRect(0, 0, 1024, 512); sg.fillStyle = '#7a1f8c';
+  for (let i = 0; i < 24; i += 2) { const a0 = i / 24 * Math.PI * 2, a1 = (i + 1) / 24 * Math.PI * 2; sg.beginPath(); sg.moveTo(512, 300); sg.lineTo(512 + 1200 * Math.cos(a0), 300 + 1200 * Math.sin(a0)); sg.lineTo(512 + 1200 * Math.cos(a1), 300 + 1200 * Math.sin(a1)); sg.fill(); }
+  const bt = new THREE.CanvasTexture(sb); bt.colorSpace = THREE.SRGBColorSpace;
+  stageSet.add(mesh(new THREE.PlaneGeometry(18, 9), new THREE.MeshBasicMaterial({ map: bt }), 0, 4.2, -4));
+  const bulbs = [];
+  for (let i = 0; i < 28; i++) { const a = i / 27 * Math.PI, b = mesh(new THREE.SphereGeometry(0.08, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd760 }), -Math.cos(a) * 5.2, 2.2 + Math.sin(a) * 3.6, -3.8); stageSet.add(b); bulbs.push(b); }
+  stageSet.userData.bulbs = bulbs;
+  const sign = canvas2d(1024, 160), sn = sign.getContext('2d'); sn.font = '400 112px Bungee, Impact, sans-serif'; sn.textAlign = 'center'; sn.textBaseline = 'middle';
+  sn.fillStyle = '#ec3a57'; sn.fillText('THE PIE-Q TEST', 518, 88); sn.fillStyle = '#ffcf4a'; sn.fillText('THE PIE-Q TEST', 512, 82);
+  const st = new THREE.CanvasTexture(sign); st.colorSpace = THREE.SRGBColorSpace; stageSet.userData.signTex = st; stageSet.userData.signCanvas = sign;
+  stageSet.add(mesh(new THREE.PlaneGeometry(7.2, 1.12), new THREE.MeshBasicMaterial({ map: st, transparent: true }), 0, 4.9, -3.5));
+  [0x2673ff, 0xff6633].forEach((col, i) => {
+    const p = mesh(new THREE.BoxGeometry(1.9, 1.55, 1.0), mat(col, 0.35), i ? 1.7 : -1.7, 0.775, 0.55);
+    p.add(mesh(new THREE.BoxGeometry(1.95, 0.12, 1.04), new THREE.MeshBasicMaterial({ color: 0xffffff }), 0, 0.55, 0));
+    p.add(mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.1, 24), mat(0xe8344e, 0.2), 0, 0.82, 0.1));
+    stageSet.add(p);
+  });
+}
+const spot = mesh(new THREE.CircleGeometry(1.6, 48), new THREE.MeshBasicMaterial({ color: 0xffcf4a, transparent: true, opacity: 0.12 }), 0, -1.35, 0);
+spot.rotation.x = -Math.PI / 2; scene.add(spot);
+
+const creamMat = new THREE.MeshStandardMaterial({ color: 0xfff8ec, roughness: 0.3 });
+const anims = [];          // per-frame functions; return false when finished
+const addAnim = f => anims.push(f);
+
+class Rig {
+  constructor(ch) {
+    this.ch = ch;
+    const built = buildHead(ch.shape);
+    Object.assign(this, { eyeY: built.eyeY, chinY: built.chinY, foreheadY: built.foreheadY });
+    const tex = new THREE.CanvasTexture(ch.texture); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+    this.head = new THREE.Mesh(built.geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.62 }));
+    this.root = new THREE.Group(); this.idle = new THREE.Group(); this.wob = new THREE.Group(); this.splats = new THREE.Group();
+    this.root.add(this.idle); this.idle.add(this.wob); this.wob.add(this.head); this.head.add(this.splats);
+    this.head.position.y = 1.2;
+    this.seed = Math.random() * 6; this.wobble = null; this.pulses = {};
+    this.addAccessories();
+  }
+  addAccessories() {
+    const h = this.ch;
+    if (h.bun) { const m = mat(rgb(h.hair), 0.95); this.head.add(mesh(new THREE.SphereGeometry(0.42, 24, 16), m, 0, 1.38, -0.5)); }
+    if (h.hat === 'party') {
+      const c = canvas2d(256), g = c.getContext('2d'); g.fillStyle = '#ff4099'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#ffd933';
+      for (let i = -256; i < 512; i += 64) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i + 28, 0); g.lineTo(i + 284, 256); g.lineTo(i + 256, 256); g.fill(); }
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      const hat = new THREE.Group(); hat.add(mesh(new THREE.ConeGeometry(0.42, 1.0, 32), new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 }), 0, 0.5, 0));
+      hat.add(mesh(new THREE.SphereGeometry(0.13, 16, 12), mat(0xffffff, 0.9), 0, 1.02, 0)); hat.position.set(0.18, 1.05, 0.05); hat.rotation.z = -0.28; this.head.add(hat);
+    } else if (h.hat === 'crown') {
+      const gold = mat(0xffc733, 0.25, 1), hat = new THREE.Group();
+      hat.add(mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.3, 32, 1, true), gold));
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; hat.add(mesh(new THREE.ConeGeometry(0.11, 0.28, 12), gold, 0.58 * Math.sin(a), 0.29, 0.58 * Math.cos(a))); }
+      gold.side = THREE.DoubleSide; hat.position.set(0, 1.18, -0.02); hat.rotation.z = 0.1; this.head.add(hat);
+    } else if (h.hat === 'top') {
+      const k = mat(0x141414, 0.35), hat = new THREE.Group();
+      hat.add(mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.05, 40), k)); hat.add(mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.95, 40), k, 0, 0.5, 0));
+      hat.add(mesh(new THREE.CylinderGeometry(0.615, 0.615, 0.16, 40), mat(0xb31a1a), 0, 0.1, 0)); hat.position.set(0, 1.08, -0.05); hat.rotation.set(-0.12, 0, 0.12); this.head.add(hat);
+    } else if (h.hat === 'headband') {
+      const b = mesh(new THREE.TorusGeometry(1.0, 0.09, 12, 64), mat(0xe62626, 0.9), 0, 0.62, -0.06); b.rotation.x = Math.PI / 2; b.scale.set(0.96, 1.02, 1); this.head.add(b);
+    }
+    if (h.googly) for (const u of [LEFT_EYE.x, RIGHT_EYE.x]) {
+      const x = modelX(u), z = this.surfaceZ(x, this.eyeY) ?? 0.9;
+      const eye = mesh(new THREE.SphereGeometry(0.17, 24, 16), mat(0xffffff, 0.2), x, this.eyeY, z + 0.06); eye.scale.z = 0.5;
+      const pupil = mesh(new THREE.SphereGeometry(0.08, 16, 12), mat(0x000000, 0.2), 0, -0.05, 0.14); eye.add(pupil); this.head.add(eye);
+      addAnim(t => { pupil.position.set(Math.sin(t * 9 + x) * 0.05, -0.06 + Math.cos(t * 7) * 0.02, 0.14); return true; });
+    }
+  }
+  surfaceZ(x, y) {
+    this.head.updateWorldMatrix(true, false);
+    const ray = new THREE.Raycaster(this.head.localToWorld(new THREE.Vector3(x, y, 3)), this.head.localToWorld(new THREE.Vector3(x, y, -1)).sub(this.head.localToWorld(new THREE.Vector3(x, y, 3))).normalize());
+    const hit = ray.intersectObject(this.head, false)[0];
+    return hit ? this.head.worldToLocal(hit.point.clone()).z : null;
+  }
+  faceWorld() { this.head.updateWorldMatrix(true, false); return this.head.localToWorld(new THREE.Vector3(0, this.eyeY - 0.25, 1.1)); }
+  pulse(name, peak = 1, attack = 0.05, hold = 0.12, release = 0.7) { this.pulses[name] = { t: 0, peak, attack, hold, release, from: null }; }
+  holdMorph(name, w, dur = 0.25) { const i = MORPHS.indexOf(name); this.pulses[name] = { t: 0, hold: true, from: this.head.morphTargetInfluences[i], to: w, dur }; }
+  wobbleHit(side, back, strength = 1) { this.wobble = { t: 0, side, back, strength }; }
+  update(t, dt) {
+    const s = t + this.seed;
+    this.idle.rotation.set(Math.sin(s * 1.3) * 0.03, Math.sin(s * 0.7) * 0.10, Math.sin(s) * 0.04);
+    if (this.wobble) {
+      const w = this.wobble; w.t += dt;
+      const amp = Math.exp(-3.2 * w.t) * Math.sin(2 * Math.PI * 2.4 * w.t + 0.35) * w.strength;
+      this.wob.rotation.set(-w.back * 0.55 * amp, 0, -w.side * 0.65 * amp);
+      if (w.t > 1.6) { this.wobble = null; this.wob.rotation.set(0, 0, 0); }
+    }
+    const inf = this.head.morphTargetInfluences;
+    for (const [name, p] of Object.entries(this.pulses)) {
+      const i = MORPHS.indexOf(name); p.t += dt;
+      if (p.hold) { const k = Math.min(1, p.t / p.dur); inf[i] = p.from + (p.to - p.from) * k; if (k >= 1) delete this.pulses[name]; continue; }
+      if (p.t < p.attack) inf[i] = p.peak * p.t / p.attack;
+      else if (p.t < p.attack + p.hold) inf[i] = p.peak;
+      else { const q = (p.t - p.attack - p.hold) / p.release; inf[i] = Math.max(-0.35, p.peak * Math.exp(-4 * q) * Math.cos(3 * Math.PI * q)); if (q >= 1) { inf[i] = 0; delete this.pulses[name]; } }
+    }
+  }
+  splat(amount = 22) {
+    this.head.updateWorldMatrix(true, false);
+    let placed = 0;
+    for (let k = 0; k < amount * 3 && placed < amount; k++) {
+      const x = (Math.random() * 2 - 1) * 0.75, y = this.chinY + 0.15 + Math.random() * (this.foreheadY - this.chinY);
+      const o = this.head.localToWorld(new THREE.Vector3(x, y, 3)), d = this.head.localToWorld(new THREE.Vector3(x, y, -1)).sub(o).normalize();
+      const hit = new THREE.Raycaster(o, d).intersectObject(this.head, false)[0]; if (!hit) continue;
+      const p = this.head.worldToLocal(hit.point.clone());
+      const nrm = hit.face.normal.clone();
+      const holder = new THREE.Group(); holder.position.copy(p); holder.lookAt(this.head.localToWorld(p.clone().add(nrm)));
+      const blob = mesh(new THREE.SphereGeometry(0.1 + Math.random() * 0.1, 16, 12), creamMat); blob.scale.z = 0.32; holder.add(blob);
+      holder.scale.setScalar(0.01); this.splats.add(holder); placed++;
+      let tt = 0; addAnim((t, dt) => { tt += dt; holder.scale.setScalar(Math.min(1, 0.01 + tt / 0.08)); return tt < 0.1; });
+    }
+  }
+  clean() { this.splats.clear(); }
+}
+
+function torso(ch) {
+  const g = new THREE.Group();
+  const chest = mesh(new THREE.CapsuleGeometry(0.55, 0.6, 8, 20), mat(rgb(ch.shirt || [0.9, 0.3, 0.5]), 0.8), 0, -0.75, 0); chest.scale.set(1.15, 1, 0.8);
+  g.add(chest); g.add(mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.4, 20), mat(rgb(ch.skin), 0.7), 0, 0.05, 0));
+  return g;
+}
+
+function makePie() {
+  const c = new THREE.Group(), p = new THREE.Group(); p.rotation.x = Math.PI / 2; c.add(p);
+  p.add(mesh(new THREE.CylinderGeometry(0.55, 0.5, 0.14, 32), mat(0xcccccc, 0.25, 1)));
+  const crust = mesh(new THREE.TorusGeometry(0.5, 0.08, 10, 32), mat(0xd99a4d, 0.8), 0, 0.08, 0); crust.rotation.x = Math.PI / 2; p.add(crust);
+  const cream = mesh(new THREE.SphereGeometry(0.5, 24, 16), creamMat, 0, 0.1, 0); cream.scale.y = 0.45; p.add(cream);
+  p.add(mesh(new THREE.SphereGeometry(0.09, 12, 10), mat(0xe8344e, 0.15), 0, 0.34, 0));
+  return c;
+}
+
+const dotTex = (() => { const c = canvas2d(64), g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0.55, '#fff'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+function burst(at, color, count = 120, speed = 5, size = 0.12, dir = new THREE.Vector3(0, 0.4, 1)) {
+  const pos = new Float32Array(count * 3), vel = [];
+  for (let k = 0; k < count; k++) {
+    pos.set([at.x, at.y, at.z], k * 3);
+    const v = new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1).normalize().add(dir.clone().multiplyScalar(1.2)).normalize().multiplyScalar(speed * (0.4 + Math.random() * 0.8));
+    vel.push(v);
+  }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const m = new THREE.PointsMaterial({ color, size, map: dotTex, transparent: true, depthWrite: false });
+  const pts = new THREE.Points(geo, m); scene.add(pts);
+  let life = 0;
+  addAnim((t, dt) => {
+    life += dt;
+    for (let k = 0; k < count; k++) { vel[k].y -= 9.8 * dt; pos[k * 3] += vel[k].x * dt; pos[k * 3 + 1] += vel[k].y * dt; pos[k * 3 + 2] += vel[k].z * dt; }
+    geo.attributes.position.needsUpdate = true; m.opacity = Math.max(0, 1 - life / 1.1);
+    if (life > 1.1) { scene.remove(pts); geo.dispose(); m.dispose(); return false; }
+    return true;
+  });
+}
+
+let shake = 0;
+function throwPie(rig, from, scale = 0.72, flight = 0.6, onHit) {
+  const target = rig.faceWorld(), pie = makePie(); pie.scale.setScalar(scale); pie.position.copy(from); scene.add(pie);
+  rig.holdMorph('mouthOpen', 0.9, 0.35);
+  const h = Math.max(0.6, Math.hypot(target.z - from.z, target.x - from.x) * 0.18);
+  let tt = 0;
+  addAnim((t, dt) => {
+    tt += dt; const p = Math.min(1, tt / flight);
+    pie.position.lerpVectors(from, target, p); pie.position.y += Math.sin(p * Math.PI) * h; pie.lookAt(target);
+    if (p < 1) return true;
+    rig.holdMorph('mouthOpen', 0, 0.05); rig.pulse('squish', 1, 0.04, 0.2, 0.8); rig.wobbleHit(Math.random() * 0.8 - 0.4, 1); rig.splat();
+    burst(target, 0xfff6e8); shake = 0.12;
+    if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(40);
+    rig.head.attach(pie);
+    let st = 0; addAnim((t2, dt2) => { st += dt2; if (st > 0.8) { pie.position.y -= dt2 * 3.5; pie.position.z += dt2; pie.rotation.x += dt2 * 2; } if (st > 1.5) { pie.removeFromParent(); return false; } return true; });
+    onHit?.();
+    return false;
+  });
+}
+
+// Camera rig
+const cam = { pos: new THREE.Vector3(0, 2.9, 8.8), look: new THREE.Vector3(0, 2.4, 0), curLook: new THREE.Vector3(0, 2.4, 0) };
+camera.position.copy(cam.pos);
+function focus(pos, look) { cam.pos.copy(pos); cam.look.copy(look); }
+
+let rigs = [];
+function clearRigs() { rigs.forEach(r => r.root.removeFromParent()); rigs = []; }
+function placeContestants(chars) {
+  clearRigs(); stageSet.visible = true; spot.visible = false;
+  chars.forEach((ch, i) => {
+    const r = new Rig(ch); r.root.position.set(i ? 1.7 : -1.7, 2.0, 0); r.root.scale.setScalar(0.62); r.root.rotation.y = i ? -0.22 : 0.22;
+    r.root.add(torso(ch)); scene.add(r.root); rigs.push(r);
+  });
+  wide();
+}
+const wide = () => focus(new THREE.Vector3(0, 2.9, 8.8), new THREE.Vector3(0, 2.4, 0));
+function closeUp(i) { const f = rigs[i].faceWorld(); focus(new THREE.Vector3(f.x * 0.75, f.y + 0.25, 4.6), new THREE.Vector3(f.x, f.y - 0.05, 0)); }
+function pieAt(i, onHit) { const f = rigs[i].faceWorld(); throwPie(rigs[i], new THREE.Vector3(f.x * 0.3 + Math.random() * 1.2 - 0.6, 0.6, 8), 0.72, 0.6, onHit); }
+
+let showcaseYaw = 0, dragging = null;
+function showcase(ch) {
+  clearRigs(); stageSet.visible = false; spot.visible = true;
+  const r = new Rig(ch); r.root.position.set(0, -1.2, 0); scene.add(r.root); rigs.push(r);
+  focus(new THREE.Vector3(0, 0.15, 5.6), new THREE.Vector3(0, -0.05, 0));
+  r.root.scale.setScalar(0.01); let tt = 0; addAnim((t, dt) => { tt += dt; const k = Math.min(1, tt / 0.45); r.root.scale.setScalar(k < 0.6 ? k / 0.6 * 1.12 : 1.12 - (k - 0.6) / 0.4 * 0.12); return k < 1; });
+  return r;
+}
+glCanvas.addEventListener('pointerdown', e => { dragging = { x: e.clientX, yaw: showcaseYaw }; });
+addEventListener('pointerup', () => dragging = null);
+addEventListener('pointermove', e => { if (dragging) showcaseYaw = dragging.yaw + (e.clientX - dragging.x) * 0.01; });
+
+function resize() {
+  const r = glCanvas.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); camera.aspect = r.width / Math.max(r.height, 1); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(glCanvas); resize();
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  for (let i = anims.length - 1; i >= 0; i--) if (!anims[i](t, dt)) anims.splice(i, 1);
+  rigs.forEach(r => r.update(t, dt));
+  if (mode === 'studio' && rigs[0]) rigs[0].root.rotation.y = dragging ? showcaseYaw : (showcaseYaw += (Math.sin(t * 0.5) * 0.55 - showcaseYaw) * 0.02);
+  stageSet.userData.bulbs.forEach((b, i) => b.material.color.setHex(Math.sin(t * 6 + i) > 0 ? 0xffd760 : 0x7a5a20));
+  const k = 1 - Math.exp(-dt * 4);
+  camera.position.lerp(cam.pos, k); cam.curLook.lerp(cam.look, k);
+  camera.lookAt(cam.curLook);
+  if (shake > 0) { camera.position.x += (Math.random() - 0.5) * shake; camera.position.y += (Math.random() - 0.5) * shake; shake = Math.max(0, shake - dt * 0.4); }
+  renderer.render(scene, camera);
+});
+document.fonts?.ready.then(() => {   // redraw the sign once Bungee has loaded
+  const sign = stageSet.userData.signCanvas, sn = sign.getContext('2d'); sn.clearRect(0, 0, 1024, 160);
+  sn.font = '400 112px Bungee, Impact, sans-serif'; sn.textAlign = 'center'; sn.textBaseline = 'middle';
+  sn.fillStyle = '#ec3a57'; sn.fillText('THE PIE-Q TEST', 518, 88); sn.fillStyle = '#ffcf4a'; sn.fillText('THE PIE-Q TEST', 512, 82);
+  stageSet.userData.signTex.needsUpdate = true;
+});
+
+/* =====================================================================================
+   UI FLOW
+   ===================================================================================== */
+const $ = id => document.getElementById(id);
+const caption = $('caption');
+let mode = 'demo', demoTimer = null, custom = null;
+function setPanel(name) {
+  mode = name;
+  for (const p of ['demo', 'studio', 'show']) $('panel-' + p).hidden = p !== name;
+  $('hud').hidden = name !== 'show'; $('react').hidden = true;
+  clearInterval(demoTimer); caption.textContent = '';
+}
+
+// Attract mode: Gus and Linda take turns.
+function startDemo() {
+  setPanel('demo'); placeContestants([HOUSE[0], HOUSE[1]]);
+  let next = 0, count = 0;
+  const beat = () => {
+    if (mode !== 'demo' || rigs.length < 2) return;
+    count++;
+    if (count % 5 === 0) { rigs.forEach(r => r.clean()); wide(); caption.textContent = 'Fresh faces!'; return; }
+    const i = next; next = 1 - next; closeUp(i);
+    const who = rigs[i].ch.name;
+    caption.textContent = [`${who} never saw it coming.`, `${who}: 0. Pie: 1.`, `Dessert is served, ${who}.`][count % 3];
+    setTimeout(() => mode === 'demo' && pieAt(i), 500);
+  };
+  setTimeout(beat, 700); demoTimer = setInterval(beat, 2700);
+}
+
+// ---- Face Studio -------------------------------------------------------------------------
+const STEPS = ['Finding the face', 'Mapping 478 facial landmarks', 'Cutting out the background', 'Sculpting a 3D head to match', 'Wrapping skin and painting hair'];
+const photoCanvas = $('photo'), pctx = photoCanvas.getContext('2d');
+let manual = null;
+function checklist(done) { $('checklist').innerHTML = STEPS.map((s, i) => `<li class="${i < done ? 'done' : ''}">${s}</li>`).join(''); }
+function note(text) { $('studio-note').hidden = !text; $('studio-note').textContent = text || ''; }
+
+async function loadImage(file) {
+  const url = URL.createObjectURL(file), img = new Image(); img.src = url; await img.decode();
+  const scale = Math.min(1, 1600 / Math.max(img.width, img.height)), c = canvas2d(Math.round(img.width * scale), Math.round(img.height * scale));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); return c;
+}
+function drawPhoto(img, points = [], color = '#43d3c7') {
+  photoCanvas.width = img.width; photoCanvas.height = img.height; pctx.drawImage(img, 0, 0);
+  pctx.fillStyle = color; const r = Math.max(2, img.width / 300);
+  for (const p of points) { pctx.beginPath(); pctx.arc(p.x, p.y, r, 0, Math.PI * 2); pctx.fill(); }
+}
+
+async function startStudio(file) {
+  setPanel('studio'); $('studio-edit').hidden = true; note(''); checklist(0);
+  $('studio-title').textContent = 'Face Studio';
+  placeContestants([]); stageSet.visible = false;
+  let img; try { img = await loadImage(file); } catch (e) { note('That file could not be opened as an image. Try a JPG or PNG.'); return; }
+  drawPhoto(img); caption.textContent = 'Loading the face AI…';
+  let ai = null;
+  try { ai = await Promise.race([loadAI(), new Promise((_, no) => setTimeout(() => no(new Error('timeout')), 30000))]); } catch (e) { console.warn('AI unavailable', e); }
+  caption.textContent = '';
+  if (!ai) return startManual(img, 'The face AI could not load here, so place the points yourself: tap their left eye (on your left).');
+  const res = ai.landmarker.detect(img), faces = res.faceLandmarks || [];
+  if (!faces.length) return startManual(img, 'No face found automatically. Tap their left eye (on your left) to place it yourself.');
+  const box = f => { const xs = f.map(p => p.x), ys = f.map(p => p.y); return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)); };
+  const lm = faces.reduce((a, b) => box(b) > box(a) ? b : a).map(p => ({ x: p.x * img.width, y: p.y * img.height }));
+  checklist(1);
+  // Animate the landmark cloud in.
+  for (let k = 1; k <= 6; k++) { await new Promise(r => setTimeout(r, 80)); drawPhoto(img, lm.slice(0, Math.round(lm.length * k / 6))); }
+  checklist(2);
+  const mask = segment(ai.segmenter, img);
+  const eye = (a, b) => lm[a] && lm[b] ? { x: (lm[a].x + lm[b].x) / 2, y: (lm[a].y + lm[b].y) / 2 } : null;
+  const pts = {
+    eyes: [lm[468] || eye(33, 133), lm[473] || eye(362, 263)],
+    nose: lm[1], mouth: eye(13, 14), mouthL: lm[61], mouthR: lm[291], chin: lm[152], contour: JAWLINE.map(i => lm[i]),
+  };
+  const warn = [];
+  if (faces.length > 1) warn.push(`Found ${faces.length} faces, so we used the biggest one.`);
+  if (!mask) warn.push('Background removal was unavailable, so the edges may be busy.');
+  await finishStudio(img, pts, mask, warn.join(' '));
+}
+
+function startManual(img, message) {
+  manual = { img, taps: [], prompts: ['Tap their left eye (on your left).', 'Now tap their right eye.', 'Tap the middle of their mouth.', 'Tap the bottom of their chin.'] };
+  note(message || manual.prompts[0]); checklist(0);
+}
+photoCanvas.addEventListener('click', e => {
+  if (!manual) return;
+  const r = photoCanvas.getBoundingClientRect(), p = { x: (e.clientX - r.left) / r.width * photoCanvas.width, y: (e.clientY - r.top) / r.height * photoCanvas.height };
+  manual.taps.push(p); drawPhoto(manual.img, manual.taps, '#ffcf4a');
+  if (manual.taps.length < 4) return note(manual.prompts[manual.taps.length]);
+  const [l, rt, mo, ch] = manual.taps, { img } = manual; manual = null;
+  // Map the standard jawline onto the tapped chin, in texture space, then back to the photo.
+  const T = similarity(l, rt, { x: LEFT_EYE.x * TEX, y: LEFT_EYE.y * TEX }, { x: RIGHT_EYE.x * TEX, y: RIGHT_EYE.y * TEX });
+  const inv = similarity({ x: LEFT_EYE.x * TEX, y: LEFT_EYE.y * TEX }, { x: RIGHT_EYE.x * TEX, y: RIGHT_EYE.y * TEX }, l, rt);
+  const chinV = T.apply(ch).y / TEX, mouthUV = T.apply(mo);
+  const std = standardShape({ chinDrop: chinV - 0.80 });
+  const fromUV = p => inv.apply({ x: p.x * TEX, y: p.y * TEX });
+  const pts = { eyes: [l, rt], mouth: mo, chin: ch, nose: fromUV({ x: 0.5, y: 0.40 + (mouthUV.y / TEX - 0.40) * 0.58 }),
+    mouthL: fromUV({ x: 0.405, y: mouthUV.y / TEX }), mouthR: fromUV({ x: 0.595, y: mouthUV.y / TEX }), contour: std.contour.map(fromUV) };
+  finishStudio(img, pts, null, '');
+});
+
+async function finishStudio(img, pts, mask, warning) {
+  checklist(3);
+  const face = buildPhotoFace(img, pts, mask);
+  await new Promise(r => setTimeout(r, 250)); checklist(4);
+  await new Promise(r => setTimeout(r, 250)); checklist(5);
+  custom = { name: $('name').value.trim() || 'Mystery Guest', skin: face.skin, hair: face.hair, shirt: [0.95, 0.3, 0.5], shape: face.shape, texture: face.texture, hat: 'none', googly: false };
+  custom.avatar = avatarURL(custom);
+  showcase(custom);
+  note(warning); $('studio-edit').hidden = false; $('react').hidden = false;
+  $('studio-title').textContent = 'Meet your Big Head';
+  caption.textContent = 'Drag to spin. Try the buttons.';
+}
+
+const HATS = [['none', 'No hat'], ['party', 'Party hat'], ['crown', 'Crown'], ['top', 'Top hat'], ['headband', 'Sweatband']];
+$('hats').innerHTML = HATS.map(([k, l]) => `<button class="chip" data-hat="${k}" aria-pressed="${k === 'none'}">${l}</button>`).join('');
+$('hats').addEventListener('click', e => {
+  const b = e.target.closest('[data-hat]'); if (!b || !custom) return;
+  custom.hat = b.dataset.hat; [...$('hats').children].forEach(c => c.setAttribute('aria-pressed', c === b));
+  showcase(custom);
+});
+$('googly').addEventListener('click', e => { if (!custom) return; custom.googly = !custom.googly; e.target.setAttribute('aria-pressed', custom.googly); showcase(custom); });
+$('name').addEventListener('input', () => { if (custom) custom.name = $('name').value.trim() || 'Mystery Guest'; });
+$('react').addEventListener('click', e => {
+  const r = e.target.dataset.r, rig = rigs[0]; if (!r || !rig) return;
+  if (r === 'pie') throwPie(rig, new THREE.Vector3(0.8, -1.5, 7.5), 1.0, 0.5);
+  if (r === 'squish') { rig.pulse('squish', 1, 0.05, 0.35, 0.9); rig.wobbleHit(0, 1); }
+  if (r === 'bonk') { rig.pulse('skewRight', 1, 0.05, 0.35, 0.9); rig.wobbleHit(1, 0.2); burst(rig.faceWorld(), 0xffd24a, 18, 2.5, 0.2, new THREE.Vector3()); }
+  if (r === 'puff') rig.pulse('puff', 1, 0.05, 0.35, 0.9);
+  if (r === 'yell') rig.pulse('mouthOpen', 1, 0.05, 0.35, 0.9);
+  if (r === 'clean') rig.clean();
+});
+
+// ---- The Pie-Q Test -------------------------------------------------------------------------
+const QUESTIONS = [
+  ["What is Scotland's national animal?", ['Haggis', 'Unicorn', 'Loch Ness Monster'], 1],
+  ['How many hearts does an octopus have?', ['1', '3', '8'], 1],
+  ['Which of these is technically a berry?', ['Strawberry', 'Raspberry', 'Banana'], 2],
+  ["What color is a polar bear's skin?", ['White', 'Black', 'Pink'], 1],
+  ['A group of flamingos is called a…', ['Flamboyance', 'Fiesta', 'Feather duster'], 0],
+  ['Which of these animals can\'t jump?', ['Frog', 'Kangaroo', 'Elephant'], 2],
+  ['Wombat poop is shaped like…', ['Stars', 'Cubes', 'Spirals'], 1],
+  ["What's the dot over a lowercase 'i' called?", ['A tittle', 'A jot', 'A speck'], 0],
+  ['Ketchup was sold in the 1830s as…', ['Paint', 'Medicine', 'Perfume'], 1],
+  ['A baker\'s dozen is how many?', ['12', '13', '14'], 1],
+  ['Bananas are slightly…', ['Magnetic', 'Radioactive', 'Carbonated'], 1],
+  ['How many noses does a slug have?', ['None', 'One', 'Four'], 2],
+  ['What color is a giraffe\'s tongue?', ['Pink', 'Blue-black', 'Green'], 1],
+  ['Which planet spins backwards compared to most?', ['Mars', 'Venus', 'Jupiter'], 1],
+];
+const show = { players: [], pies: [0, 0], round: 0, turn: 0, total: 6, qs: [], timer: null, time: 0, gen: 0 };
+const later = (ms, f) => { const g = show.gen; setTimeout(() => { if (g === show.gen && mode === 'show') f(); }, ms); };
+
+function startShow(p1) {
+  setPanel('show');
+  const opp = HOUSE.filter(h => h !== p1);
+  const players = [p1, opp[Math.floor(Math.random() * opp.length)]];
+  Object.assign(show, { players, pies: [0, 0], round: 0, turn: 0, qs: QUESTIONS.slice().sort(() => Math.random() - 0.5), gen: show.gen + 1 });
+  placeContestants(players);
+  players.forEach((p, i) => { $('score' + i).querySelector('img').src = p.avatar; $('name' + i).textContent = p.name; });
+  updateScores(); $('results').hidden = true; $('qbox').hidden = true;
+  host(`Welcome to The Pie-Q Test! ${players[0].name} versus ${players[1].name}. Wrong answers get dessert.`);
+  later(2600, nextQ);
+}
+function host(t) { $('host').textContent = t; }
+function updateScores() {
+  for (const i of [0, 1]) { $('pies' + i).textContent = `${show.pies[i]} ${show.pies[i] === 1 ? 'pie' : 'pies'}`; $('score' + i).classList.toggle('turn', show.turn === i); }
+  $('round').textContent = `Question ${Math.min(show.round + 1, show.total)} of ${show.total}`;
+}
+function nextQ() {
+  if (show.round >= show.total) return finish();
+  const [prompt, opts, ans] = show.qs[show.round];
+  $('qbox').hidden = false; $('prompt').textContent = prompt;
+  const human = show.turn === 0;
+  $('turn').textContent = human ? 'Your turn' : `${show.players[1].name} is answering`;
+  $('opts').innerHTML = opts.map((o, i) => `<button class="opt" data-i="${i}" ${human ? '' : 'disabled'}>${o}</button>`).join('');
+  updateScores(); closeUp(show.turn);
+  host(human ? `This one's for you, ${show.players[0].name}.` : `${show.players[1].name} is thinking. It's not their strong suit.`);
+  show.time = 10; clearInterval(show.timer);
+  show.timer = setInterval(() => {
+    show.time -= 0.1; $('timer').firstElementChild.style.width = `${Math.max(0, show.time / 10) * 100}%`; $('timer').classList.toggle('low', show.time < 3);
+    if (show.time <= 0 && human) resolve(-1, ans, opts);
+  }, 100);
+  if (!human) later(1600 + Math.random() * 1600, () => { const ok = Math.random() < 0.55; resolve(ok ? ans : [0, 1, 2].filter(i => i !== ans)[Math.floor(Math.random() * 2)], ans, opts); });
+}
+$('opts').addEventListener('click', e => {
+  const b = e.target.closest('.opt'); if (!b || b.disabled) return;
+  const [, opts, ans] = show.qs[show.round]; resolve(+b.dataset.i, ans, opts);
+});
+function resolve(pick, ans, opts) {
+  clearInterval(show.timer); show.gen++;
+  [...$('opts').children].forEach((b, i) => { b.disabled = true; if (i === ans) b.classList.add('right'); else if (i === pick) b.classList.add('wrong'); });
+  const correct = pick === ans, target = correct ? 1 - show.turn : show.turn;
+  host(pick < 0 ? 'Time! The pie waits for no one.' : correct ? `Correct! The pie goes to ${show.players[target].name}.` : `Wrong. It was "${opts[ans]}". Dessert is served.`);
+  later(1300, () => { closeUp(target); pieAt(target, () => { show.pies[target]++; updateScores(); }); });
+  later(3900, () => { show.round++; show.turn = 1 - show.turn; nextQ(); });
+}
+function finish() {
+  $('qbox').hidden = true; $('results').hidden = false; $('turn').textContent = 'Final'; wide();
+  const [a, b] = show.pies;
+  if (a === b) { host("It's a tie, so everybody gets a pie."); later(700, () => { pieAt(0); pieAt(1); }); }
+  else { const w = a < b ? 0 : 1; host(`${show.players[w].name} wins with the cleanest face in show business!`); burst(rigs[w].faceWorld().add(new THREE.Vector3(0, 1.2, 0)), 0xffd24a, 160, 6, 0.16, new THREE.Vector3(0, 1, 0)); later(1100, () => pieAt(1 - w)); }
+}
+
+// ---- Wiring ------------------------------------------------------------------------------
+const onFile = e => { const f = e.target.files?.[0]; if (f) startStudio(f); e.target.value = ''; };
+$('file').addEventListener('change', onFile); $('file2').addEventListener('change', onFile);
+$('play-cast').addEventListener('click', () => startShow(HOUSE[Math.floor(Math.random() * HOUSE.length)]));
+$('to-show').addEventListener('click', () => custom && startShow(custom));
+$('rematch').addEventListener('click', () => startShow(show.players[0]));
+$('show-home').addEventListener('click', startDemo); $('studio-home').addEventListener('click', startDemo);
+loadAI().catch(() => {});   // warm up the AI in the background
+startDemo();
+
+// Local self-test hook: open with #selftest next to a test.jpg to run the photo pipeline automatically.
+if (location.hash === '#selftest') fetch('test.jpg').then(r => r.blob()).then(b => startStudio(new File([b], 'test.jpg'))).catch(() => {});
+</script>

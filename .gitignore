@@ -1,0 +1,7 @@
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcuserstate
+.DS_Store
+# Large downloaded model/runtime files (re-create with web-prototype/fetch-models.sh)
+web-prototype/mp/
