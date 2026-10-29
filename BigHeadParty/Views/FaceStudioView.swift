@@ -50,6 +50,9 @@ final class FaceStudioModel: ObservableObject {
                     self.markDone(0)
                 }
                 let face = FaceTextureBuilder.build(from: capture)
+                #if DEBUG
+                Self.dumpDebug(capture: capture, face: face)
+                #endif
                 let character = self.makeCharacter(face)
                 _ = HeadGeometryCache.output(for: character)   // sculpt off the main thread
 
@@ -78,6 +81,38 @@ final class FaceStudioModel: ObservableObject {
             }
         }
     }
+
+    #if DEBUG
+    /// CI only: next to the `-studioTestImage` photo, write what the AI measured so a failed
+    /// head can be diagnosed without a device (texture, landmark overlay, shape JSON).
+    private static func dumpDebug(capture: FaceCapture, face: BuiltFace) {
+        guard let path = UserDefaults.standard.string(forKey: "studioTestImage") else { return }
+        let dir = URL(fileURLWithPath: path).deletingLastPathComponent()
+        try? face.texture.pngData()?.write(to: dir.appendingPathComponent("debug-texture.png"))
+        let w = CGFloat(capture.image.width), h = CGFloat(capture.image.height)
+        let overlay = UIGraphicsImageRenderer(size: CGSize(width: w, height: h)).image { ctx in
+            UIImage(cgImage: capture.image).draw(at: .zero)
+            func dot(_ p: CGPoint, _ c: UIColor, _ r: CGFloat) { c.setFill(); ctx.fill(CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r)) }
+            for p in capture.overlayPoints { dot(CGPoint(x: p.x * w, y: p.y * h), .cyan, 3) }
+            // Vision coordinates are bottom-up; flip for drawing.
+            let flip = { (p: CGPoint) in CGPoint(x: p.x, y: h - p.y) }
+            capture.contour.forEach { dot(flip($0), .yellow, 5) }
+            capture.nose.forEach { dot(flip($0), .green, 5) }
+            capture.outerLips.forEach { dot(flip($0), .magenta, 5) }
+            dot(flip(capture.eyes.0), .red, 8); dot(flip(capture.eyes.1), .red, 8)
+        }
+        try? overlay.pngData()?.write(to: dir.appendingPathComponent("debug-landmarks.png"))
+        var info: [String: Any] = [
+            "imageSize": [w, h], "faceCount": capture.faceCount, "yaw": capture.yaw, "roll": capture.roll,
+            "eyes": [[capture.eyes.0.x, capture.eyes.0.y], [capture.eyes.1.x, capture.eyes.1.y]],
+            "contourImage": capture.contour.map { [$0.x, $0.y] }, "hasPersonMask": capture.personMask != nil,
+        ]
+        if let data = try? JSONEncoder().encode(face.shape), let shape = try? JSONSerialization.jsonObject(with: data) { info["shape"] = shape }
+        if let json = try? JSONSerialization.data(withJSONObject: info, options: [.prettyPrinted, .sortedKeys]) {
+            try? json.write(to: dir.appendingPathComponent("debug-shape.json"))
+        }
+    }
+    #endif
 
     private func markDone(_ i: Int) {
         guard i < steps.count else { return }

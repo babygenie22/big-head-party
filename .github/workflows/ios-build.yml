@@ -64,6 +64,7 @@ jobs:
           run 07-whack-a-head 9 -hasSeenIntro YES -demoGame whack
           run 08-bobble-boxing 9 -hasSeenIntro YES -demoGame boxing
           run 09-slap-real-heads 9 -hasSeenIntro YES -headSize real -demoGame slap
+          cp debug-* shots/ 2>/dev/null || true
           ls -la shots
           find ~/Library/Logs/DiagnosticReports -name "BigHeadParty*" -newer "$APP" -exec cp {} shots/ \; 2>/dev/null || true
           if ls shots | grep -qiE "\.ips$|\.crash$"; then echo "::error::Crash report found"; else echo "No crash reports"; fi
