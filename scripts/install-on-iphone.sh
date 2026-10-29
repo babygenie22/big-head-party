@@ -43,7 +43,7 @@ except Exception: devices = []
 for d in devices:
     hw, props = d.get("hardwareProperties", {}), d.get("connectionProperties", {})
     if hw.get("platform") == "iOS" and props.get("tunnelState") != "unavailable":
-        print(d["identifier"]); break
+        print(hw.get("udid") or d["identifier"]); break   # the UDID works for both xcodebuild and devicectl
 PY
 )
 rm -f "$JSON"
