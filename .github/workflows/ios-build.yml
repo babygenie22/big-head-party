@@ -1,0 +1,54 @@
+name: iOS build
+
+on:
+  push:
+    branches: [main]
+    paths: ["BigHeadParty/**", "BigHeadParty.xcodeproj/**", ".github/workflows/ios-build.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode
+        run: xcodebuild -version && xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Build for the iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild -project BigHeadParty.xcodeproj -scheme BigHeadParty \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug -derivedDataPath build/sim \
+            CODE_SIGNING_ALLOWED=NO build 2>&1 | tee sim.log | grep -E "error:|warning: .*(deprecated|will never be executed)|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" sim.log
+
+      - name: Build for iPhone (unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild -project BigHeadParty.xcodeproj -scheme BigHeadParty \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -configuration Release -derivedDataPath build/device \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build 2>&1 | tee device.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" device.log
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/device/Build/Products/Release-iphoneos/BigHeadParty.app Payload/
+          zip -qr BigHeadParty-unsigned.ipa Payload
+
+      - name: Upload IPA (re-sign with Sideloadly/AltStore to install)
+        uses: actions/upload-artifact@v4
+        with:
+          name: BigHeadParty-unsigned-ipa
+          path: BigHeadParty-unsigned.ipa
+
+      - name: Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: "*.log"
