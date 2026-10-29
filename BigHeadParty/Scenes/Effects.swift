@@ -13,33 +13,48 @@ enum Effects {
     }()
 
     /// Tileable skin-pore normal map (generated once).
-    static let skinNormalMap: UIImage = {
+    static let skinNormalMap: UIImage = makeSkinNormalMap()
+
+    private static func toByte(_ v: Float) -> UInt8 {
+        let scaled: Float = (v * 0.5 + 0.5) * 255
+        return UInt8(max(0, min(255, scaled)))
+    }
+
+    private static func makeSkinNormalMap() -> UIImage {
         let n = 256
+        let count = n * n
         var rng = SeededRandom(seed: 99)
-        var h = (0..<(n * n)).map { _ in Float(rng.next()) }
+        var h = [Float](repeating: 0, count: count)
+        for i in 0..<count { h[i] = Float(rng.next()) }
         for _ in 0..<2 {
             var next = h
-            for i in 0..<(n * n) { next[i] = (h[i] * 2 + h[(i + 1) % (n * n)] + h[(i + n) % (n * n)]) / 4 }
+            for i in 0..<count {
+                let sum: Float = h[i] * 2 + h[(i + 1) % count] + h[(i + n) % count]
+                next[i] = sum / 4
+            }
             h = next
         }
-        var px = [UInt8](repeating: 255, count: n * n * 4)
+        var px = [UInt8](repeating: 255, count: count * 4)
         for y in 0..<n {
             for x in 0..<n {
-                let dx = h[y * n + (x + 1) % n] - h[y * n + (x + n - 1) % n]
-                let dy = h[((y + 1) % n) * n + x] - h[((y + n - 1) % n) * n + x]
-                let l = (dx * dx * 16 + dy * dy * 16 + 1).squareRoot()
+                let right: Float = h[y * n + (x + 1) % n], left: Float = h[y * n + (x + n - 1) % n]
+                let down: Float = h[((y + 1) % n) * n + x], up: Float = h[((y + n - 1) % n) * n + x]
+                let dx: Float = (right - left) * 4
+                let dy: Float = (down - up) * 4
+                let l: Float = (dx * dx + dy * dy + 1).squareRoot()
                 let i = (y * n + x) * 4
-                px[i] = UInt8(max(0, min(255, (-dx * 4 / l * 0.5 + 0.5) * 255)))
-                px[i + 1] = UInt8(max(0, min(255, (-dy * 4 / l * 0.5 + 0.5) * 255)))
-                px[i + 2] = UInt8(max(0, min(255, (1 / l * 0.5 + 0.5) * 255)))
+                px[i] = toByte(-dx / l)
+                px[i + 1] = toByte(-dy / l)
+                px[i + 2] = toByte(1 / l)
             }
         }
         let provider = CGDataProvider(data: Data(px) as CFData)!
+        let info = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue)
         let cg = CGImage(width: n, height: n, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: n * 4,
-                         space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                         space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: info,
                          provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)!
         return UIImage(cgImage: cg)
-    }()
+    }
 
     /// Vertical carnival stripes.
     static func stripes(_ a: UIColor, _ b: UIColor, count: Int = 16) -> UIImage {
