@@ -59,6 +59,7 @@ final class FaceStudioModel: ObservableObject {
                 var warnings: [String] = []
                 if abs(capture.yaw) > 0.35 { warnings.append("Their face is turned — a straight-on photo looks best.") }
                 if abs(capture.roll) > 0.5 { warnings.append("Photo is tilted a lot. We straightened it, but results may vary.") }
+                if capture.estimated { warnings.append("We couldn't map every feature, so the face shape is estimated. A sharper, front-facing photo works best.") }
                 if capture.faceCount > 1 { warnings.append("Found \(capture.faceCount) faces — we used the biggest one.") }
                 if capture.personMask == nil { warnings.append("Couldn't separate the background, so edges may look busy.") }
 

@@ -20,6 +20,8 @@ struct FaceCapture {
     let yaw: Double
     let roll: Double
     let faceCount: Int
+    /// True when the features were estimated from the face box instead of measured.
+    var estimated = false
 }
 
 enum FaceAnalyzerError: LocalizedError {
@@ -37,52 +39,46 @@ enum FaceAnalyzerError: LocalizedError {
 }
 
 enum FaceAnalyzer {
-    /// Runs Apple's Vision face-landmark model (76 points) plus person segmentation.
-    /// Everything stays on device.
+    private struct Features {
+        let eyes: (CGPoint, CGPoint)
+        let nose: [CGPoint]
+        let lips: [CGPoint]
+        let contour: [CGPoint]
+        let overlay: [CGPoint]
+    }
+
+    /// Runs Apple's Vision face-landmark model (76 points) plus person segmentation, on device.
+    /// If the landmarks come back unusable, tries the previous model revision, then falls back to
+    /// typical human proportions inside the detected face box (`estimated` is then true).
     static func analyze(_ uiImage: UIImage) throws -> FaceCapture {
         guard let cg = uiImage.normalizedCGImage(maxDimension: 1600) else { throw FaceAnalyzerError.unreadableImage }
         let size = CGSize(width: cg.width, height: cg.height)
-
-        let landmarksRequest = VNDetectFaceLandmarksRequest()
-        landmarksRequest.revision = VNDetectFaceLandmarksRequestRevision3
-        #if targetEnvironment(simulator)
-        // The Simulator's default Vision path returns collapsed landmarks; the CPU path is correct.
-        landmarksRequest.usesCPUOnly = true
-        #endif
         let handler = VNImageRequestHandler(cgImage: cg, orientation: .up, options: [:])
-        try handler.perform([landmarksRequest])
 
-        guard let faces = landmarksRequest.results, !faces.isEmpty else { throw FaceAnalyzerError.noFace }
-        // The biggest face wins (group photos: the person closest to the camera).
-        let face = faces.max { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height }!
-        guard let lm = face.landmarks else { throw FaceAnalyzerError.missingLandmarks }
+        var bestFace: VNFaceObservation?
+        var faceCount = 0
+        var features: Features?
+        for revision in [VNDetectFaceLandmarksRequestRevision3, VNDetectFaceLandmarksRequestRevision2] {
+            let request = VNDetectFaceLandmarksRequest()
+            request.revision = revision
+            #if targetEnvironment(simulator)
+            request.usesCPUOnly = true
+            #endif
+            guard (try? handler.perform([request])) != nil, let faces = request.results, !faces.isEmpty else { continue }
+            // The biggest face wins (group photos: the person closest to the camera).
+            let face = faces.max { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height }!
+            if bestFace == nil { bestFace = face; faceCount = faces.count }
+            if let f = landmarkFeatures(face, size: size) {
+                bestFace = face
+                faceCount = faces.count
+                features = f
+                break
+            }
+        }
+        guard let face = bestFace else { throw FaceAnalyzerError.noFace }
+        let estimated = features == nil
+        let f = features ?? estimatedFeatures(face, size: size)
 
-        func points(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint] {
-            region?.pointsInImage(imageSize: size) ?? []
-        }
-        func centroid(_ pts: [CGPoint]) -> CGPoint? {
-            guard !pts.isEmpty else { return nil }
-            let s = pts.reduce(CGPoint.zero) { CGPoint(x: $0.x + $1.x, y: $0.y + $1.y) }
-            return CGPoint(x: s.x / CGFloat(pts.count), y: s.y / CGFloat(pts.count))
-        }
-
-        let pupilA = centroid(points(lm.leftPupil)) ?? centroid(points(lm.leftEye))
-        let pupilB = centroid(points(lm.rightPupil)) ?? centroid(points(lm.rightEye))
-        let nose = points(lm.nose)
-        let lips = points(lm.outerLips)
-        let contour = points(lm.faceContour)
-        guard let ea = pupilA, let eb = pupilB, !nose.isEmpty, !lips.isEmpty, contour.count >= 5 else {
-            throw FaceAnalyzerError.missingLandmarks
-        }
-        let eyes = ea.x < eb.x ? (ea, eb) : (eb, ea)
-        // Real eyes sit roughly a third of the face width apart. Anything far smaller means the
-        // landmarks collapsed; better to ask for another photo than to sculpt a broken head.
-        let faceWidth = face.boundingBox.width * size.width
-        guard hypot(eyes.1.x - eyes.0.x, eyes.1.y - eyes.0.y) > faceWidth * 0.18 else {
-            throw FaceAnalyzerError.missingLandmarks
-        }
-
-        let overlay = points(lm.allPoints).map { CGPoint(x: $0.x / size.width, y: 1 - $0.y / size.height) }
         let bb = face.boundingBox
         let overlayBox = CGRect(x: bb.minX, y: 1 - bb.maxY, width: bb.width, height: bb.height)
 
@@ -91,21 +87,61 @@ enum FaceAnalyzer {
         let segmentation = VNGeneratePersonSegmentationRequest()
         segmentation.qualityLevel = .accurate
         segmentation.outputPixelFormat = kCVPixelFormatType_OneComponent8
-        if (try? VNImageRequestHandler(cgImage: cg, orientation: .up, options: [:]).perform([segmentation])) != nil {
+        if (try? handler.perform([segmentation])) != nil {
             mask = segmentation.results?.first?.pixelBuffer
         }
 
         return FaceCapture(image: cg,
-                           eyes: eyes,
-                           nose: nose,
-                           outerLips: lips,
-                           contour: contour,
-                           overlayPoints: overlay,
+                           eyes: f.eyes,
+                           nose: f.nose,
+                           outerLips: f.lips,
+                           contour: f.contour,
+                           overlayPoints: f.overlay,
                            overlayBox: overlayBox,
                            personMask: mask,
                            yaw: face.yaw?.doubleValue ?? 0,
                            roll: face.roll?.doubleValue ?? 0,
-                           faceCount: faces.count)
+                           faceCount: faceCount,
+                           estimated: estimated)
+    }
+
+    /// Landmarks from Vision, or nil if they're missing or collapsed.
+    private static func landmarkFeatures(_ face: VNFaceObservation, size: CGSize) -> Features? {
+        guard let lm = face.landmarks else { return nil }
+        func points(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint] { region?.pointsInImage(imageSize: size) ?? [] }
+        func centroid(_ pts: [CGPoint]) -> CGPoint? {
+            guard !pts.isEmpty else { return nil }
+            let s = pts.reduce(CGPoint.zero) { CGPoint(x: $0.x + $1.x, y: $0.y + $1.y) }
+            return CGPoint(x: s.x / CGFloat(pts.count), y: s.y / CGFloat(pts.count))
+        }
+        let pupilA = centroid(points(lm.leftPupil)) ?? centroid(points(lm.leftEye))
+        let pupilB = centroid(points(lm.rightPupil)) ?? centroid(points(lm.rightEye))
+        let nose = points(lm.nose), lips = points(lm.outerLips), contour = points(lm.faceContour)
+        guard let ea = pupilA, let eb = pupilB, !nose.isEmpty, !lips.isEmpty, contour.count >= 5 else { return nil }
+        let eyes = ea.x < eb.x ? (ea, eb) : (eb, ea)
+        // Real eyes sit roughly a third of the face width apart; far less means the points collapsed.
+        let faceWidth = face.boundingBox.width * size.width
+        guard hypot(eyes.1.x - eyes.0.x, eyes.1.y - eyes.0.y) > faceWidth * 0.18 else { return nil }
+        let overlay = points(lm.allPoints).map { CGPoint(x: $0.x / size.width, y: 1 - $0.y / size.height) }
+        return Features(eyes: eyes, nose: nose, lips: lips, contour: contour, overlay: overlay)
+    }
+
+    /// Typical proportions inside Vision's face box (box-relative, origin bottom-left).
+    private static func estimatedFeatures(_ face: VNFaceObservation, size: CGSize) -> Features {
+        let bb = face.boundingBox
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(x: (bb.minX + x * bb.width) * size.width, y: (bb.minY + y * bb.height) * size.height)
+        }
+        let eyes = (p(0.3, 0.62), p(0.7, 0.62))
+        let nose = [p(0.42, 0.36), p(0.5, 0.33), p(0.58, 0.36)]
+        let lips = [p(0.34, 0.2), p(0.5, 0.25), p(0.66, 0.2), p(0.5, 0.14)]
+        let contour = (0...16).map { i -> CGPoint in
+            let t = CGFloat(i) / 16 * .pi
+            return p(0.5 - 0.48 * cos(t) * (1 - 0.15 * sin(t)), 0.6 - 0.6 * pow(sin(t), 0.8))
+        }
+        let all = [eyes.0, eyes.1] + nose + lips + contour
+        let overlay = all.map { CGPoint(x: $0.x / size.width, y: 1 - $0.y / size.height) }
+        return Features(eyes: eyes, nose: nose, lips: lips, contour: contour, overlay: overlay)
     }
 }
 
