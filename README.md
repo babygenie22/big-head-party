@@ -59,6 +59,8 @@ The key idea: the photo is never stretched to fit a generic head. The **head is 
 | `Views/*` | Intro/demo, Home, Face Studio, Cast, Match setup, game screens |
 
 ## Play it on your iPhone
+- **One command on your Mac:** plug in your iPhone (tap Trust, turn on Developer Mode), make sure Xcode is signed in with your Apple ID, then run
+  `cd ~/big-head-party && git pull && ./scripts/install-on-iphone.sh`. It builds, signs, installs and launches the game.
 - **TestFlight (recommended, no Mac needed):** follow [`docs/TESTFLIGHT.md`](docs/TESTFLIGHT.md). GitHub Actions signs the app with your Apple Developer account and uploads it. You install it from the TestFlight app and can invite family.
 - **Every push to `main`** is compiled on a macOS runner (`.github/workflows/ios-build.yml`). The run launches the app in an iPhone Simulator, screenshots every screen and produces an unsigned `.ipa` you can sideload with Sideloadly or AltStore.
 
