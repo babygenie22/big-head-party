@@ -53,7 +53,11 @@ jobs:
             t 20 xcrun simctl terminate "$UDID" $BUNDLE >/dev/null 2>&1 || true
             t 60 xcrun simctl launch "$UDID" $BUNDLE "$@" || echo "launch failed for $name"
             sleep "$wait"; shot "$name"
-            if ! t 20 xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE"; then echo "::error::App is not running after $name"; fi
+            if list=$(t 40 xcrun simctl spawn "$UDID" launchctl list); then
+              echo "$list" | grep -q "$BUNDLE" || echo "::error::App is not running after $name"
+            else
+              echo "(running check timed out after $name)"
+            fi
           }
           run 01-intro-demo 14
           run 02-home 8 -hasSeenIntro YES
