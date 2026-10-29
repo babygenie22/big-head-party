@@ -136,7 +136,7 @@ final class HeadRig {
     // MARK: - Cream
 
     /// Raycasts onto the real mesh so the cream hugs this person's actual face shape.
-    func splatCream(amount: Int = 16) {
+    func splatCream(amount: Int = 22) {
         let creamMaterial = Effects.creamMaterial
         var placed = 0
         for _ in 0..<(amount * 3) where placed < amount {
@@ -149,9 +149,9 @@ final class HeadRig {
             let holder = SCNNode()
             holder.position = p
             holder.look(at: SCNVector3(p.x + n.x, p.y + n.y, p.z + n.z), up: SCNVector3(0, 1, 0), localFront: SCNVector3(0, 0, 1))
-            let blob = SCNNode(geometry: SCNSphere(radius: CGFloat.random(in: 0.12...0.24)))
+            let blob = SCNNode(geometry: SCNSphere(radius: CGFloat.random(in: 0.1...0.2)))
             blob.geometry?.materials = [creamMaterial]
-            blob.scale = SCNVector3(1, 1, 0.42)
+            blob.scale = SCNVector3(1, 1, 0.32)
             holder.addChildNode(blob)
             holder.scale = SCNVector3(0.01, 0.01, 0.01)
             holder.runAction(.scale(to: 1, duration: 0.08))

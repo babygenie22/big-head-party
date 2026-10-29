@@ -62,7 +62,7 @@ struct HomeView: View {
     @State private var showCast = false
     @State private var setupGame: GameKind?
     @State private var debugGame: GameConfig?
-    @State private var debugStudioImage: UIImage?
+    @State private var debugStudio: IdentifiableImage?
     @AppStorage(HeadSize.storageKey) private var headSize: HeadSize = .big
 
     var body: some View {
@@ -94,7 +94,8 @@ struct HomeView: View {
             startDebugScenarioIfRequested()
         }
         .onChange(of: store.characters.map(\.id)) { _, _ in hero.show(store.star) }
-        .fullScreenCover(isPresented: $showStudio) { FaceStudioView(testImage: debugStudioImage) }
+        .fullScreenCover(isPresented: $showStudio) { FaceStudioView() }
+        .fullScreenCover(item: $debugStudio) { FaceStudioView(testImage: $0.image) }
         .fullScreenCover(item: $debugGame) { GameHost(config: $0) }
         .sheet(isPresented: $showCast) { CastView() }
         .sheet(item: $setupGame) { kind in MatchSetupView(kind: kind) }
@@ -107,8 +108,7 @@ struct HomeView: View {
         #if DEBUG
         let defaults = UserDefaults.standard
         if let path = defaults.string(forKey: "studioTestImage"), let image = UIImage(contentsOfFile: path) {
-            debugStudioImage = image
-            showStudio = true
+            debugStudio = IdentifiableImage(image: image)
         } else if let raw = defaults.string(forKey: "demoGame"), let kind = GameKind(rawValue: raw), store.defaults.count >= 2 {
             let cast = store.defaults
             debugGame = GameConfig(kind: kind, players: kind.isSolo ? [cast[0]] : [cast[0], cast[1]], vsCPU: true)

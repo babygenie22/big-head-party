@@ -33,7 +33,7 @@ enum PieThrower {
         rig.hold(.mouthOpen, weight: 0, duration: 0.05)
         rig.pulse(.squish, peak: 1.0, attack: 0.04, hold: 0.2, release: 0.8)
         rig.wobbleHit(sideways: Float.random(in: -0.4...0.4), back: 1, strength: 1)
-        rig.splatCream(amount: 14)
+        rig.splatCream()
         Effects.burst(in: scene, at: point, color: UIColor(red: 1, green: 0.98, blue: 0.92, alpha: 1), count: 120,
                       velocity: 5, size: 0.09, direction: SCNVector3(0, 0.4, 1), spread: 85)
         if let camera { Effects.shake(camera, intensity: 0.1) }
