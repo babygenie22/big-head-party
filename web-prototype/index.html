@@ -83,6 +83,17 @@ input[type=text] { font: 700 1rem var(--font-body); padding: 11px 14px; border-r
 .opt:disabled { cursor: default; }
 .opt.right { background: var(--teal); color: var(--stage); }
 .opt.wrong { background: var(--cherry); }
+.games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.game { text-align: left; display: grid; gap: 2px; padding: 12px 14px; border-radius: 16px; border: 0; cursor: pointer; background: var(--velvet-hi); color: var(--ink); font: 600 .84rem var(--font-body); }
+.game b { font-family: var(--font-display); font-weight: 400; font-size: .98rem; color: var(--bulb); }
+.game span { color: var(--ink-dim); }
+.game:active { transform: translateY(2px); }
+.game:focus-visible, #size-toggle:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+#size-toggle { background: transparent; cursor: pointer; font-family: var(--font-body); }
+#size-toggle[aria-pressed=true] { color: var(--bulb); border-color: var(--bulb); }
+.meter { position: relative; height: 34px; border-radius: 12px; background: var(--velvet-hi); overflow: hidden; }
+.meter i { position: absolute; left: 42.5%; width: 15%; top: 0; bottom: 0; background: var(--bulb); opacity: .85; }
+.meter b { position: absolute; top: -4px; bottom: -4px; width: 6px; margin-left: -3px; background: var(--cream); border-radius: 3px; box-shadow: 0 0 0 2px var(--stage); left: 50%; }
 .meta { display: flex; justify-content: space-between; font-weight: 800; color: var(--ink-dim); font-size: .85rem; }
 @media (prefers-reduced-motion: reduce) { .btn, .timer i { transition: none; } }
 </style>
@@ -90,7 +101,7 @@ input[type=text] { font: 700 1rem var(--font-body); padding: 11px 14px; border-r
 <div class="app">
   <header class="top">
     <span class="logo">BIG HEAD PARTY</span>
-    <span class="tag">Prototype</span>
+    <button class="tag" id="size-toggle" aria-pressed="false">Big heads</button>
   </header>
 
   <div class="viewport" id="viewport">
@@ -112,7 +123,8 @@ input[type=text] { font: 700 1rem var(--font-body); padding: 11px 14px; border-r
     <p>Upload a photo of a friend or family member. AI maps their face, sculpts a 3D head to match, and drops them onto a game show where wrong answers get a cream pie to the face.</p>
     <label class="btn hot" for="file">Make a Big Head from a photo</label>
     <input type="file" id="file" accept="image/*">
-    <button class="btn ghost" id="play-cast">Play The Pie-Q Test with the house cast</button>
+    <h2>Or play with the house cast</h2>
+    <div class="games" id="games-demo"></div>
     <ol class="steps">
       <li><div><b>Pick a photo</b><span>Front-facing, good light, eyes open.</span></div></li>
       <li><div><b>AI maps the face</b><span>478 landmarks and a background cutout, computed right here in your browser.</span></div></li>
@@ -136,13 +148,25 @@ input[type=text] { font: 700 1rem var(--font-body); padding: 11px 14px; border-r
           <div class="chips" id="hats"></div>
         </div>
         <div class="chips"><button class="chip" id="googly" aria-pressed="false">Googly eyes</button></div>
-        <button class="btn hot" id="to-show">Put them on The Pie-Q Test</button>
+        <h2 style="font-size:.9rem">Pick a game for them</h2>
+        <div class="games" id="games-studio"></div>
         <div class="row">
           <label class="btn ghost" for="file2">Try another photo</label>
           <button class="btn ghost" id="studio-home">Back to start</button>
         </div>
         <input type="file" id="file2" accept="image/*">
       </div>
+    </div>
+  </section>
+
+  <!-- Slap Champs / Dunk Tank / Whack-a-Head -->
+  <section class="panel" id="panel-play" hidden>
+    <div class="meta"><span id="play-title"></span><span id="play-stat"></span></div>
+    <div class="host" id="play-host"></div>
+    <div id="play-controls"></div>
+    <div class="row" id="play-end" hidden>
+      <button class="btn hot" id="play-again">Play again</button>
+      <button class="btn ghost" id="play-home">Back to start</button>
     </div>
   </section>
 
@@ -228,7 +252,7 @@ function relief(u, v, s) {
   return z;
 }
 
-function buildHead(rawShape) {
+function buildHead(rawShape, depth = null) {
   const shape = sanitize(rawShape);
   const eyeV = (shape.le.y + shape.re.y) / 2, chinV = shape.chin.y, midU = (shape.le.x + shape.re.x) / 2;
   const yEye = modelY(eyeV), yChin = modelY(chinV);
@@ -265,6 +289,57 @@ function buildHead(rawShape) {
     rings.push({ y: yEye + (yChin - yEye) * s, w, cz: lerp(-0.05, 0.45, e), front: lerp(1, 0.32, e) * narrow, back: lerp(1.15, 0.30, Math.pow(s, 1.2)) * narrow });
   }
 
+  // Surface depth before any facial relief, used to turn landmark depth into relief.
+  const baseZ = (u, v) => {
+    const y = modelY(v), x = modelX(u);
+    let k = 1; while (k < rings.length - 1 && rings[k].y > y) k++;
+    const a = rings[k - 1], b = rings[k], t = clamp((a.y - y) / Math.max(a.y - b.y, 1e-5), 0, 1);
+    const w = lerp(a.w, b.w, t), q = clamp(x / Math.max(w, 1e-3), -1, 1);
+    return lerp(a.cz, b.cz, t) + lerp(a.front, b.front, t) * Math.sqrt(1 - q * q);
+  };
+  // Real per-person depth: MediaPipe gives every landmark a z. Fit that depth to the head with
+  // least squares (scale + offset), keep only what the template lacks (nose, sockets, lips, cheeks),
+  // and spread it over a smoothed grid so sparse areas don't ripple.
+  let grid = null;
+  const G = 96, U0 = 0.12, U1 = 0.88, V0 = 0.05, V1 = 0.92;
+  if (depth && depth.length) {
+    const b = depth.map(p => baseZ(p.u, p.v)), zs = depth.map(p => p.z);
+    const mz = zs.reduce((a, x) => a + x, 0) / zs.length, mb = b.reduce((a, x) => a + x, 0) / b.length;
+    let cov = 0, vz = 0; zs.forEach((z, i) => { cov += (z - mz) * (b[i] - mb); vz += (z - mz) ** 2; });
+    const a = clamp(cov / Math.max(vz, 1e-6), 0.45, 1.1), c = mb - a * mz;
+    const pts = depth.map((p, i) => ({ u: p.u, v: p.v, r: clamp(a * p.z + c - b[i], -0.22, 0.36) }));
+    const R = new Float32Array(G * G), W = new Float32Array(G * G), SIG2 = 2 * 0.03 * 0.03;
+    for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+      const u = U0 + (U1 - U0) * i / (G - 1), v = V0 + (V1 - V0) * j / (G - 1);
+      let ws = 0, acc = 0;
+      for (const p of pts) { const du = u - p.u, dv = v - p.v, d2 = du * du + dv * dv; if (d2 > 0.012) continue; const w = Math.exp(-d2 / SIG2); ws += w; acc += w * p.r; }
+      R[j * G + i] = ws > 1e-6 ? acc / ws : 0; W[j * G + i] = clamp(ws / 2, 0, 1);
+    }
+    for (let pass = 0; pass < 3; pass++) {           // blur (r·w) and w, then divide
+      const RW = R.map((r, k) => r * W[k]), nR = new Float32Array(G * G), nW = new Float32Array(G * G);
+      for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
+        let sr = 0, sw = 0, cnt = 0;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+          const jj = clamp(j + dj, 0, G - 1), ii = clamp(i + di, 0, G - 1); sr += RW[jj * G + ii]; sw += W[jj * G + ii]; cnt++;
+        }
+        nW[j * G + i] = sw / cnt; nR[j * G + i] = sw > 1e-6 ? sr / sw : 0;
+      }
+      R.set(nR); W.set(nW);
+    }
+    grid = { R, W };
+  }
+  const sampleGrid = (A, u, v) => {
+    const x = clamp((u - U0) / (U1 - U0), 0, 1) * (G - 1), y = clamp((v - V0) / (V1 - V0), 0, 1) * (G - 1);
+    const i = Math.min(Math.floor(x), G - 2), j = Math.min(Math.floor(y), G - 2), fx = x - i, fy = y - j;
+    return lerp(lerp(A[j * G + i], A[j * G + i + 1], fx), lerp(A[(j + 1) * G + i], A[(j + 1) * G + i + 1], fx), fy);
+  };
+  const faceRelief = (u, v) => {
+    const par = relief(u, v, shape);
+    if (!grid || u < U0 || u > U1 || v < V0 || v > V1) return par;
+    const w = sampleGrid(grid.W, u, v);
+    return w * sampleGrid(grid.R, u, v) + (1 - w) * par;
+  };
+
   const cols = SEG + 1, n = rings.length * cols;
   const pos = new Float32Array(n * 3), uv = new Float32Array(n * 2), fwA = new Float32Array(n), czA = new Float32Array(n);
   let i = 0;
@@ -274,7 +349,7 @@ function buildHead(rawShape) {
     let z = r.cz + (ca >= 0 ? r.front : r.back) * ca;
     const uF = 0.5 + x / (2 * S), v = 0.5 - (y - YC) / (2 * S);
     const fw = Math.pow(Math.max(0, ca), 1.5);
-    if (fw > 0) z += relief(uF, v, shape) * fw;
+    if (fw > 0) z += faceRelief(uF, v) * fw;
     let u = uF;
     if (ca < 0) { const side = (sa > 0 || (sa === 0 && a > 0)) ? 1 : -1, edge = r.w / (2 * S); u = 0.5 + side * (edge + (0.49 - edge) * (-ca)); }
     pos.set([x, y, z], i * 3);
@@ -331,7 +406,7 @@ function buildHead(rawShape) {
   geo.morphAttributes.position = mPos;
   geo.morphAttributes.normal = mNrm;
   geo.computeBoundingSphere();
-  return { geo, eyeY: yEye, chinY: yChin, foreheadY: yEye + 0.45 };
+  return { geo, eyeY: yEye, chinY: yChin, foreheadY: yEye + 0.45, templeW };
 }
 
 /* =====================================================================================
@@ -341,6 +416,19 @@ const canvas2d = (w, h = w) => { const c = document.createElement('canvas'); c.w
 const rgb = a => `rgb(${a.map(x => Math.round(x * 255)).join(',')})`;
 const rgba = (a, al) => `rgba(${a.map(x => Math.round(x * 255)).join(',')},${al})`;
 const darker = (a, f) => a.map(x => x * f);
+
+/** Fine hair strands combed down from the crown, clipped to a hair region. */
+function hairStrands(g, color, region, count = 2600, rnd = Math.random) {
+  g.save(); g.clip(region); g.lineCap = 'round';
+  for (let k = 0; k < count; k++) {
+    const u = rnd(), v = rnd() * 0.66, dx = u - 0.5, dy = v + 0.2, len = Math.hypot(dx, dy) || 1;
+    const L = (0.015 + rnd() * 0.045) * TEX, f = 0.6 + rnd() * 0.8, fade = 1 - smoothStep(0.5, 0.64, v);
+    g.strokeStyle = rgba(color.map(c => clamp(c * f, 0, 1)), 0.32 * fade);
+    g.lineWidth = 1 + rnd() * 2.2;
+    g.beginPath(); g.moveTo(u * TEX, v * TEX); g.lineTo(u * TEX + dx / len * L + (rnd() - 0.5) * 6, v * TEX + dy / len * L); g.stroke();
+  }
+  g.restore();
+}
 
 function paintFace(spec) {
   const c = canvas2d(TEX), g = c.getContext('2d'), sh = spec.shape;
@@ -360,11 +448,14 @@ function paintFace(spec) {
   if (spec.hair2D === 'full' || spec.hair2D === 'buzz') {
     g.fillStyle = spec.hair2D === 'buzz' ? rgba(spec.hair, 0.75) : rgb(spec.hair);
     const hl = eyeV - (spec.hair2D === 'buzz' ? 0.17 : 0.19);
-    g.beginPath(); g.moveTo(...P(0, 0)); g.lineTo(...P(1, 0)); g.lineTo(...P(1, 0.64)); g.lineTo(...P(0.8, 0.64)); g.lineTo(...P(0.79, eyeV - 0.02));
-    g.quadraticCurveTo(...P(0.77, hl - 0.01), ...P(0.5, hl)); g.quadraticCurveTo(...P(0.23, hl - 0.01), ...P(0.21, eyeV - 0.02));
-    g.lineTo(...P(0.2, 0.64)); g.lineTo(...P(0, 0.64)); g.closePath(); g.fill();
+    const hp = new Path2D(); hp.moveTo(...P(0, 0)); hp.lineTo(...P(1, 0)); hp.lineTo(...P(1, 0.64)); hp.lineTo(...P(0.8, 0.64)); hp.lineTo(...P(0.79, eyeV - 0.02));
+    hp.quadraticCurveTo(...P(0.77, hl - 0.01), ...P(0.5, hl)); hp.quadraticCurveTo(...P(0.23, hl - 0.01), ...P(0.21, eyeV - 0.02));
+    hp.lineTo(...P(0.2, 0.64)); hp.lineTo(...P(0, 0.64)); hp.closePath(); g.fill(hp);
+    hairStrands(g, spec.hair, hp, spec.hair2D === 'buzz' ? 1200 : 3000, rnd);
   } else if (spec.hair2D === 'bald') {
     g.fillStyle = rgb(spec.hair); g.fillRect(0, 0.30 * TEX, 0.22 * TEX, 0.34 * TEX); g.fillRect(0.78 * TEX, 0.30 * TEX, 0.22 * TEX, 0.34 * TEX);
+    const sides = new Path2D(); sides.rect(0, 0.30 * TEX, 0.22 * TEX, 0.34 * TEX); sides.rect(0.78 * TEX, 0.30 * TEX, 0.22 * TEX, 0.34 * TEX);
+    hairStrands(g, spec.hair, sides, 900, rnd);
     radial(0.44, 0.10, 0.12, 'rgba(255,255,255,.35)', 'rgba(255,255,255,0)');
   } else if (spec.hair2D === 'curl') {
     g.strokeStyle = rgb(spec.hair); g.lineWidth = 9; g.lineCap = 'round'; g.beginPath(); g.moveTo(...P(0.5, 0.13));
@@ -424,6 +515,7 @@ function avatarURL(ch) {
 HOUSE.forEach(h => h.avatar = avatarURL(h));
 
 // --- Photo → face texture (mirrors FaceTextureBuilder.swift) ---------------------------
+const FACE_OVAL = new Set([10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]);
 const JAWLINE = [454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234];
 
 function similarity(a1, a2, b1, b2) {
@@ -495,8 +587,13 @@ function buildPhotoFace(img, pts, personMask) {
   hg.fillRect(0, 0, TEX, 0.16 * TEX); hg.fillRect(0, 0, 0.17 * TEX, 0.62 * TEX); hg.fillRect(0.83 * TEX, 0, 0.17 * TEX, 0.62 * TEX);
   og.fillStyle = rgb(skin); og.fillRect(0, 0, TEX, TEX);
   og.filter = 'blur(28px)'; og.drawImage(hard, 0, 0); og.filter = 'none';
+  const hairRegion = new Path2D(); hairRegion.rect(0, 0, TEX, 0.17 * TEX); hairRegion.rect(0, 0, 0.18 * TEX, 0.62 * TEX); hairRegion.rect(0.82 * TEX, 0, 0.18 * TEX, 0.62 * TEX);
+  hairStrands(og, hair, hairRegion, 3000);
   og.drawImage(photo, 0, 0);
-  return { texture: out, shape, skin, hair };
+  // Landmark depth, in head-model units (toward the viewer = +z).
+  const s3 = Math.hypot(T.a, T.b);
+  const depth = pts.lm3d ? pts.lm3d.slice(0, 468).map((p, i) => { const q = uv(p); return { u: q.x, v: q.y, z: -p.z * s3 * 2 * S / TEX, oval: FACE_OVAL.has(i) }; }) : null;
+  return { texture: out, shape, skin, hair, depth };
 }
 
 /* =====================================================================================
@@ -563,7 +660,11 @@ scene.environmentIntensity = 0.35;
 renderer.toneMappingExposure = 0.92;
 const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
 scene.add(new THREE.HemisphereLight(0xfff1e6, 0x2a1438, 0.9));
-const key = new THREE.DirectionalLight(0xfff4e8, 2.0); key.position.set(3, 5, 6); scene.add(key);
+const key = new THREE.DirectionalLight(0xfff4e8, 2.0); key.position.set(3, 7, 6); scene.add(key);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+key.castShadow = true; key.shadow.mapSize.set(1024, 1024); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.03;
+Object.assign(key.shadow.camera, { left: -6, right: 6, top: 7, bottom: -3, near: 1, far: 25 });
+const shadowize = (obj, receive = false) => obj.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = receive; } });
 const rim = new THREE.PointLight(0xff5fa2, 30, 20); rim.position.set(3, 5, -4); scene.add(rim);
 const fill = new THREE.PointLight(0x8fb4ff, 14, 20); fill.position.set(-5, 3, 5); scene.add(fill);
 
@@ -573,7 +674,7 @@ const mesh = (geo, m, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(geo, m)
 // Game-show set
 const stageSet = new THREE.Group(); scene.add(stageSet);
 {
-  const floor = mesh(new THREE.CircleGeometry(12, 48), mat(0x2a1238, 0.35)); floor.rotation.x = -Math.PI / 2; stageSet.add(floor);
+  const floor = mesh(new THREE.CircleGeometry(12, 48), mat(0x2a1238, 0.35)); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; stageSet.add(floor);
   const sb = canvas2d(1024, 512), sg = sb.getContext('2d'); sg.fillStyle = '#5a1470'; sg.fillRect(0, 0, 1024, 512); sg.fillStyle = '#7a1f8c';
   for (let i = 0; i < 24; i += 2) { const a0 = i / 24 * Math.PI * 2, a1 = (i + 1) / 24 * Math.PI * 2; sg.beginPath(); sg.moveTo(512, 300); sg.lineTo(512 + 1200 * Math.cos(a0), 300 + 1200 * Math.sin(a0)); sg.lineTo(512 + 1200 * Math.cos(a1), 300 + 1200 * Math.sin(a1)); sg.fill(); }
   const bt = new THREE.CanvasTexture(sb); bt.colorSpace = THREE.SRGBColorSpace;
@@ -596,16 +697,33 @@ const spot = mesh(new THREE.CircleGeometry(1.6, 48), new THREE.MeshBasicMaterial
 spot.rotation.x = -Math.PI / 2; scene.add(spot);
 
 const creamMat = new THREE.MeshStandardMaterial({ color: 0xfff8ec, roughness: 0.3 });
+// Fine skin-pore normal map, tiled over the face.
+const skinNormal = (() => {
+  const N = 256, h = new Float32Array(N * N).map(() => Math.random());
+  for (let pass = 0; pass < 2; pass++) for (let i = 0; i < N * N; i++) h[i] = (h[i] * 2 + h[(i + 1) % (N * N)] + h[(i + N) % (N * N)]) / 4;
+  const c = canvas2d(N), g = c.getContext('2d'), id = g.createImageData(N, N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const i = y * N + x, dx = h[y * N + (x + 1) % N] - h[y * N + (x + N - 1) % N], dy = h[((y + 1) % N) * N + x] - h[((y + N - 1) % N) * N + x];
+    const l = Math.hypot(dx * 4, dy * 4, 1);
+    id.data.set([(-dx * 4 / l * 0.5 + 0.5) * 255, (-dy * 4 / l * 0.5 + 0.5) * 255, (1 / l * 0.5 + 0.5) * 255, 255], i * 4);
+  }
+  g.putImageData(id, 0, 0);
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(9, 9); return t;
+})();
+const skinMaterial = (opts = {}) => new THREE.MeshPhysicalMaterial({ roughness: 0.55, sheen: 0.35, sheenRoughness: 0.6, sheenColor: new THREE.Color(0xff8f7a),
+  normalMap: skinNormal, normalScale: new THREE.Vector2(0.16, 0.16), clearcoat: 0.04, clearcoatRoughness: 0.5, ...opts });
+let timeScale = 1;
 const anims = [];          // per-frame functions; return false when finished
 const addAnim = f => anims.push(f);
 
 class Rig {
   constructor(ch) {
     this.ch = ch;
-    const built = buildHead(ch.shape);
-    Object.assign(this, { eyeY: built.eyeY, chinY: built.chinY, foreheadY: built.foreheadY });
+    const built = buildHead(ch.shape, ch.depth);
+    Object.assign(this, { eyeY: built.eyeY, chinY: built.chinY, foreheadY: built.foreheadY, templeW: built.templeW, scale: 1 });
     const tex = new THREE.CanvasTexture(ch.texture); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-    this.head = new THREE.Mesh(built.geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.62 }));
+    this.head = new THREE.Mesh(built.geo, skinMaterial({ map: tex }));
+    this.head.castShadow = true;
     this.root = new THREE.Group(); this.idle = new THREE.Group(); this.wob = new THREE.Group(); this.splats = new THREE.Group();
     this.root.add(this.idle); this.idle.add(this.wob); this.wob.add(this.head); this.head.add(this.splats);
     this.head.position.y = 1.2;
@@ -614,6 +732,24 @@ class Rig {
   }
   addAccessories() {
     const h = this.ch;
+    // Ears, half-buried in the side of the head.
+    const earM = skinMaterial({ color: new THREE.Color(rgb(darker(h.skin, 0.88))), normalMap: null });
+    const earIn = skinMaterial({ color: new THREE.Color(rgb(darker(h.skin, 0.62))), normalMap: null });
+    for (const side of [-1, 1]) {
+      const ear = new THREE.Group(); ear.position.set(side * this.templeW * 0.96, this.eyeY - 0.18, -0.15); ear.rotation.set(0.1, side * 0.55, 0);
+      const outer = mesh(new THREE.SphereGeometry(1, 24, 16), earM); outer.scale.set(0.07, 0.25, 0.16);
+      const rim = mesh(new THREE.TorusGeometry(0.13, 0.035, 10, 28, Math.PI * 1.3), earM, side * 0.035, 0.02, 0); rim.rotation.set(0, side * Math.PI / 2, -0.6); rim.scale.set(1, 1.6, 1);
+      const inner = mesh(new THREE.SphereGeometry(1, 16, 12), earIn, side * 0.04, -0.02, 0.01); inner.scale.set(0.035, 0.15, 0.085);
+      ear.add(outer, rim, inner); this.head.add(ear);
+    }
+    // Clear corneas over the eyes so they catch light like real eyes.
+    if (!h.googly) {
+      const corneaM = new THREE.MeshPhysicalMaterial({ transmission: 1, thickness: 0.02, roughness: 0.02, ior: 1.376, clearcoat: 1, clearcoatRoughness: 0.02 });
+      for (const u of [LEFT_EYE.x, RIGHT_EYE.x]) {
+        const x = modelX(u), z = this.surfaceZ(x, this.eyeY); if (z == null) continue;
+        const c = mesh(new THREE.SphereGeometry(0.1, 24, 16), corneaM, x, this.eyeY + 0.005, z - 0.025); c.scale.set(1.15, 0.62, 0.32); this.head.add(c);
+      }
+    }
     if (h.bun) { const m = mat(rgb(h.hair), 0.95); this.head.add(mesh(new THREE.SphereGeometry(0.42, 24, 16), m, 0, 1.38, -0.5)); }
     if (h.hat === 'party') {
       const c = canvas2d(256), g = c.getContext('2d'); g.fillStyle = '#ff4099'; g.fillRect(0, 0, 256, 256); g.fillStyle = '#ffd933';
@@ -648,7 +784,7 @@ class Rig {
   }
   faceWorld() { this.head.updateWorldMatrix(true, false); return this.head.localToWorld(new THREE.Vector3(0, this.eyeY - 0.25, 1.1)); }
   pulse(name, peak = 1, attack = 0.05, hold = 0.12, release = 0.7) { this.pulses[name] = { t: 0, peak, attack, hold, release, from: null }; }
-  holdMorph(name, w, dur = 0.25) { const i = MORPHS.indexOf(name); this.pulses[name] = { t: 0, hold: true, from: this.head.morphTargetInfluences[i], to: w, dur }; }
+  holdMorph(name, w, dur = 0.25) { const i = MORPHS.indexOf(name); this.pulses[name] = { t: 0, isHold: true, from: this.head.morphTargetInfluences[i], to: w, dur }; }
   wobbleHit(side, back, strength = 1) { this.wobble = { t: 0, side, back, strength }; }
   update(t, dt) {
     const s = t + this.seed;
@@ -662,7 +798,7 @@ class Rig {
     const inf = this.head.morphTargetInfluences;
     for (const [name, p] of Object.entries(this.pulses)) {
       const i = MORPHS.indexOf(name); p.t += dt;
-      if (p.hold) { const k = Math.min(1, p.t / p.dur); inf[i] = p.from + (p.to - p.from) * k; if (k >= 1) delete this.pulses[name]; continue; }
+      if (p.isHold) { const k = Math.min(1, p.t / p.dur); inf[i] = p.from + (p.to - p.from) * k; if (k >= 1) delete this.pulses[name]; continue; }
       if (p.t < p.attack) inf[i] = p.peak * p.t / p.attack;
       else if (p.t < p.attack + p.hold) inf[i] = p.peak;
       else { const q = (p.t - p.attack - p.hold) / p.release; inf[i] = Math.max(-0.35, p.peak * Math.exp(-4 * q) * Math.cos(3 * Math.PI * q)); if (q >= 1) { inf[i] = 0; delete this.pulses[name]; } }
@@ -684,13 +820,49 @@ class Rig {
     }
   }
   clean() { this.splats.clear(); }
+  setWet(on) {
+    const m = this.head.material; m.roughness = on ? 0.2 : 0.55; m.clearcoat = on ? 0.9 : 0.04; m.clearcoatRoughness = on ? 0.08 : 0.5; m.color.setScalar(on ? 0.84 : 1);
+    if (!on) return;
+    let tt = 0, next = 0;
+    addAnim((t, dt) => { tt += dt; if (tt > next) { next += 0.22; burst(this.head.localToWorld(new THREE.Vector3((Math.random() - 0.5) * 0.6, this.chinY + 0.05, 0.6)), 0x9fd8ff, 3, 0.4, 0.05 * this.scale / 0.55 + 0.02, new THREE.Vector3(0, -1, 0)); } return tt < 4; });
+  }
 }
 
-function torso(ch) {
-  const g = new THREE.Group();
-  const chest = mesh(new THREE.CapsuleGeometry(0.55, 0.6, 8, 20), mat(rgb(ch.shirt || [0.9, 0.3, 0.5]), 0.8), 0, -0.75, 0); chest.scale.set(1.15, 1, 0.8);
-  g.add(chest); g.add(mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.4, 20), mat(rgb(ch.skin), 0.7), 0, 0.05, 0));
+/** A proportioned body hanging from the neck (y = 0). legs: false | true (standing) | 'sit'. */
+function body(ch, legs = false) {
+  const g = new THREE.Group(), shirtC = ch.shirt || [0.9, 0.3, 0.5];
+  const shirt = mat(rgb(shirtC), 0.85), skinM = skinMaterial({ color: new THREE.Color(rgb(ch.skin)), normalMap: null }), pants = mat(0x2b2f45, 0.8), shoe = mat(0x1a1a1a, 0.5);
+  g.add(mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.32, 20), skinM, 0, -0.04, 0));
+  const chest = mesh(new THREE.CapsuleGeometry(0.4, 0.55, 8, 24), shirt, 0, -0.74, 0); chest.scale.set(1.3, 1, 0.72); g.add(chest);
+  const sh = mesh(new THREE.CapsuleGeometry(0.17, 0.85, 8, 16), shirt, 0, -0.32, 0); sh.rotation.z = Math.PI / 2; sh.scale.z = 0.85; g.add(sh);
+  const collar = mesh(new THREE.TorusGeometry(0.15, 0.045, 8, 24), mat(rgb(darker(shirtC, 0.72)), 0.8), 0, -0.17, 0.02); collar.rotation.x = Math.PI / 2; g.add(collar);
+  for (const s of [-1, 1]) {
+    const arm = new THREE.Group(); arm.position.set(s * 0.6, -0.32, 0); arm.rotation.z = s * 0.1;
+    arm.add(mesh(new THREE.CapsuleGeometry(0.12, 0.5, 6, 14), shirt, 0, -0.32, 0));
+    arm.add(mesh(new THREE.CapsuleGeometry(0.1, 0.42, 6, 14), skinM, 0, -0.85, 0));
+    const hand = mesh(new THREE.SphereGeometry(0.13, 16, 12), skinM, 0, -1.15, 0.02); hand.scale.set(0.8, 1.1, 0.55); arm.add(hand);
+    g.add(arm); g.userData[s < 0 ? 'armL' : 'armR'] = arm;
+  }
+  if (legs) for (const s of [-1, 1]) {
+    const leg = new THREE.Group(); leg.position.set(s * 0.21, -1.32, legs === 'sit' ? 0.12 : 0);
+    if (legs === 'sit') leg.rotation.x = -0.35;
+    leg.add(mesh(new THREE.CapsuleGeometry(0.16, 0.95, 6, 14), pants, 0, -0.62, 0));
+    leg.add(mesh(new THREE.BoxGeometry(0.24, 0.14, 0.42), shoe, 0, -1.2, 0.1));
+    g.add(leg);
+  }
   return g;
+}
+const HEAD_SCALE = { big: 0.55, real: 0.26 };
+let headSize = 'big';
+try { headSize = localStorage.getItem('bhp-headsize') === 'real' ? 'real' : 'big'; } catch (e) {}
+/** Puts a character (head + body) in the scene. The neck sits at (x, y, z). */
+function spawn(ch, { x = 0, y = 0, z = 0, rotY = 0, legs = false, headTurn = 0, scale = HEAD_SCALE[headSize], withBody = true } = {}) {
+  const r = new Rig(ch), g = new THREE.Group();
+  r.scale = scale; g.position.set(x, y, z); g.rotation.y = rotY;
+  if (withBody) { r.body = body(ch, legs); g.add(r.body); }
+  r.root.position.y = withBody ? 0.08 : 0; r.root.scale.setScalar(scale); r.root.rotation.y = headTurn; g.add(r.root);
+  r.group = g; shadowize(g); scene.add(g); rigs.push(r);
+  return r;
 }
 
 function makePie() {
@@ -725,11 +897,12 @@ function burst(at, color, count = 120, speed = 5, size = 0.12, dir = new THREE.V
 
 let shake = 0;
 function throwPie(rig, from, scale = 0.72, flight = 0.6, onHit) {
-  const target = rig.faceWorld(), pie = makePie(); pie.scale.setScalar(scale); pie.position.copy(from); scene.add(pie);
+  const target = rig.faceWorld(), pie = makePie(), g0 = gen; pie.scale.setScalar(scale); pie.position.copy(from); scene.add(pie);
   rig.holdMorph('mouthOpen', 0.9, 0.35);
   const h = Math.max(0.6, Math.hypot(target.z - from.z, target.x - from.x) * 0.18);
   let tt = 0;
   addAnim((t, dt) => {
+    if (g0 !== gen) { pie.removeFromParent(); return false; }
     tt += dt; const p = Math.min(1, tt / flight);
     pie.position.lerpVectors(from, target, p); pie.position.y += Math.sin(p * Math.PI) * h; pie.lookAt(target);
     if (p < 1) return true;
@@ -749,23 +922,32 @@ camera.position.copy(cam.pos);
 function focus(pos, look) { cam.pos.copy(pos); cam.look.copy(look); }
 
 let rigs = [];
-function clearRigs() { rigs.forEach(r => r.root.removeFromParent()); rigs = []; }
+function clearRigs() { rigs.forEach(r => (r.group || r.root).removeFromParent()); rigs = []; }
+const sets = { show: stageSet };
+const setBuilders = {};
+function useSet(name) {
+  if (!sets[name] && setBuilders[name]) sets[name] = setBuilders[name]();
+  for (const [k, g] of Object.entries(sets)) g.visible = k === name;
+  spot.visible = name === 'studio';
+}
 function placeContestants(chars) {
-  clearRigs(); stageSet.visible = true; spot.visible = false;
-  chars.forEach((ch, i) => {
-    const r = new Rig(ch); r.root.position.set(i ? 1.7 : -1.7, 2.0, 0); r.root.scale.setScalar(0.62); r.root.rotation.y = i ? -0.22 : 0.22;
-    r.root.add(torso(ch)); scene.add(r.root); rigs.push(r);
-  });
+  clearRigs(); useSet('show');
+  chars.forEach((ch, i) => spawn(ch, { x: i ? 1.7 : -1.7, y: 2.0, rotY: i ? -0.22 : 0.22 }));
   wide();
 }
 const wide = () => focus(new THREE.Vector3(0, 2.9, 8.8), new THREE.Vector3(0, 2.4, 0));
-function closeUp(i) { const f = rigs[i].faceWorld(); focus(new THREE.Vector3(f.x * 0.75, f.y + 0.25, 4.6), new THREE.Vector3(f.x, f.y - 0.05, 0)); }
-function pieAt(i, onHit) { const f = rigs[i].faceWorld(); throwPie(rigs[i], new THREE.Vector3(f.x * 0.3 + Math.random() * 1.2 - 0.6, 0.6, 8), 0.72, 0.6, onHit); }
+/** Camera close-up on a face, scaled to the head size. */
+function closeUpOn(r, side = 0.75) {
+  const f = r.faceWorld(), k = r.scale / 0.62;
+  focus(new THREE.Vector3(f.x * side, f.y + 0.25 * k, f.z + 4.0 * k + 0.3), new THREE.Vector3(f.x, f.y - 0.05 * k, f.z));
+}
+function closeUp(i) { closeUpOn(rigs[i]); }
+function pieAt(i, onHit) { const r = rigs[i], f = r.faceWorld(); throwPie(r, new THREE.Vector3(f.x * 0.3 + Math.random() * 1.2 - 0.6, 0.6, 8), r.scale * 1.15, 0.6, onHit); }
 
 let showcaseYaw = 0, dragging = null;
 function showcase(ch) {
-  clearRigs(); stageSet.visible = false; spot.visible = true;
-  const r = new Rig(ch); r.root.position.set(0, -1.2, 0); scene.add(r.root); rigs.push(r);
+  clearRigs(); useSet('studio');
+  const r = new Rig(ch); r.root.position.set(0, -1.2, 0); shadowize(r.root); scene.add(r.root); rigs.push(r);
   focus(new THREE.Vector3(0, 0.15, 5.6), new THREE.Vector3(0, -0.05, 0));
   r.root.scale.setScalar(0.01); let tt = 0; addAnim((t, dt) => { tt += dt; const k = Math.min(1, tt / 0.45); r.root.scale.setScalar(k < 0.6 ? k / 0.6 * 1.12 : 1.12 - (k - 0.6) / 0.4 * 0.12); return k < 1; });
   return r;
@@ -781,15 +963,16 @@ new ResizeObserver(resize).observe(glCanvas); resize();
 
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
-  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
-  for (let i = anims.length - 1; i >= 0; i--) if (!anims[i](t, dt)) anims.splice(i, 1);
+  const rdt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime, dt = rdt * timeScale;
+  for (let i = anims.length - 1; i >= 0; i--) if (!anims[i](t, dt, rdt)) anims.splice(i, 1);
   rigs.forEach(r => r.update(t, dt));
+  if (sets.dunk?.visible) sets.dunk.userData.waves(t);
   if (mode === 'studio' && rigs[0]) rigs[0].root.rotation.y = dragging ? showcaseYaw : (showcaseYaw += (Math.sin(t * 0.5) * 0.55 - showcaseYaw) * 0.02);
   stageSet.userData.bulbs.forEach((b, i) => b.material.color.setHex(Math.sin(t * 6 + i) > 0 ? 0xffd760 : 0x7a5a20));
-  const k = 1 - Math.exp(-dt * 4);
+  const k = 1 - Math.exp(-rdt * 4);
   camera.position.lerp(cam.pos, k); cam.curLook.lerp(cam.look, k);
   camera.lookAt(cam.curLook);
-  if (shake > 0) { camera.position.x += (Math.random() - 0.5) * shake; camera.position.y += (Math.random() - 0.5) * shake; shake = Math.max(0, shake - dt * 0.4); }
+  if (shake > 0) { camera.position.x += (Math.random() - 0.5) * shake; camera.position.y += (Math.random() - 0.5) * shake; shake = Math.max(0, shake - rdt * 0.4); }
   renderer.render(scene, camera);
 });
 document.fonts?.ready.then(() => {   // redraw the sign once Bungee has loaded
@@ -807,8 +990,9 @@ const caption = $('caption');
 let mode = 'demo', demoTimer = null, custom = null;
 function setPanel(name) {
   mode = name;
-  for (const p of ['demo', 'studio', 'show']) $('panel-' + p).hidden = p !== name;
-  $('hud').hidden = name !== 'show'; $('react').hidden = true;
+  for (const p of ['demo', 'studio', 'show', 'play']) $('panel-' + p).hidden = p !== name;
+  $('hud').hidden = name !== 'show' && name !== 'play'; $('react').hidden = true;
+  gen++; timeScale = 1; show.gen++;
   clearInterval(demoTimer); caption.textContent = '';
 }
 
@@ -849,7 +1033,7 @@ function drawPhoto(img, points = [], color = '#43d3c7') {
 async function startStudio(file) {
   setPanel('studio'); $('studio-edit').hidden = true; note(''); checklist(0);
   $('studio-title').textContent = 'Face Studio';
-  placeContestants([]); stageSet.visible = false;
+  clearRigs(); useSet('studio');
   let img; try { img = await loadImage(file); } catch (e) { note('That file could not be opened as an image. Try a JPG or PNG.'); return; }
   drawPhoto(img); caption.textContent = 'Loading the face AI…';
   let ai = null;
@@ -859,7 +1043,7 @@ async function startStudio(file) {
   const res = ai.landmarker.detect(img), faces = res.faceLandmarks || [];
   if (!faces.length) return startManual(img, 'No face found automatically. Tap their left eye (on your left) to place it yourself.');
   const box = f => { const xs = f.map(p => p.x), ys = f.map(p => p.y); return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)); };
-  const lm = faces.reduce((a, b) => box(b) > box(a) ? b : a).map(p => ({ x: p.x * img.width, y: p.y * img.height }));
+  const lm = faces.reduce((a, b) => box(b) > box(a) ? b : a).map(p => ({ x: p.x * img.width, y: p.y * img.height, z: p.z * img.width }));
   checklist(1);
   // Animate the landmark cloud in.
   for (let k = 1; k <= 6; k++) { await new Promise(r => setTimeout(r, 80)); drawPhoto(img, lm.slice(0, Math.round(lm.length * k / 6))); }
@@ -868,7 +1052,7 @@ async function startStudio(file) {
   const eye = (a, b) => lm[a] && lm[b] ? { x: (lm[a].x + lm[b].x) / 2, y: (lm[a].y + lm[b].y) / 2 } : null;
   const pts = {
     eyes: [lm[468] || eye(33, 133), lm[473] || eye(362, 263)],
-    nose: lm[1], mouth: eye(13, 14), mouthL: lm[61], mouthR: lm[291], chin: lm[152], contour: JAWLINE.map(i => lm[i]),
+    nose: lm[1], mouth: eye(13, 14), mouthL: lm[61], mouthR: lm[291], chin: lm[152], contour: JAWLINE.map(i => lm[i]), lm3d: lm,
   };
   const warn = [];
   if (faces.length > 1) warn.push(`Found ${faces.length} faces, so we used the biggest one.`);
@@ -902,7 +1086,7 @@ async function finishStudio(img, pts, mask, warning) {
   const face = buildPhotoFace(img, pts, mask);
   await new Promise(r => setTimeout(r, 250)); checklist(4);
   await new Promise(r => setTimeout(r, 250)); checklist(5);
-  custom = { name: $('name').value.trim() || 'Mystery Guest', skin: face.skin, hair: face.hair, shirt: [0.95, 0.3, 0.5], shape: face.shape, texture: face.texture, hat: 'none', googly: false };
+  custom = { name: $('name').value.trim() || 'Mystery Guest', skin: face.skin, hair: face.hair, shirt: [0.2, 0.45, 0.85], shape: face.shape, depth: face.depth, texture: face.texture, hat: 'none', googly: false };
   custom.avatar = avatarURL(custom);
   showcase(custom);
   note(warning); $('studio-edit').hidden = false; $('react').hidden = false;
@@ -1000,11 +1184,393 @@ function finish() {
   else { const w = a < b ? 0 : 1; host(`${show.players[w].name} wins with the cleanest face in show business!`); burst(rigs[w].faceWorld().add(new THREE.Vector3(0, 1.2, 0)), 0xffd24a, 160, 6, 0.16, new THREE.Vector3(0, 1, 0)); later(1100, () => pieAt(1 - w)); }
 }
 
+/* =====================================================================================
+   MORE MINI-GAMES: Slap Champs, Dunk Tank, Whack-a-Head
+   ===================================================================================== */
+let gen = 0, replay = null;
+const after = (ms, f) => { const g = gen; setTimeout(() => { if (g === gen) f(); }, ms); };
+const alive = g => g === gen;
+const pickOpponent = p1 => { const o = HOUSE.filter(h => h !== p1); return o[Math.floor(Math.random() * o.length)]; };
+function hud(i, ch, value, label) {
+  if (ch) { $('score' + i).querySelector('img').src = ch.avatar; $('name' + i).textContent = label ?? ch.name; }
+  if (value != null) $('pies' + i).textContent = value;
+  $('score' + i).classList.remove('turn');
+}
+function playPanel(title, line) {
+  setPanel('play');
+  $('play-title').textContent = title; $('play-host').textContent = line; $('play-stat').textContent = '';
+  $('play-controls').innerHTML = ''; $('play-end').hidden = true;
+}
+function playEnd(line) { $('play-host').textContent = line; $('play-controls').innerHTML = ''; $('play-end').hidden = false; }
+function bannerTexture(text, bg, w = 1024, h = 256) {
+  const c = canvas2d(w, h), x = c.getContext('2d');
+  x.fillStyle = bg; x.fillRect(0, 0, w, h);
+  x.font = `400 ${Math.round(h * 0.55)}px Bungee, Impact, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = '#ec3a57'; x.fillText(text, w / 2 + 6, h / 2 + 8); x.fillStyle = '#ffcf4a'; x.fillText(text, w / 2, h / 2);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function stripes(a, b, n = 16) {
+  const c = canvas2d(512, 256), x = c.getContext('2d');
+  for (let i = 0; i < n; i++) { x.fillStyle = i % 2 ? b : a; x.fillRect(i * 512 / n, 0, 512 / n + 1, 256); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+function animate(dur, step, done) {
+  const g = gen; let tt = 0;
+  addAnim((t, dt) => { if (!alive(g)) return false; tt += dt; const k = Math.min(1, tt / dur); step(k); if (k >= 1) { done?.(); return false; } return true; });
+}
+
+// ---- Slap Champs ---------------------------------------------------------------------------
+setBuilders.slap = () => {
+  const g = new THREE.Group();
+  const floor = mesh(new THREE.CircleGeometry(12, 48), mat(0x161b28, 0.7)); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; g.add(floor);
+  const ring = mesh(new THREE.CylinderGeometry(2.4, 2.5, 0.1, 48), mat(0xa81c2a, 0.75), 0, 0.05, 0); ring.receiveShadow = true; g.add(ring);
+  g.add(mesh(new THREE.PlaneGeometry(24, 12), mat(0x111522, 0.95), 0, 5, -4.4));
+  g.add(mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshBasicMaterial({ map: bannerTexture('SLAP CHAMPS', '#111522') }), 0, 5.6, -4.3));
+  const podium = mesh(new THREE.BoxGeometry(0.42, 1.25, 0.8), mat(0x2a2a30, 0.35, 0.4), 0, 0.72, -0.35); podium.castShadow = true; g.add(podium);
+  for (const sx of [-1, 1]) {
+    const beam = mesh(new THREE.ConeGeometry(1.5, 7, 32, 1, true), new THREE.MeshBasicMaterial({ color: 0xfff1c4, transparent: true, opacity: 0.05, depthWrite: false, side: THREE.DoubleSide }), sx * 0.9, 3.6, 0);
+    g.add(beam);
+  }
+  scene.add(g); return g;
+};
+const slap = {};
+function startSlap(p1) {
+  const p2 = pickOpponent(p1);
+  playPanel('Slap Champs', `${p1.name} vs ${p2.name}. Stop the needle in the gold zone for a perfect slap.`);
+  replay = () => startSlap(p1);
+  useSet('slap'); clearRigs();
+  const turn = Math.PI / 2 - 0.62;
+  const a = spawn(p1, { x: -0.8, y: 2.5, rotY: turn, legs: true, headTurn: -0.45 });
+  const b = spawn(p2, { x: 0.8, y: 2.5, rotY: -turn, legs: true, headTurn: 0.45 });
+  Object.assign(slap, { players: [p1, p2], rigs: [a, b], hp: [100, 100], turn: 0, slaps: 0, total: 6 });
+  hud(0, p1, '100 HP'); hud(1, p2, '100 HP');
+  slapWide();
+  after(1300, slapTurn);
+}
+function slapWide() { const k = slap.rigs[0].scale / 0.55; focus(new THREE.Vector3(0, 2.5 + 1.1 * k, 4.6 + 2.2 * k), new THREE.Vector3(0, 2.2 + 0.6 * k, 0)); }
+function slapTurn() {
+  if (slap.slaps >= slap.total || slap.hp.some(h => h <= 0)) return slapFinish();
+  const t = slap.turn, human = t === 0, who = slap.players[t].name;
+  $('score' + t).classList.add('turn'); $('score' + (1 - t)).classList.remove('turn');
+  $('play-stat').textContent = `Slap ${slap.slaps + 1} of ${slap.total}`;
+  $('play-host').textContent = human ? `Your slap, ${who}. Tap SLAP when the needle is in the gold.` : `${who} is winding up. Brace yourself.`;
+  $('play-controls').innerHTML = `<div class="meter"><i></i><b id="needle"></b></div>` + (human ? `<button class="btn hot" id="slap-btn" style="margin-top:12px">SLAP!</button>` : '');
+  slapWide();
+  const g = gen, needle = $('needle'), speed = 1.2 + slap.slaps * 0.2;
+  let pos = 0.5, live = true, tt = Math.random() * 3;
+  addAnim((_, __, rdt) => { if (!live || !alive(g)) return false; tt += rdt; pos = 0.5 + 0.5 * Math.sin(tt * speed * Math.PI); needle.style.left = `${pos * 100}%`; return true; });
+  const fire = () => { if (!live || !alive(g)) return; live = false; $('slap-btn')?.setAttribute('disabled', ''); doSlap(t, 1 - Math.abs(pos - 0.5) * 2); };
+  if (human) $('slap-btn').onclick = fire; else after(900 + Math.random() * 1500, fire);
+}
+function doSlap(ai, power) {
+  const A = slap.rigs[ai], D = slap.rigs[1 - ai];
+  const arm = A.body.userData[ai === 0 ? 'armL' : 'armR'];
+  const perfect = power > 0.85, dmg = Math.round(6 + 28 * power * power);
+  const face = D.faceWorld(), toA = A.group.position.clone().sub(D.group.position).setY(0).normalize();
+  const cheek = face.clone().add(toA.multiplyScalar(0.6 * D.scale)).add(new THREE.Vector3(0, -0.1 * D.scale, 0));
+  arm.parent.updateWorldMatrix(true, false);
+  const local = arm.parent.worldToLocal(cheek.clone()).sub(arm.position), reach = local.length();
+  const qRest = arm.quaternion.clone(), qHit = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, -1, 0), local.clone().normalize());
+  const qBack = qHit.clone().premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), ai === 0 ? -1.9 : 1.9));
+  const wind = 0.45, strike = 0.12, follow = 0.14, back = 0.45, stretch = reach / 1.28;
+  A.pulse('puff', 0.4, 0.15, 0.25, 0.4);
+  if (perfect) after(wind * 1000 - 40, () => { timeScale = 0.18; closeUpOn(D, 0.6); caption.textContent = 'PERFECT SLAP!'; setTimeout(() => { timeScale = 1; }, 1500); });
+  let hit = false;
+  animate(wind + strike + follow + back, k => {
+    const tt = k * (wind + strike + follow + back);
+    if (tt < wind) arm.quaternion.slerpQuaternions(qRest, qBack, smoothStep(0, 1, tt / wind));
+    else if (tt < wind + strike) { const q = (tt - wind) / strike; arm.quaternion.slerpQuaternions(qBack, qHit, q * q); arm.scale.y = lerp(1, stretch, q); }
+    else {
+      if (!hit) { hit = true; slapImpact(ai, power, dmg, cheek, perfect); }
+      if (tt < wind + strike + follow) return;   // follow-through: the hand stays on the cheek
+      const q = (tt - wind - strike - follow) / back; arm.quaternion.slerpQuaternions(qHit, qRest, smoothStep(0, 1, q)); arm.scale.y = lerp(stretch, 1, q);
+    }
+  });
+}
+function slapImpact(ai, power, dmg, at, perfect) {
+  const di = 1 - ai, D = slap.rigs[di], dir = ai === 0 ? 1 : -1;
+  D.pulse(dir > 0 ? 'skewRight' : 'skewLeft', 0.5 + 0.8 * power, 0.03, 0.15, 1.1);
+  D.pulse('puff', 0.3 + 0.5 * power, 0.03, 0.1, 0.9);
+  D.pulse('mouthOpen', 0.5 * power, 0.05, 0.1, 0.8);
+  D.wobbleHit(dir * (0.6 + power), 0.25, 0.8 + power);
+  burst(at, 0xbfe6ff, Math.round(30 + power * 70), 2.5 + power * 3, 0.03 + 0.06 * D.scale, new THREE.Vector3(-dir, 0.4, 0.2));
+  shake = 0.05 + 0.12 * power;
+  if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(30 + power * 60);
+  slap.hp[di] = Math.max(0, slap.hp[di] - dmg);
+  hud(di, null, `${slap.hp[di]} HP`);
+  if (!perfect) caption.textContent = power > 0.6 ? `Good slap! −${dmg}` : power > 0.3 ? `Meh. −${dmg}` : `A gentle pat. −${dmg}`;
+  else caption.textContent = `PERFECT SLAP! −${dmg}`;
+  after(2100, () => {
+    caption.textContent = '';
+    if (slap.hp[di] <= 0) {
+      const G = D.group;
+      animate(0.7, k => { G.rotation.z = -dir * 1.45 * k * k; G.position.y = 2.5 - 0.9 * k * k; });
+      return after(900, slapFinish);
+    }
+    slap.slaps++; slap.turn = 1 - slap.turn; slapTurn();
+  });
+}
+function slapFinish() {
+  const [a, b] = slap.hp;
+  slapWide();
+  if (a === b) return playEnd('Dead even. Both cheeks are glowing.');
+  const w = a > b ? 0 : 1, W = slap.rigs[w];
+  W.pulse('puff', 0.8, 0.1, 0.4, 0.6);
+  burst(W.faceWorld().add(new THREE.Vector3(0, 0.8 * W.scale, 0)), 0xffd24a, 140, 5, 0.12, new THREE.Vector3(0, 1, 0));
+  playEnd(`${slap.players[w].name} is the Slap Champ! ${slap.hp[1 - w] <= 0 ? 'Knocked clean out.' : 'Won on cheek damage.'}`);
+}
+
+// ---- Dunk Tank -----------------------------------------------------------------------------
+const TANK = { x: 0.9, water: 1.3, seat: 2.32 }, TGT = { x: -1.95, y: 2.35, z: 0.25 };
+setBuilders.dunk = () => {
+  const g = new THREE.Group();
+  const ground = mesh(new THREE.PlaneGeometry(30, 20), mat(0x4b3b2c, 0.95)); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; g.add(ground);
+  g.add(mesh(new THREE.PlaneGeometry(18, 7), new THREE.MeshStandardMaterial({ map: stripes('#d8283f', '#f4efe6'), roughness: 0.9 }), 0, 3.5, -3.6));
+  g.add(mesh(new THREE.PlaneGeometry(7, 1.75), new THREE.MeshBasicMaterial({ map: bannerTexture('DUNK TANK', '#2b1a12') }), 0, 6.1, -3.5));
+  // Tank: glass, metal frame, water with a moving surface.
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0xd8f2ff, transparent: true, opacity: 0.18, roughness: 0.05, metalness: 0, clearcoat: 1, depthWrite: false });
+  g.add(mesh(new THREE.BoxGeometry(2.2, 1.9, 1.6), glass, TANK.x, 0.95, 0));
+  const steel = mat(0x9aa3ad, 0.3, 0.9);
+  for (const [dx, dz] of [[-1.1, -0.8], [1.1, -0.8], [-1.1, 0.8], [1.1, 0.8]]) g.add(mesh(new THREE.BoxGeometry(0.08, 1.95, 0.08), steel, TANK.x + dx, 0.97, dz));
+  for (const y of [0.02, 1.92]) for (const dz of [-0.8, 0.8]) g.add(mesh(new THREE.BoxGeometry(2.28, 0.08, 0.08), steel, TANK.x, y, dz));
+  const waterM = new THREE.MeshPhysicalMaterial({ color: 0x2d8fd5, transparent: true, opacity: 0.55, roughness: 0.08, clearcoat: 1, depthWrite: false });
+  g.add(mesh(new THREE.BoxGeometry(2.12, TANK.water - 0.06, 1.52), waterM, TANK.x, (TANK.water - 0.06) / 2 + 0.03, 0));
+  const surf = new THREE.PlaneGeometry(2.12, 1.52, 24, 18), surface = mesh(surf, waterM, TANK.x, TANK.water, 0); surface.rotation.x = -Math.PI / 2; g.add(surface);
+  const base = surf.attributes.position.array.slice();
+  g.userData.ripple = 0;
+  g.userData.waves = t => {
+    const a = surf.attributes.position.array, rp = g.userData.ripple; g.userData.ripple *= 0.985;
+    for (let i = 0; i < a.length; i += 3) { const x = base[i], y = base[i + 1], r = Math.hypot(x, y); a[i + 2] = 0.025 * Math.sin(t * 2 + x * 3) + rp * Math.sin(r * 9 - t * 12) * Math.exp(-r * 1.2); }
+    surf.attributes.position.needsUpdate = true; surf.computeVertexNormals();
+  };
+  // Seat plank on a hinge at its back edge.
+  const hinge = new THREE.Group(); hinge.position.set(TANK.x, TANK.seat, -0.55);
+  const plank = mesh(new THREE.BoxGeometry(1.2, 0.08, 0.75), mat(0x8a6038, 0.8), 0, -0.04, 0.37); plank.castShadow = true; hinge.add(plank);
+  g.add(hinge); g.userData.hinge = hinge;
+  g.add(mesh(new THREE.BoxGeometry(0.08, TANK.seat + 0.6, 0.08), steel, TANK.x, (TANK.seat + 0.6) / 2, -0.85));
+  // Target on a post, linked to the plank.
+  const rings = canvas2d(512), rx = rings.getContext('2d');
+  [[256, '#d8283f'], [196, '#ffffff'], [140, '#d8283f'], [80, '#ffffff'], [80 * 0.17 / 0.3, '#d8283f']].forEach(([r, c]) => { rx.fillStyle = c; rx.beginPath(); rx.arc(256, 256, r, 0, Math.PI * 2); rx.fill(); });
+  const rt = new THREE.CanvasTexture(rings); rt.colorSpace = THREE.SRGBColorSpace;
+  const face = new THREE.MeshStandardMaterial({ map: rt, roughness: 0.6 });
+  const target = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.08, 48), [mat(0xeeeeee, 0.5), face, face]);
+  target.rotation.x = Math.PI / 2; target.position.set(TGT.x, TGT.y, TGT.z - 0.04); target.castShadow = true; g.add(target);
+  g.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, TGT.y, 12), steel, TGT.x, TGT.y / 2, TGT.z - 0.1));
+  g.add(mesh(new THREE.BoxGeometry(Math.abs(TANK.x - TGT.x), 0.05, 0.05), steel, (TANK.x + TGT.x) / 2, TGT.y + 0.6, -0.4));
+  const cross = new THREE.Group();
+  cross.add(mesh(new THREE.TorusGeometry(0.09, 0.016, 8, 32), new THREE.MeshBasicMaterial({ color: 0x111111 })));
+  cross.add(mesh(new THREE.BoxGeometry(0.26, 0.012, 0.01), new THREE.MeshBasicMaterial({ color: 0x111111 })));
+  cross.add(mesh(new THREE.BoxGeometry(0.012, 0.26, 0.01), new THREE.MeshBasicMaterial({ color: 0x111111 })));
+  cross.position.set(TGT.x, TGT.y, TGT.z + 0.04); g.add(cross); g.userData.cross = cross;
+  scene.add(g); return g;
+};
+const dunk = {};
+function startDunk(p1) {
+  const p2 = pickOpponent(p1);
+  playPanel('Dunk Tank', `Hit the bullseye to drop ${p2.name} in the water. Then it's their turn to aim at you.`);
+  replay = () => startDunk(p1);
+  useSet('dunk');
+  Object.assign(dunk, { players: [p1, p2], score: [0, 0], half: 0, balls: 5 });
+  hud(0, p1, '0 dunks'); hud(1, p2, '0 dunks');
+  dunkHalf();
+}
+const seatY = () => TANK.seat + 1.36;
+function dunkHalf() {
+  clearRigs();
+  const thrower = dunk.half, victim = 1 - thrower;
+  dunk.v = spawn(dunk.players[victim], { x: TANK.x, y: seatY(), z: 0.05, rotY: -0.3, legs: 'sit' });
+  dunk.ball = 0;
+  sets.dunk.userData.hinge.rotation.x = 0;
+  const k = dunk.v.scale / 0.55;
+  focus(new THREE.Vector3(-0.45, 2.6 + 0.9 * k, 7.2 + 1.6 * k), new THREE.Vector3(-0.45, 2.2 + 0.7 * k, 0));
+  $('play-host').textContent = thrower === 0 ? `You're throwing at ${dunk.players[1].name}. Five balls.` : `Uh oh. ${dunk.players[1].name} is throwing at you now.`;
+  $('score' + thrower).classList.add('turn'); $('score' + victim).classList.remove('turn');
+  after(1200, dunkThrow);
+}
+function dunkThrow() {
+  if (dunk.ball >= dunk.balls) {
+    if (dunk.half === 0) { dunk.half = 1; caption.textContent = 'Switch!'; return after(1300, () => { caption.textContent = ''; dunkHalf(); }); }
+    return dunkFinish();
+  }
+  const human = dunk.half === 0, cross = sets.dunk.userData.cross, g = gen, sp = 0.9 + dunk.ball * 0.18;
+  $('play-stat').textContent = `Ball ${dunk.ball + 1} of ${dunk.balls}`;
+  $('play-controls').innerHTML = human ? `<button class="btn hot" id="throw-btn">THROW</button>` : '';
+  let live = true, tt = Math.random() * 5;
+  addAnim((_, __, rdt) => { if (!live || !alive(g)) return false; tt += rdt * sp; cross.position.set(TGT.x + 0.48 * Math.sin(tt * 2.1), TGT.y + 0.44 * Math.sin(tt * 3.3 + 1), TGT.z + 0.05); return true; });
+  const fire = () => { if (!live || !alive(g)) return; live = false; $('throw-btn')?.setAttribute('disabled', ''); throwBall(cross.position.clone()); };
+  if (human) $('throw-btn').onclick = fire; else after(900 + Math.random() * 1600, fire);
+}
+function throwBall(at) {
+  const ball = mesh(new THREE.SphereGeometry(0.11, 20, 14), mat(0xf2f2f2, 0.45)), from = new THREE.Vector3(-0.6, 1.2, 7.5);
+  ball.castShadow = true; scene.add(ball);
+  const d = Math.hypot(at.x - TGT.x, at.y - TGT.y), bull = d < 0.17, onBoard = d < 0.55;
+  animate(0.42, k => { ball.position.lerpVectors(from, at, k); ball.position.y += Math.sin(k * Math.PI) * 0.7; }, () => {
+    const away = new THREE.Vector3((Math.random() - 0.5) * 2, -3, 3);
+    animate(0.8, k => { ball.position.addScaledVector(away, 0.016); away.y -= 0.25; }, () => ball.removeFromParent());
+    if (bull) { caption.textContent = 'BULLSEYE!'; dunkIt(); after(3600, next); }
+    else {
+      caption.textContent = onBoard ? 'Clang! Just off the bullseye.' : 'Missed the whole target!';
+      dunk.v.pulse('puff', 0.9, 0.08, 0.35, 0.5); dunk.v.wobbleHit(Math.random() - 0.5, -0.5, 0.6);
+      after(1400, next);
+    }
+  });
+  function next() { caption.textContent = ''; dunk.ball++; dunkThrow(); }
+}
+function dunkIt() {
+  const V = dunk.v, G = V.group, hinge = sets.dunk.userData.hinge, scorer = dunk.half;
+  dunk.score[scorer]++; hud(scorer, null, `${dunk.score[scorer]} dunk${dunk.score[scorer] === 1 ? '' : 's'}`);
+  const top = seatY(), under = TANK.water - 0.55 - V.scale * 0.9, bob = TANK.water - 0.05;
+  V.holdMorph('mouthOpen', 1, 0.12);
+  animate(0.18, k => { hinge.rotation.x = 1.5 * k; });
+  animate(0.42, k => { G.position.y = top + (under - top) * k * k; }, () => {
+    sets.dunk.userData.ripple = 0.12;
+    burst(new THREE.Vector3(TANK.x, TANK.water + 0.1, 0.2), 0x7cc8ff, 220, 6, 0.12, new THREE.Vector3(0, 1.6, 0.4));
+    burst(new THREE.Vector3(TANK.x, TANK.water + 0.1, 0.2), 0xffffff, 90, 4, 0.07, new THREE.Vector3(0, 1.4, 0.6));
+    shake = 0.12; V.setWet(true); V.holdMorph('mouthOpen', 0, 0.2);
+    after(500, () => animate(0.7, k => { G.position.y = under + (bob - under) * Math.sin(k * Math.PI / 2); }, () => {
+      V.pulse('puff', 1, 0.05, 0.25, 0.5);
+      burst(V.faceWorld(), 0x9fd8ff, 25, 1.5, 0.05, new THREE.Vector3(0, 0.6, 1));
+    }));
+    after(2700, () => {
+      animate(0.6, k => { G.position.y = bob + (top - bob) * smoothStep(0, 1, k); hinge.rotation.x = 1.5 * (1 - k); });
+    });
+  });
+}
+function dunkFinish() {
+  const [a, b] = dunk.score, P = dunk.players;
+  $('score0').classList.remove('turn'); $('score1').classList.remove('turn');
+  playEnd(a === b ? `${a === 1 ? 'One dunk' : `${a} dunks`} each. Everybody's wet.` : `${P[a > b ? 0 : 1].name} wins, ${Math.max(a, b)} to ${Math.min(a, b)}!`);
+}
+
+// ---- Whack-a-Head --------------------------------------------------------------------------
+const HOLES = [];
+for (const z of [-1.15, 0, 1.15]) for (const x of [-1.4, 0, 1.4]) HOLES.push({ x, z });
+const WHACK = { up: 0.95, down: -0.25, scale: 0.36 };
+setBuilders.whack = () => {
+  const g = new THREE.Group();
+  const floor = mesh(new THREE.PlaneGeometry(30, 20), mat(0x1c1426, 0.9)); floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; g.add(floor);
+  g.add(mesh(new THREE.PlaneGeometry(18, 8), new THREE.MeshStandardMaterial({ map: stripes('#2a7fd4', '#ffcf4a', 20), roughness: 0.9 }), 0, 3.5, -3.4));
+  g.add(mesh(new THREE.PlaneGeometry(7, 1.75), new THREE.MeshBasicMaterial({ map: bannerTexture('WHACK-A-HEAD', '#1c1426') }), 0, 3.9, -3.3));
+  const shape = new THREE.Shape(); shape.moveTo(-2.3, -1.95); shape.lineTo(2.3, -1.95); shape.lineTo(2.3, 1.95); shape.lineTo(-2.3, 1.95); shape.closePath();
+  for (const h of HOLES) { const p = new THREE.Path(); p.absarc(h.x, -h.z, 0.5, 0, Math.PI * 2, true); shape.holes.push(p); }
+  const top = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.12, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2, curveSegments: 32 }), mat(0x2f8f5b, 0.55));
+  top.rotation.x = -Math.PI / 2; top.position.y = 0.88; top.receiveShadow = true; g.add(top);
+  for (const h of HOLES) { const rim = mesh(new THREE.TorusGeometry(0.5, 0.05, 10, 40), mat(0x1a1a1a, 0.4), h.x, 1.02, h.z); rim.rotation.x = Math.PI / 2; g.add(rim); }
+  const inside = mat(0x0d0a12, 1);
+  g.add(mesh(new THREE.BoxGeometry(4.6, 0.05, 3.9), inside, 0, -0.6, 0));
+  for (const [x, z, w, d] of [[0, 1.95, 4.6, 0.1], [0, -1.95, 4.6, 0.1], [-2.3, 0, 0.1, 3.9], [2.3, 0, 0.1, 3.9]]) g.add(mesh(new THREE.BoxGeometry(w, 1.6, d), mat(0xd8283f, 0.6), x, 0.1, z));
+  scene.add(g); return g;
+};
+const whack = { pool: [], score: 0, time: 0 };
+function startWhack(p1) {
+  playPanel('Whack-a-Head', `Bonk every head that pops up. Golden heads are worth 3. Do not bonk the baby.`);
+  replay = () => startWhack(p1);
+  useSet('whack'); clearRigs();
+  const cast = [p1, ...HOUSE.filter(h => h !== p1)].slice(0, 5);
+  whack.pool = cast.map(ch => {
+    const r = spawn(ch, { withBody: false, scale: WHACK.scale, y: WHACK.down });
+    r.root.rotation.x = -0.35; r.group.visible = false; r.hole = -1; return r;
+  });
+  let best = 0; try { best = +localStorage.getItem('bhp-whack-best') || 0; } catch (e) {}
+  Object.assign(whack, { score: 0, time: 30, best, p1 });
+  hud(0, p1, '0', 'Score'); hud(1, p1, String(best), 'Best');
+  focus(new THREE.Vector3(0, 5.4, 5.2), new THREE.Vector3(0, 0.9, 0.25));
+  $('play-stat').textContent = '30 s';
+  caption.textContent = 'Get ready…';
+  after(1200, () => { caption.textContent = 'GO!'; whackPop(); whackTick(); after(700, () => { if (caption.textContent === 'GO!') caption.textContent = ''; }); });
+}
+function whackTick() {
+  if (whack.time <= 0) return;
+  whack.time--; $('play-stat').textContent = `${whack.time} s`;
+  if (whack.time <= 0) return whackFinish();
+  after(1000, whackTick);
+}
+function whackPop() {
+  if (whack.time <= 0) return;
+  const free = HOLES.map((_, i) => i).filter(i => !whack.pool.some(r => r.hole === i));
+  const idle = whack.pool.filter(r => r.hole < 0);
+  if (free.length && idle.length) {
+    const r = idle.includes(whack.pool[0]) && Math.random() < 0.4 ? whack.pool[0] : idle[Math.floor(Math.random() * idle.length)];
+    const h = free[Math.floor(Math.random() * free.length)];
+    Object.assign(r, { hole: h, hit: false, golden: Math.random() < 0.13 && r.ch.name !== 'Baby Benny' });
+    r.head.material.emissive.setHex(r.golden ? 0x7a5200 : 0x000000);
+    r.group.position.set(HOLES[h].x, WHACK.down, HOLES[h].z); r.group.visible = true;
+    const stay = Math.max(0.5, 1.3 - (30 - whack.time) * 0.027);
+    animate(0.13, k => { r.group.position.y = lerp(WHACK.down, WHACK.up, k); }, () => after(stay * 1000, () => { if (!r.hit && r.hole === h) retract(r); }));
+  }
+  after(260 + Math.random() * 360, whackPop);
+}
+function retract(r, dur = 0.14) {
+  const y0 = r.group.position.y;
+  animate(dur, k => { r.group.position.y = lerp(y0, WHACK.down, k); }, () => { r.hole = -1; r.group.visible = false; });
+}
+function swingHammer(at) {
+  const h = new THREE.Group(), pivot = new THREE.Group();
+  pivot.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.3, 12), mat(0xc49a6c, 0.6), 0, 0.65, 0));
+  const head = mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.6, 24), mat(0xe8344e, 0.5), 0, 1.35, 0); head.rotation.z = Math.PI / 2; pivot.add(head);
+  h.add(pivot); h.position.set(at.x + 0.2, at.y - 0.9, at.z + 1.1); scene.add(h);
+  animate(0.16, k => { pivot.rotation.x = lerp(0.6, -0.75, k * k); }, () => after(220, () => h.removeFromParent()));
+}
+glCanvas.addEventListener('pointerdown', e => {
+  if (mode !== 'play' || !sets.whack?.visible || whack.time <= 0) return;
+  const rc = glCanvas.getBoundingClientRect(), ray = new THREE.Raycaster();
+  ray.setFromCamera(new THREE.Vector2((e.clientX - rc.left) / rc.width * 2 - 1, -(e.clientY - rc.top) / rc.height * 2 + 1), camera);
+  let best = null, bestD = Infinity;
+  for (const r of whack.pool) {
+    if (r.hole < 0 || r.hit) continue;
+    const c = r.head.localToWorld(new THREE.Vector3(0, 0, 0.3)), d = ray.ray.distanceToPoint(c);
+    if (d < bestD) { bestD = d; best = r; }
+  }
+  if (!best || bestD > 0.95 * WHACK.scale * 1.6) { caption.textContent = 'Whiff!'; return; }
+  bonk(best);
+});
+function bonk(r) {
+  r.hit = true;
+  const baby = r.ch.name === 'Baby Benny' && whack.pool[0] !== r, pts = baby ? -2 : r.golden ? 3 : 1;
+  whack.score = Math.max(0, whack.score + pts); hud(0, null, String(whack.score));
+  const f = r.faceWorld();
+  r.pulse('squish', 1, 0.03, 0.15, 0.6); r.wobbleHit(Math.random() - 0.5, 1, 1);
+  burst(f, baby ? 0xff6688 : r.golden ? 0xffd24a : 0xffffff, 22, 2.4, 0.13, new THREE.Vector3(0, 1, 0.3));
+  swingHammer(f); shake = 0.05;
+  caption.textContent = baby ? 'Not the baby! −2' : r.golden ? 'GOLDEN BONK! +3' : ['Bonk!', 'Boop!', 'Gotcha!', 'Thwack!'][Math.floor(Math.random() * 4)];
+  if (navigator.userActivation?.hasBeenActive) navigator.vibrate?.(25);
+  after(280, () => retract(r, 0.1));
+}
+function whackFinish() {
+  const best = Math.max(whack.best, whack.score);
+  try { localStorage.setItem('bhp-whack-best', String(best)); } catch (e) {}
+  hud(1, null, String(best));
+  caption.textContent = '';
+  playEnd(whack.score > whack.best ? `New best: ${whack.score} points!` : `Time! ${whack.score} points. Best is ${best}.`);
+}
+
+// ---- Game picker ---------------------------------------------------------------------------
+const GAMES = [
+  { id: 'pie', name: 'The Pie-Q Test', blurb: 'Trivia. Wrong answer, pie to the face.', start: p => startShow(p) },
+  { id: 'slap', name: 'Slap Champs', blurb: 'Time the meter. Perfect slaps go slow-mo.', start: startSlap },
+  { id: 'dunk', name: 'Dunk Tank', blurb: 'Hit the bullseye. Splash.', start: startDunk },
+  { id: 'whack', name: 'Whack-a-Head', blurb: 'Bonk the faces. Not the baby.', start: startWhack },
+];
+for (const el of document.querySelectorAll('.games')) el.innerHTML = GAMES.map(g => `<button class="game" data-g="${g.id}"><b>${g.name}</b><span>${g.blurb}</span></button>`).join('');
+document.addEventListener('click', e => {
+  const b = e.target.closest('.game'); if (!b) return;
+  GAMES.find(g => g.id === b.dataset.g).start(custom || HOUSE[Math.floor(Math.random() * HOUSE.length)]);
+  $('viewport').scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+$('play-again').addEventListener('click', () => replay?.());
+$('play-home').addEventListener('click', () => startDemo());
+const sizeBtn = $('size-toggle');
+const sizeLabel = () => { sizeBtn.textContent = headSize === 'big' ? 'Big heads' : 'Real heads'; sizeBtn.setAttribute('aria-pressed', headSize === 'real'); };
+sizeLabel();
+sizeBtn.addEventListener('click', () => {
+  headSize = headSize === 'big' ? 'real' : 'big'; sizeLabel();
+  try { localStorage.setItem('bhp-headsize', headSize); } catch (e) {}
+  if (mode === 'demo') startDemo(); else caption.textContent = headSize === 'real' ? 'Real-size heads from the next game' : 'Big heads from the next game';
+});
+
 // ---- Wiring ------------------------------------------------------------------------------
 const onFile = e => { const f = e.target.files?.[0]; if (f) startStudio(f); e.target.value = ''; };
 $('file').addEventListener('change', onFile); $('file2').addEventListener('change', onFile);
-$('play-cast').addEventListener('click', () => startShow(HOUSE[Math.floor(Math.random() * HOUSE.length)]));
-$('to-show').addEventListener('click', () => custom && startShow(custom));
 $('rematch').addEventListener('click', () => startShow(show.players[0]));
 $('show-home').addEventListener('click', startDemo); $('studio-home').addEventListener('click', startDemo);
 loadAI().catch(() => {});   // warm up the AI in the background
