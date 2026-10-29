@@ -179,6 +179,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Big Head Party";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.party-games";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Snap a photo of a friend so Big Head Party can turn their face into a 3D character. Photos are processed on your device.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save screenshots of your pie-splattered friends.";
@@ -191,11 +192,11 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.bigheadparty;
+				PRODUCT_BUNDLE_IDENTIFIER = com.domqinvestments.bigheadparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -209,6 +210,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Big Head Party";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.party-games";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Snap a photo of a friend so Big Head Party can turn their face into a 3D character. Photos are processed on your device.";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Save screenshots of your pie-splattered friends.";
@@ -221,11 +223,11 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = com.example.bigheadparty;
+				PRODUCT_BUNDLE_IDENTIFIER = com.domqinvestments.bigheadparty;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};

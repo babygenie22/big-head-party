@@ -58,12 +58,16 @@ The key idea: the photo is never stretched to fit a generic head. The **head is 
 | `Games/*` | Pie-Q Test, trivia bank, Bobble Boxing, Slap Champs, Dunk Tank, Whack-a-Head |
 | `Views/*` | Intro/demo, Home, Face Studio, Cast, Match setup, game screens |
 
+## Play it on your iPhone
+- **TestFlight (recommended, no Mac needed):** follow [`docs/TESTFLIGHT.md`](docs/TESTFLIGHT.md). GitHub Actions signs the app with your Apple Developer account and uploads it. You install it from the TestFlight app and can invite family.
+- **Every push to `main`** is compiled on a macOS runner (`.github/workflows/ios-build.yml`). The run launches the app in an iPhone Simulator, screenshots every screen and produces an unsigned `.ipa` you can sideload with Sideloadly or AltStore.
+
 ## Build & run
 
 Requires a Mac with **Xcode 16 or newer**, and iOS 17+ on the device or simulator.
 
 1. Open `BigHeadParty.xcodeproj`. It uses Xcode 16's synchronized folders, so every file in `BigHeadParty/` is included automatically.
-2. Select the **BigHeadParty** target → *Signing & Capabilities* → choose your team (and change the bundle id `com.example.bigheadparty` if needed).
+2. Select the **BigHeadParty** target → *Signing & Capabilities* → choose your team (bundle id: `com.domqinvestments.bigheadparty`).
 3. Run on a **real iPhone** for the best results. Vision's person segmentation and the camera aren't available in the Simulator. Without segmentation the app still works and shows a warning that edges may be busy.
 
 If the project file gives you trouble, regenerate it with XcodeGen: `brew install xcodegen && xcodegen` (spec in `project.yml`).

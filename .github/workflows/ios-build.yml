@@ -26,23 +26,34 @@ jobs:
           grep -q "BUILD SUCCEEDED" sim.log
 
       - name: Run in the iPhone Simulator and take screenshots
+        timeout-minutes: 15
         run: |
+          # t SECONDS CMD...: run with a time limit (macOS has no `timeout`)
+          t() { perl -e 'alarm shift; exec @ARGV' "$@"; }
           APP=build/sim/Build/Products/Debug-iphonesimulator/BigHeadParty.app
-          BUNDLE=com.example.bigheadparty
-          UDID=$(xcrun simctl create bhp "iPhone 16")
-          xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID" -b
-          xcrun simctl install "$UDID" "$APP"
+          BUNDLE=com.domqinvestments.bigheadparty
+          xcrun simctl list runtimes | grep -i ios
+          DEVTYPE=$(xcrun simctl list devicetypes | grep -E "^iPhone 1[5-7] \(" | head -1 | sed -E 's/.*\((com[^)]+)\).*/\1/')
+          RUNTIME=$(xcrun simctl list runtimes | grep -E "^iOS .*com.apple" | tail -1 | sed -E 's/.* - (com[^ ]+).*/\1/')
+          echo "device type: $DEVTYPE  runtime: $RUNTIME"
+          UDID=$(xcrun simctl create bhp "$DEVTYPE" "$RUNTIME")
+          echo "created $UDID"
+          t 240 xcrun simctl boot "$UDID" || echo "boot returned $?"
+          t 300 xcrun simctl bootstatus "$UDID" -b || echo "bootstatus returned $?"
+          echo "booted"
+          t 120 xcrun simctl install "$UDID" "$APP"
+          echo "installed"
           mkdir -p shots
           # A test portrait for the photo -> 3D head pipeline (downloaded, not stored in the repo).
           curl -sSL -o "$PWD/test-face.png" https://storage.googleapis.com/mediapipe-assets/business-person.png || true
-          shot() { xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || echo "screenshot $1 failed"; }
+          shot() { t 30 xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || echo "screenshot $1 failed"; }
           run() {  # run NAME SECONDS ARGS...
             local name=$1 wait=$2; shift 2
-            xcrun simctl terminate "$UDID" $BUNDLE >/dev/null 2>&1 || true
-            xcrun simctl launch "$UDID" $BUNDLE "$@" >/dev/null
+            echo "== $name"
+            t 20 xcrun simctl terminate "$UDID" $BUNDLE >/dev/null 2>&1 || true
+            t 60 xcrun simctl launch "$UDID" $BUNDLE "$@" || echo "launch failed for $name"
             sleep "$wait"; shot "$name"
-            if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE"; then echo "::error::App is not running after $name"; fi
+            if ! t 20 xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE"; then echo "::error::App is not running after $name"; fi
           }
           run 01-intro-demo 14
           run 02-home 8 -hasSeenIntro YES
@@ -54,9 +65,8 @@ jobs:
           run 08-bobble-boxing 9 -hasSeenIntro YES -demoGame boxing
           run 09-slap-real-heads 9 -hasSeenIntro YES -headSize real -demoGame slap
           ls -la shots
-          # Any crash reports from the app?
           find ~/Library/Logs/DiagnosticReports -name "BigHeadParty*" -newer "$APP" -exec cp {} shots/ \; 2>/dev/null || true
-          ls shots | grep -i -E "\.ips|\.crash" && echo "::error::Crash report found" || echo "No crash reports"
+          if ls shots | grep -qiE "\.ips$|\.crash$"; then echo "::error::Crash report found"; else echo "No crash reports"; fi
 
       - name: Upload screenshots
         if: always()

@@ -1,7 +1,7 @@
 # Fallback: `brew install xcodegen && xcodegen` regenerates BigHeadParty.xcodeproj
 name: BigHeadParty
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.domqinvestments
   deploymentTarget:
     iOS: "17.0"
 targets:
@@ -11,9 +11,10 @@ targets:
     sources: [BigHeadParty]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.example.bigheadparty
+        PRODUCT_BUNDLE_IDENTIFIER: com.domqinvestments.bigheadparty
         SWIFT_VERSION: "5.0"
-        TARGETED_DEVICE_FAMILY: "1,2"
+        TARGETED_DEVICE_FAMILY: "1"
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         GENERATE_INFOPLIST_FILE: YES
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: 1
