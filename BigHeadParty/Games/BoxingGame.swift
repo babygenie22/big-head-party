@@ -133,7 +133,7 @@ final class BoxingGame: ObservableObject {
     let vsCPU: Bool
     let scene = SCNScene()
     let cameraRig = SCNNode()
-    let camera = Effects.makeCamera(fov: 42)
+    let camera = Effects.makeCamera(fov: 40, horizontal: true)
     private(set) var fighters: [Fighter] = []
     weak var view: SCNView?
 

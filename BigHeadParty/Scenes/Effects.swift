@@ -190,7 +190,7 @@ enum Effects {
             ctx.cgContext.drawLinearGradient(g, start: .zero, end: CGPoint(x: 0, y: 256), options: [])
         }
         scene.lightingEnvironment.contents = env
-        scene.lightingEnvironment.intensity = 1.1
+        scene.lightingEnvironment.intensity = 0.8
 
         let ambient = SCNNode()
         ambient.light = SCNLight()
@@ -227,14 +227,18 @@ enum Effects {
         scene.rootNode.addChildNode(rimLight)
     }
 
-    static func makeCamera(fov: CGFloat = 40) -> SCNNode {
+    /// `horizontal: true` fixes the field of view across the screen's width, so wide scenes
+    /// (two contestants, a tank and a target) always fit a tall phone screen.
+    static func makeCamera(fov: CGFloat = 40, horizontal: Bool = false) -> SCNNode {
         let camera = SCNCamera()
+        camera.projectionDirection = horizontal ? .horizontal : .vertical
         camera.fieldOfView = fov
         camera.zNear = 0.1
         camera.zFar = 100
         camera.wantsHDR = true
-        camera.bloomIntensity = 0.4
-        camera.bloomThreshold = 0.85
+        camera.exposureOffset = -0.25
+        camera.bloomIntensity = 0.2
+        camera.bloomThreshold = 0.95
         camera.vignettingIntensity = 0.4
         let node = SCNNode()
         node.camera = camera

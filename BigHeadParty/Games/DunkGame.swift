@@ -19,7 +19,7 @@ final class DunkGame: ObservableObject {
     let vsCPU: Bool
     let scene = SCNScene()
     let cameraRig = SCNNode()
-    let camera = Effects.makeCamera(fov: 36)
+    let camera = Effects.makeCamera(fov: 42, horizontal: true)
     weak var view: SCNView?
 
     private let tankX: Float = 0.9, water: Float = 1.3, seat: Float = 2.32

@@ -37,7 +37,7 @@ final class SlapGame: ObservableObject {
     let vsCPU: Bool
     let scene = SCNScene()
     let cameraRig = SCNNode()
-    let camera = Effects.makeCamera(fov: 38)
+    let camera = Effects.makeCamera(fov: 40, horizontal: true)
     private(set) var contestants: [Contestant] = []
     weak var view: SCNView?
 

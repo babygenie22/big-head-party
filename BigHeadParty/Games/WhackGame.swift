@@ -22,7 +22,7 @@ final class WhackGame: ObservableObject {
     let player: GameCharacter
     let scene = SCNScene()
     let cameraRig = SCNNode()
-    let camera = Effects.makeCamera(fov: 38)
+    let camera = Effects.makeCamera(fov: 46, horizontal: true)
     weak var view: SCNView?
 
     private var moles: [Mole] = []
