@@ -12,6 +12,58 @@ enum Effects {
         return m
     }()
 
+    /// Tileable skin-pore normal map (generated once).
+    static let skinNormalMap: UIImage = {
+        let n = 256
+        var rng = SeededRandom(seed: 99)
+        var h = (0..<(n * n)).map { _ in Float(rng.next()) }
+        for _ in 0..<2 {
+            var next = h
+            for i in 0..<(n * n) { next[i] = (h[i] * 2 + h[(i + 1) % (n * n)] + h[(i + n) % (n * n)]) / 4 }
+            h = next
+        }
+        var px = [UInt8](repeating: 255, count: n * n * 4)
+        for y in 0..<n {
+            for x in 0..<n {
+                let dx = h[y * n + (x + 1) % n] - h[y * n + (x + n - 1) % n]
+                let dy = h[((y + 1) % n) * n + x] - h[((y + n - 1) % n) * n + x]
+                let l = (dx * dx * 16 + dy * dy * 16 + 1).squareRoot()
+                let i = (y * n + x) * 4
+                px[i] = UInt8(max(0, min(255, (-dx * 4 / l * 0.5 + 0.5) * 255)))
+                px[i + 1] = UInt8(max(0, min(255, (-dy * 4 / l * 0.5 + 0.5) * 255)))
+                px[i + 2] = UInt8(max(0, min(255, (1 / l * 0.5 + 0.5) * 255)))
+            }
+        }
+        let provider = CGDataProvider(data: Data(px) as CFData)!
+        let cg = CGImage(width: n, height: n, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: n * 4,
+                         space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                         provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)!
+        return UIImage(cgImage: cg)
+    }()
+
+    /// Vertical carnival stripes.
+    static func stripes(_ a: UIColor, _ b: UIColor, count: Int = 16) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 512, height: 256)).image { ctx in
+            for i in 0..<count {
+                (i % 2 == 0 ? a : b).setFill()
+                ctx.fill(CGRect(x: CGFloat(i) * 512 / CGFloat(count), y: 0, width: 512 / CGFloat(count) + 1, height: 256))
+            }
+        }
+    }
+
+    /// Show title painted on a banner.
+    static func banner(_ text: String, background: UIColor) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 256)).image { ctx in
+            background.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 1024, height: 256))
+            let font = UIFont.systemFont(ofSize: 130, weight: .black)
+            let style = NSMutableParagraphStyle(); style.alignment = .center
+            let shadow: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor(red: 0.93, green: 0.23, blue: 0.34, alpha: 1), .paragraphStyle: style]
+            let main: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor(red: 1, green: 0.81, blue: 0.29, alpha: 1), .paragraphStyle: style]
+            (text as NSString).draw(in: CGRect(x: 6, y: 50, width: 1024, height: 180), withAttributes: shadow)
+            (text as NSString).draw(in: CGRect(x: 0, y: 44, width: 1024, height: 180), withAttributes: main)
+        }
+    }
+
     static let dotImage: UIImage = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 64)).image { ctx in
         let colors = [UIColor.white.cgColor, UIColor.white.withAlphaComponent(0).cgColor] as CFArray
         let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0.55, 1])!

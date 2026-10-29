@@ -7,10 +7,10 @@ final class PieStage {
     let scene = SCNScene()
     let cameraRig = SCNNode()
     let camera = Effects.makeCamera(fov: 38)
-    private(set) var rigs: [HeadRig] = []
+    private(set) var contestants: [Contestant] = []
+    var rigs: [HeadRig] { contestants.map(\.rig) }
     let podiumX: [Float] = [-1.7, 1.7]
     let neckY: Float = 2.0
-    let headScale: Float = 0.62
 
     init(characters: [GameCharacter], showSign: Bool = true) {
         scene.background.contents = UIColor(red: 0.08, green: 0.03, blue: 0.14, alpha: 1)
@@ -20,15 +20,12 @@ final class PieStage {
         buildSet(showSign: showSign)
 
         for (i, character) in characters.prefix(2).enumerated() {
-            let rig = HeadRig(character: character)
-            rig.root.position = SCNVector3(podiumX[i], neckY, 0)
-            rig.root.scale = SCNVector3(headScale, headScale, headScale)
-            rig.root.eulerAngles.y = i == 0 ? 0.22 : -0.22
-            let body = Accessories.torso(color: UIColor(rgb: character.meta.shirtRGB), skin: UIColor(rgb: character.meta.skinRGB))
-            rig.root.addChildNode(body)
-            scene.rootNode.addChildNode(rig.root)
-            rig.startIdle(seed: Double(i) * 2.1)
-            rigs.append(rig)
+            let c = Contestant(character: character)
+            c.group.position = SCNVector3(podiumX[i], neckY, 0)
+            c.group.eulerAngles.y = i == 0 ? 0.22 : -0.22
+            scene.rootNode.addChildNode(c.group)
+            c.rig.startIdle(seed: Double(i) * 2.1)
+            contestants.append(c)
         }
         focus(on: nil, animated: false)
     }
@@ -118,10 +115,10 @@ final class PieStage {
     func focus(on index: Int?, animated: Bool = true) {
         let position: SCNVector3
         let target: SCNVector3
-        if let index, index < rigs.count {
-            let face = rigs[index].faceWorldPosition
-            position = SCNVector3(face.x * 0.75, face.y + 0.25, 4.6)
-            target = SCNVector3(face.x, face.y - 0.05, 0)
+        if let index, index < contestants.count {
+            let shot = contestants[index].closeUp()
+            position = shot.position
+            target = shot.target
         } else {
             position = SCNVector3(0, 2.9, 8.8)
             target = SCNVector3(0, 2.4, 0)
@@ -138,17 +135,18 @@ final class PieStage {
 
     /// Launches a pie at contestant `index`. The completion runs on the main thread after impact.
     func throwPie(at index: Int, completion: (() -> Void)? = nil) {
-        guard index < rigs.count else { return }
-        let target = rigs[index].faceWorldPosition
-        PieThrower.throwPie(at: rigs[index], in: scene, camera: camera,
+        guard index < contestants.count else { return }
+        let c = contestants[index]
+        let target = c.rig.faceWorldPosition
+        PieThrower.throwPie(at: c.rig, in: scene, camera: camera,
                             from: SCNVector3(target.x * 0.3 + Float.random(in: -0.6...0.6), 0.6, 8),
-                            scale: headScale * 1.15, completion: completion)
+                            scale: c.headScale * 1.15, completion: completion)
     }
 
     func cheer(_ index: Int) {
         guard index < rigs.count else { return }
         let rig = rigs[index]
-        Effects.confetti(in: scene, at: SCNVector3(rig.root.position.x, 4.2, 0.5))
+        Effects.confetti(in: scene, at: SCNVector3(contestants[index].group.position.x, 4.2, 0.5))
         rig.root.runAction(.sequence([.moveBy(x: 0, y: 0.4, z: 0, duration: 0.15), .moveBy(x: 0, y: -0.4, z: 0, duration: 0.25)]))
         rig.pulse(.puff, peak: 0.8)
     }

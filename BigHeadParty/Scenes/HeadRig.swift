@@ -41,8 +41,16 @@ final class HeadRig {
         material.diffuse.wrapS = .clamp
         material.diffuse.wrapT = .clamp
         material.diffuse.mipFilter = .linear
-        material.roughness.contents = 0.62
+        material.roughness.contents = 0.55
         material.metalness.contents = 0.0
+        // Fine pore detail and a faint skin sheen.
+        material.normal.contents = Effects.skinNormalMap
+        material.normal.intensity = 0.3
+        material.normal.wrapS = .repeat
+        material.normal.wrapT = .repeat
+        material.normal.contentsTransform = SCNMatrix4MakeScale(9, 9, 1)
+        material.clearCoat.contents = 0.05
+        material.clearCoatRoughness.contents = 0.5
         geometry.materials = [material]
         head.geometry = geometry
 
@@ -169,4 +177,33 @@ final class HeadRig {
     }
 
     var creamLevel: Int { splats.childNodes.count }
+
+    // MARK: - Looks
+
+    /// Soaked: glossy, a little darker, dripping for a few seconds.
+    func setWet(_ wet: Bool, in scene: SCNScene? = nil) {
+        guard let m = head.geometry?.firstMaterial else { return }
+        m.roughness.contents = wet ? 0.18 : 0.55
+        m.clearCoat.contents = wet ? 0.9 : 0.05
+        m.clearCoatRoughness.contents = wet ? 0.08 : 0.5
+        m.multiply.contents = wet ? UIColor(white: 0.84, alpha: 1) : UIColor.white
+        guard wet, let scene else { return }
+        let chin = SCNVector3(0, anchors.chinY + 0.05, 0.6)
+        head.runAction(.repeat(.sequence([
+            .run { [weak self] node in
+                guard let self else { return }
+                let p = node.convertPosition(SCNVector3(chin.x + Float.random(in: -0.3...0.3), chin.y, chin.z), to: nil)
+                DispatchQueue.main.async {
+                    Effects.burst(in: scene, at: p, color: UIColor(red: 0.62, green: 0.85, blue: 1, alpha: 1), count: 3, velocity: 0.4,
+                                  size: CGFloat(0.02 + 0.05 * self.root.scale.x), direction: SCNVector3(0, -1, 0), spread: 20, lifespan: 0.8)
+                }
+            },
+            .wait(duration: 0.22),
+        ]), count: 18), forKey: "drip")
+    }
+
+    /// Golden glow for bonus targets.
+    func setGolden(_ golden: Bool) {
+        head.geometry?.firstMaterial?.emission.contents = golden ? UIColor(red: 0.48, green: 0.33, blue: 0, alpha: 1) : UIColor.black
+    }
 }

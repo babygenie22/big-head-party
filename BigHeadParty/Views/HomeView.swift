@@ -11,15 +11,47 @@ final class ShowcaseHolder: ObservableObject {
     }
 }
 
-enum GameKind: String, Identifiable {
-    case pieShow, boxing
+enum GameKind: String, Identifiable, CaseIterable {
+    case pieShow, slap, dunk, whack, boxing
     var id: String { rawValue }
-    var title: String { self == .pieShow ? "The Pie-Q Test" : "Bobble Boxing" }
-    var blurb: String {
-        self == .pieShow ? "Game-show trivia. Wrong answer? Pie to the face." : "Big heads. Tiny bodies. Wobbly knockouts."
+    var title: String {
+        switch self {
+        case .pieShow: return "The Pie-Q Test"
+        case .slap: return "Slap Champs"
+        case .dunk: return "Dunk Tank"
+        case .whack: return "Whack-a-Head"
+        case .boxing: return "Bobble Boxing"
+        }
     }
-    var symbol: String { self == .pieShow ? "birthday.cake.fill" : "figure.boxing" }
-    var color: Color { self == .pieShow ? Theme.yellow : Theme.red }
+    var blurb: String {
+        switch self {
+        case .pieShow: return "Game-show trivia. Wrong answer? Pie to the face."
+        case .slap: return "Time the meter. Perfect slaps go slow-mo."
+        case .dunk: return "Hit the bullseye. Splash."
+        case .whack: return "Bonk the faces. Not the baby."
+        case .boxing: return "Big heads. Wobbly knockouts."
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .pieShow: return "birthday.cake.fill"
+        case .slap: return "hand.raised.fill"
+        case .dunk: return "drop.fill"
+        case .whack: return "hammer.fill"
+        case .boxing: return "figure.boxing"
+        }
+    }
+    var color: Color {
+        switch self {
+        case .pieShow: return Theme.yellow
+        case .slap: return Theme.pink
+        case .dunk: return Theme.teal
+        case .whack: return Color(red: 0.55, green: 0.85, blue: 0.4)
+        case .boxing: return Theme.red
+        }
+    }
+    /// Whack-a-Head is solo; everything else is head-to-head.
+    var isSolo: Bool { self == .whack }
 }
 
 struct HomeView: View {
@@ -29,6 +61,7 @@ struct HomeView: View {
     @State private var showStudio = false
     @State private var showCast = false
     @State private var setupGame: GameKind?
+    @AppStorage(HeadSize.storageKey) private var headSize: HeadSize = .big
 
     var body: some View {
         ZStack {
@@ -44,9 +77,8 @@ struct HomeView: View {
                     }
                     .buttonStyle(ChunkyButtonStyle())
 
-                    HStack(spacing: 14) {
-                        gameCard(.pieShow)
-                        gameCard(.boxing)
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 14) {
+                        ForEach(GameKind.allCases) { gameCard($0) }
                     }
                     castRow
                     comingSoon
@@ -66,6 +98,14 @@ struct HomeView: View {
         HStack {
             PartyTitle(text: "BIG HEAD PARTY", size: 30)
             Spacer()
+            Menu {
+                Picker("Head size", selection: $headSize) {
+                    ForEach(HeadSize.allCases) { Text($0.label).tag($0) }
+                }
+            } label: {
+                Image(systemName: headSize == .big ? "person.crop.circle.badge.plus" : "person.crop.circle").font(.title2)
+            }
+            .accessibilityLabel("Head size: \(headSize.label)")
             Button {
                 hasSeenIntro = false
             } label: {
@@ -124,7 +164,7 @@ struct HomeView: View {
             }
             .foregroundStyle(.black)
             .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 190, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: 170, alignment: .topLeading)
             .background(kind.color, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -169,9 +209,8 @@ struct HomeView: View {
             Text("Coming soon").font(.party(22))
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    teaser("Dunk Tank Derby", "drop.fill", Theme.teal)
-                    teaser("Slap Champs", "hand.raised.fill", Theme.pink)
                     teaser("Bobble Kart", "car.fill", Theme.blue)
+                    teaser("Bobble Sumo", "figure.wrestling", Theme.pink)
                     teaser("Wedding Cake Wars", "gift.fill", Theme.yellow)
                 }
             }

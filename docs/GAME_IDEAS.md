@@ -19,9 +19,9 @@ Principles drawn from what has already worked (JibJab's "Elf Yourself", Reface, 
 |---|------|:---:|:---:|:---:|:---:|---|
 | 1 | **The Pie-Q Test**: game-show trivia; wrong answer = pie to the face | ★★★★★ | ★★★★★ | Low | ★★★★★ | **Built (v0.1).** Best fit. |
 | 2 | **Bobble Boxing**: big-head boxers, wobbly heads, squishy punches | ★★★★☆ | ★★★★★ | Medium | ★★★★☆ | **Built (v0.1).** The "fighting game" pick. |
-| 3 | **Dunk Tank Derby**: throw balls at a target; hit it and your uncle drops into the water, hair soaked | ★★★★☆ | ★★★★☆ | Low | ★★★★☆ | Next up: reuses the podium stage |
-| 4 | **Slap Champs**: turn-based slap contest; timing meter sets power, cheeks ripple in slow-mo | ★★★★★ | ★★★★★ | Low | ★★★★★ | Strong; the slow-mo face ripple is the whole joke |
-| 5 | **Whack-a-Relative**: family faces pop up out of holes; bonk with a foam hammer | ★★★★☆ | ★★★★☆ | Very low | ★★★☆☆ | Great casual/kids mode |
+| 3 | **Dunk Tank**: throw balls at a target; hit it and your uncle drops into the water, hair soaked | ★★★★☆ | ★★★★☆ | Low | ★★★★☆ | **Built (v0.2).** |
+| 4 | **Slap Champs**: turn-based slap contest; timing meter sets power, cheeks ripple in slow-mo | ★★★★★ | ★★★★★ | Low | ★★★★★ | **Built (v0.2).** The slow-mo face ripple is the whole joke |
+| 5 | **Whack-a-Head**: family faces pop up out of holes; bonk with a foam hammer | ★★★★☆ | ★★★★☆ | Very low | ★★★☆☆ | **Built (v0.2).** Great casual/kids mode |
 | 6 | **Wedding Cake Wars**: tag-team food fight at a wedding, cakes & spaghetti | ★★★★☆ | ★★★★☆ | Medium | ★★★★☆ | Seasonal and event-friendly (weddings, birthdays) |
 | 7 | **Bobble Kart**: kart racing; the head sticks out of the kart and catches bugs and banana peels | ★★★☆☆ | ★★★☆☆ | High | ★★★★☆ | Fun, but faces get small at speed |
 | 8 | **Talent Show Judges**: your friends sit as judges and react to your silly act (boo, cry, laugh) | ★★★★★ | ★★★☆☆ | Medium | ★★☆☆☆ | Good for "look at Dad's face" reaction memes |

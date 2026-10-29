@@ -15,7 +15,7 @@ struct PieShowView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            SceneContainer(scene: game.stage.scene, pointOfView: game.stage.camera) { game.view = $0 }
+            SceneContainer(scene: game.stage.scene, pointOfView: game.stage.camera, onViewCreated: { game.view = $0 })
                 .ignoresSafeArea()
             VStack(spacing: 10) {
                 scoreboard

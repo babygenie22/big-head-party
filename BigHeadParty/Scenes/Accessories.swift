@@ -6,6 +6,8 @@ import UIKit
 enum Accessories {
     static func attach(to rig: HeadRig) {
         let meta = rig.character.meta
+        addEars(to: rig)
+        if !meta.googlyEyes { addCorneas(to: rig) }
         let hairColor = UIColor(rgb: meta.hairRGB)
         if let hair = hairNode(meta.hairVolume, color: hairColor) { rig.head.addChildNode(hair) }
         let lift: Float = meta.hairVolume == .afro ? 0.8 : (meta.hairVolume == .pompadour ? 0.2 : 0)
@@ -139,6 +141,46 @@ enum Accessories {
             ])))
             eye.addChildNode(pupil)
             rig.head.addChildNode(eye)
+        }
+    }
+
+    /// Ears, half-buried in the side of the head at the temples.
+    static func addEars(to rig: HeadRig) {
+        let skin = UIColor(rgb: rig.character.meta.skinRGB)
+        let outerM = material(skin.darker(0.88), roughness: 0.6)
+        let innerM = material(skin.darker(0.62), roughness: 0.7)
+        for side: Float in [-1, 1] {
+            let ear = SCNNode()
+            ear.position = SCNVector3(side * rig.anchors.templeW * 0.96, rig.anchors.eyeY - 0.18, -0.15)
+            ear.eulerAngles = SCNVector3(0.1, side * 0.55, 0)
+            let outer = node(SCNSphere(radius: 1), outerM, at: SCNVector3(0, 0, 0))
+            outer.scale = SCNVector3(0.07, 0.25, 0.16)
+            let rim = node(SCNTorus(ringRadius: 0.13, pipeRadius: 0.032), outerM, at: SCNVector3(side * 0.035, 0.02, 0))
+            rim.eulerAngles.z = .pi / 2          // ring stands upright in the ear's plane
+            rim.scale = SCNVector3(1.6, 1, 1)    // taller than wide (local x is vertical after the turn)
+            let inner = node(SCNSphere(radius: 1), innerM, at: SCNVector3(side * 0.04, -0.02, 0.01))
+            inner.scale = SCNVector3(0.035, 0.15, 0.085)
+            [outer, rim, inner].forEach(ear.addChildNode)
+            rig.head.addChildNode(ear)
+        }
+    }
+
+    /// Clear, glossy caps over the painted/photo eyes so they catch light like real eyes.
+    static func addCorneas(to rig: HeadRig) {
+        let cornea = SCNMaterial()
+        cornea.lightingModel = .blinn
+        cornea.diffuse.contents = UIColor.black
+        cornea.specular.contents = UIColor.white
+        cornea.shininess = 80
+        cornea.blendMode = .add          // adds only the highlights
+        cornea.writesToDepthBuffer = false
+        for u in [FaceLayout.leftEye.x, FaceLayout.rightEye.x] {
+            let x = HeadMeshBuilder.modelX(u: u), y = rig.anchors.eyeY
+            let hits = rig.head.hitTestWithSegment(from: SCNVector3(x, y, 3), to: SCNVector3(x, y, -0.5), options: nil)
+            guard let z = hits.first(where: { $0.node === rig.head })?.localCoordinates.z else { continue }
+            let c = node(SCNSphere(radius: 0.1), cornea, at: SCNVector3(x, y + 0.005, z - 0.025))
+            c.scale = SCNVector3(1.15, 0.62, 0.32)
+            rig.head.addChildNode(c)
         }
     }
 

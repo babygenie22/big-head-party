@@ -15,7 +15,7 @@ struct BoxingView: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            SceneContainer(scene: game.scene, pointOfView: game.camera) { game.view = $0 }
+            SceneContainer(scene: game.scene, pointOfView: game.camera, onViewCreated: { game.view = $0 })
                 .ignoresSafeArea()
             VStack {
                 hud

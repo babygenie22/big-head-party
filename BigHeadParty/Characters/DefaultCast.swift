@@ -117,10 +117,15 @@ enum DefaultCast {
                 path.addQuadCurve(to: P(0.21, eyeV - 0.02), controlPoint: P(0.23, hairline - 0.01))
                 path.addLine(to: P(0.20, 0.64)); path.addLine(to: P(0, 0.64)); path.close()
                 path.fill()
+                HairStrands.draw(in: c, color: spec.hair, region: path.cgPath, count: spec.hair2D == .buzz ? 1200 : 3000, rng: &rng)
             case .baldTop:
                 spec.hair.setFill()
                 UIBezierPath(rect: CGRect(x: 0, y: 0.30 * T, width: 0.22 * T, height: 0.34 * T)).fill()
                 UIBezierPath(rect: CGRect(x: 0.78 * T, y: 0.30 * T, width: 0.22 * T, height: 0.34 * T)).fill()
+                let sides = CGMutablePath()
+                sides.addRect(CGRect(x: 0, y: 0.30 * T, width: 0.22 * T, height: 0.34 * T))
+                sides.addRect(CGRect(x: 0.78 * T, y: 0.30 * T, width: 0.22 * T, height: 0.34 * T))
+                HairStrands.draw(in: c, color: spec.hair, region: sides, count: 900, rng: &rng)
                 radial(P(0.44, 0.10), 0.12 * T, UIColor(white: 1, alpha: 0.35), UIColor(white: 1, alpha: 0))   // shiny scalp
             case .curl:
                 spec.hair.setStroke()

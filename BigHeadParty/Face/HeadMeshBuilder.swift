@@ -38,6 +38,8 @@ enum HeadMeshBuilder {
         let noseTip: SCNVector3
         let mouth: SCNVector3
         let chinY: Float
+        /// Half-width of the skull at the temples (where the ears go).
+        let templeW: Float
     }
 
     static func build(shape rawShape: FaceShape) -> Output {
@@ -228,7 +230,8 @@ enum HeadMeshBuilder {
                       eyeY: yEye,
                       noseTip: SCNVector3(noseX, noseY, 0.95 + 0.27),
                       mouth: SCNVector3(mouthX, mouthY, 0.92),
-                      chinY: yChin)
+                      chinY: yChin,
+                      templeW: templeW)
     }
 
     // MARK: - Facial relief

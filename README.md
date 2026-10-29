@@ -22,6 +22,9 @@ Grandpa Gus · Aunt Linda · Coach Brick · Baby Benny · Disco Dolores · Sir R
 ### Game modes (built)
 | Mode | What happens | Face reactions used |
 |---|---|---|
+| **Slap Champs** | Turn-based slap contest, 6 slaps. Stop the power needle in the gold zone. A perfect slap plays in slow motion with a close-up. 100 HP each; a KO topples the loser. | sideways cheek skew, puff, jaw drop, neck wobble, sweat spray |
+| **Dunk Tank** | A crosshair drifts over a target. Hit the bullseye and the person on the plank drops into the water and comes up soaked (glossy, darker, dripping). Five balls each, then the roles swap. | "oh no" jaw drop, smug cheek puff on a miss, wet skin |
+| **Whack-a-Head** | 30 seconds. Faces pop out of a 3×3 board; tap to bonk. Golden heads +3, bonking Baby Benny −2. Your own face pops up most. Best score is saved. | squish, wobble, stars |
 | **The Pie-Q Test** | Game-show trivia, 6 questions, alternating turns. Right answer: the pie hits your opponent. Wrong answer or timeout: it hits you. Cream accumulates. Fewest pies wins; ties mean pies for everyone. | jaw-drop "oh no" before impact, pancake squish, wobble, cream raycast onto the face, tin slides off |
 | **Bobble Boxing** | 60-second bout. Jab / Hook / Uppercut buttons, hold BLOCK. CPU opponent reads your punches sometimes. K.O. = head spins and the boxer topples. 2P mode splits the controls left/right. | sideways skew on hooks, cheek puff, uppercut jaw-drop, spring-wobble on the neck, stars and sweat |
 
@@ -35,6 +38,10 @@ photo ─► Vision: 76 landmarks + person segmentation
       ─► 5 blend shapes (squish, mouthOpen, puff, skewLeft, skewRight) + bobblehead wobble
 ```
 
+**Realism details:** ears shaped and coloured from the person's skin tone, glossy corneas so the eyes catch light, a skin-pore normal map with a light clear-coat sheen, hair-strand texture on the crown and back (hair colour detected from the photo), proportioned bodies with arms and legs, soft shadows, and a **Big heads / Real heads** setting (home screen, top right) for cartoon or realistic proportions.
+
+**Web prototype extra:** the browser version also uses MediaPipe's 478 *3D* landmarks to give each face its real depth (nose, brow, eye sockets, cheeks). It fits the AI depth to the head template with least squares and spreads the difference over a smoothed grid. The iOS app doesn't have that yet: Apple's Vision only gives 2D landmarks, so iOS needs the MediaPipe iOS SDK or a server-side 3D fit (see the roadmap).
+
 The key idea: the photo is never stretched to fit a generic head. The **head is bent to fit the photo**. Skull rings follow the measured face contour. A relief field places brow ridge, eye sockets, cheekbones, nose ridge and tip, lips and chin at the person's own landmark positions. UVs come from the same frontal projection the texture uses, so the photo's nose lands on the mesh's nose.
 
 | File | Role |
@@ -46,7 +53,9 @@ The key idea: the photo is never stretched to fit a generic head. The **head is 
 | `Scenes/HeadRig.swift` | Live head: morph animation, wobble physics, cream splats raycast onto the mesh |
 | `Scenes/Accessories.swift` | Hats, 3D hair volumes, googly eyes, torso |
 | `Scenes/PieThrower.swift`, `Effects.swift` | Pie arc and impact, particles, lights, camera shake |
-| `Games/*` | Pie-Q Test stage and logic, trivia bank, Bobble Boxing |
+| `Scenes/Bodies.swift` | Proportioned bodies, `Contestant` (head + body), head-size setting |
+| `Face/HairStrands.swift` | Hair-strand texture painter |
+| `Games/*` | Pie-Q Test, trivia bank, Bobble Boxing, Slap Champs, Dunk Tank, Whack-a-Head |
 | `Views/*` | Intro/demo, Home, Face Studio, Cast, Match setup, game screens |
 
 ## Build & run
@@ -68,7 +77,7 @@ This was written in a Linux container with no Xcode or iOS SDK, so **the iOS app
 
 ## Web prototype
 
-`web-prototype/index.html` is the same pipeline in a single page: MediaPipe Face Landmarker (478 points) + selfie segmentation → the ported head sculptor → three.js, with the attract demo, Face Studio (Pie / Squish / Bonk / Puff / Yell, hats, googly eyes) and a 6-question Pie-Q Test. If the AI can't load, it falls back to tap-to-place (eyes, mouth, chin).
+`web-prototype/index.html` is the same pipeline in a single page: MediaPipe Face Landmarker (478 3D points) + selfie segmentation → the ported head sculptor with per-person depth → three.js. It includes the attract demo, Face Studio (Pie / Squish / Bonk / Puff / Yell, hats, googly eyes), and four games: The Pie-Q Test, Slap Champs, Dunk Tank and Whack-a-Head. If the AI can't load, it falls back to tap-to-place (eyes, mouth, chin).
 
 Run locally:
 ```bash
@@ -78,7 +87,7 @@ python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
 ## Roadmap
-- **Realism:** MediaPipe's 478-point 3D landmarks on iOS for per-person depth. Server-side FLAME/3DMM fitting for accurate head shape. Inpainting for the ears, sides and back of the head.
-- **Modes:** Slap Champs, Dunk Tank Derby, Whack-a-Relative, Wedding Cake Wars (see `docs/GAME_IDEAS.md`).
+- **Realism:** bring the web prototype's per-person 3D depth to iOS (MediaPipe iOS SDK, or a server-side FLAME/3DMM fit). Inpainting for the sides and back of the head. Real teeth/tongue inside the mouth for the jaw-drop.
+- **Modes:** Bobble Kart, Bobble Sumo, Wedding Cake Wars (see `docs/GAME_IDEAS.md`).
 - **Juice:** sound effects and a host voice, slow-motion replays, a share-video export, custom trivia ("How old is Uncle Ray?").
 - **Store readiness:** consent checkbox on upload, report/delete flow, app icon, privacy nutrition label (on-device only).

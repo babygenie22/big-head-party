@@ -32,18 +32,22 @@ struct MatchSetupView: View {
 
                 HStack(alignment: .center, spacing: 18) {
                     slot(0, p1, color: Theme.blue)
-                    Text("VS").font(.party(34)).foregroundStyle(Theme.yellow)
-                    slot(1, p2, color: Theme.red)
+                    if !kind.isSolo {
+                        Text("VS").font(.party(34)).foregroundStyle(Theme.yellow)
+                        slot(1, p2, color: Theme.red)
+                    }
                 }
 
-                Picker("Mode", selection: $vsCPU) {
-                    Text("vs Computer").tag(true)
-                    Text("2 Players, 1 Phone").tag(false)
+                if !kind.isSolo {
+                    Picker("Mode", selection: $vsCPU) {
+                        Text("vs Computer").tag(true)
+                        Text("2 Players, 1 Phone").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
 
-                Text(editing == 0 ? "Pick Player 1" : (vsCPU ? "Pick the opponent" : "Pick Player 2"))
+                Text(kind.isSolo ? "Whose face pops up most?" : (editing == 0 ? "Pick Player 1" : (vsCPU ? "Pick the opponent" : "Pick Player 2")))
                     .font(.headline)
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 12)], spacing: 12) {
@@ -61,12 +65,16 @@ struct MatchSetupView: View {
                     .padding(.horizontal)
                 }
                 Button("Let's go!") {
-                    guard let p1, let p2 else { return }
-                    game = GameConfig(kind: kind, players: [p1, p2], vsCPU: vsCPU)
+                    guard let p1 else { return }
+                    if kind.isSolo {
+                        game = GameConfig(kind: kind, players: [p1], vsCPU: true)
+                    } else if let p2 {
+                        game = GameConfig(kind: kind, players: [p1, p2], vsCPU: vsCPU)
+                    }
                 }
                 .buttonStyle(ChunkyButtonStyle(color: kind.color, textColor: .black))
-                .disabled(p1 == nil || p2 == nil)
-                .opacity(p1 == nil || p2 == nil ? 0.5 : 1)
+                .disabled(!ready)
+                .opacity(ready ? 1 : 0.5)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 20)
             }
@@ -96,7 +104,10 @@ struct MatchSetupView: View {
         .foregroundStyle(.white)
     }
 
+    private var ready: Bool { p1 != nil && (kind.isSolo || p2 != nil) }
+
     private func choose(_ c: GameCharacter) {
+        if kind.isSolo { p1 = c; return }
         if editing == 0 { p1 = c; editing = 1 } else { p2 = c; editing = 0 }
     }
 }
@@ -104,6 +115,7 @@ struct MatchSetupView: View {
 /// Owns the running game; bumping `rematch` rebuilds it from scratch.
 struct GameHost: View {
     let config: GameConfig
+    @EnvironmentObject private var store: CharacterStore
     @State private var rematch = 0
     @Environment(\.dismiss) private var dismiss
 
@@ -114,6 +126,12 @@ struct GameHost: View {
                 PieShowView(players: config.players, vsCPU: config.vsCPU, onRematch: { rematch += 1 }, onExit: { dismiss() })
             case .boxing:
                 BoxingView(players: config.players, vsCPU: config.vsCPU, onRematch: { rematch += 1 }, onExit: { dismiss() })
+            case .slap:
+                SlapView(players: config.players, vsCPU: config.vsCPU, onRematch: { rematch += 1 }, onExit: { dismiss() })
+            case .dunk:
+                DunkView(players: config.players, vsCPU: config.vsCPU, onRematch: { rematch += 1 }, onExit: { dismiss() })
+            case .whack:
+                WhackView(player: config.players[0], cast: store.defaults, onRematch: { rematch += 1 }, onExit: { dismiss() })
             }
         }
         .id(rematch)
