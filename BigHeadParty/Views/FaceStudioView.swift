@@ -114,6 +114,8 @@ final class FaceStudioModel: ObservableObject {
 }
 
 struct FaceStudioView: View {
+    /// Debug/CI only: a photo to process as soon as the studio opens.
+    var testImage: UIImage?
     @EnvironmentObject private var store: CharacterStore
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model = FaceStudioModel()
@@ -140,6 +142,9 @@ struct FaceStudioView: View {
                 }
             }
             .padding(.top, 10)
+        }
+        .onAppear {
+            if let testImage, model.stage == .pick { model.process(testImage) }
         }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }

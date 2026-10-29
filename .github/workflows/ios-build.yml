@@ -25,6 +25,46 @@ jobs:
             CODE_SIGNING_ALLOWED=NO build 2>&1 | tee sim.log | grep -E "error:|warning: .*(deprecated|will never be executed)|BUILD (SUCCEEDED|FAILED)" || true
           grep -q "BUILD SUCCEEDED" sim.log
 
+      - name: Run in the iPhone Simulator and take screenshots
+        run: |
+          APP=build/sim/Build/Products/Debug-iphonesimulator/BigHeadParty.app
+          BUNDLE=com.example.bigheadparty
+          UDID=$(xcrun simctl create bhp "iPhone 16")
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p shots
+          # A test portrait for the photo -> 3D head pipeline (downloaded, not stored in the repo).
+          curl -sSL -o "$PWD/test-face.png" https://storage.googleapis.com/mediapipe-assets/business-person.png || true
+          shot() { xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || echo "screenshot $1 failed"; }
+          run() {  # run NAME SECONDS ARGS...
+            local name=$1 wait=$2; shift 2
+            xcrun simctl terminate "$UDID" $BUNDLE >/dev/null 2>&1 || true
+            xcrun simctl launch "$UDID" $BUNDLE "$@" >/dev/null
+            sleep "$wait"; shot "$name"
+            if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE"; then echo "::error::App is not running after $name"; fi
+          }
+          run 01-intro-demo 14
+          run 02-home 8 -hasSeenIntro YES
+          run 03-face-studio 22 -hasSeenIntro YES -studioTestImage "$PWD/test-face.png"
+          run 04-pie-q-test 12 -hasSeenIntro YES -demoGame pieShow
+          run 05-slap-champs 9 -hasSeenIntro YES -demoGame slap
+          run 06-dunk-tank 9 -hasSeenIntro YES -demoGame dunk
+          run 07-whack-a-head 9 -hasSeenIntro YES -demoGame whack
+          run 08-bobble-boxing 9 -hasSeenIntro YES -demoGame boxing
+          run 09-slap-real-heads 9 -hasSeenIntro YES -headSize real -demoGame slap
+          ls -la shots
+          # Any crash reports from the app?
+          find ~/Library/Logs/DiagnosticReports -name "BigHeadParty*" -newer "$APP" -exec cp {} shots/ \; 2>/dev/null || true
+          ls shots | grep -i -E "\.ips|\.crash" && echo "::error::Crash report found" || echo "No crash reports"
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-screenshots
+          path: shots
+
       - name: Build for iPhone (unsigned)
         run: |
           set -o pipefail
