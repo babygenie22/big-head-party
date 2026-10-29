@@ -45,6 +45,10 @@ enum FaceAnalyzer {
 
         let landmarksRequest = VNDetectFaceLandmarksRequest()
         landmarksRequest.revision = VNDetectFaceLandmarksRequestRevision3
+        #if targetEnvironment(simulator)
+        // The Simulator's default Vision path returns collapsed landmarks; the CPU path is correct.
+        landmarksRequest.usesCPUOnly = true
+        #endif
         let handler = VNImageRequestHandler(cgImage: cg, orientation: .up, options: [:])
         try handler.perform([landmarksRequest])
 
@@ -71,6 +75,12 @@ enum FaceAnalyzer {
             throw FaceAnalyzerError.missingLandmarks
         }
         let eyes = ea.x < eb.x ? (ea, eb) : (eb, ea)
+        // Real eyes sit roughly a third of the face width apart. Anything far smaller means the
+        // landmarks collapsed; better to ask for another photo than to sculpt a broken head.
+        let faceWidth = face.boundingBox.width * size.width
+        guard hypot(eyes.1.x - eyes.0.x, eyes.1.y - eyes.0.y) > faceWidth * 0.18 else {
+            throw FaceAnalyzerError.missingLandmarks
+        }
 
         let overlay = points(lm.allPoints).map { CGPoint(x: $0.x / size.width, y: 1 - $0.y / size.height) }
         let bb = face.boundingBox
