@@ -77,7 +77,16 @@ final class SlapGame: ObservableObject {
     func stop() {
         clock.cancelAll()
         needleTimer?.invalidate()
-        scene.rootNode.speed = 1
+        setSlowMotion(1)
+    }
+
+    /// Slows every running action in the scene (the slap, wobbles, expressions).
+    private var slowFactor: CGFloat = 1
+    private func setSlowMotion(_ factor: CGFloat) {
+        slowFactor = factor
+        scene.rootNode.enumerateHierarchy { node, _ in
+            for key in node.actionKeys { node.action(forKey: key)?.speed = factor }
+        }
     }
 
     func snapshot() -> UIImage? { view?.snapshot() }
@@ -132,7 +141,8 @@ final class SlapGame: ObservableObject {
         let qBack = simd_quatf(angle: ai == 0 ? -1.9 : 1.9, axis: simd_float3(0, 1, 0)) * qHit
 
         A.rig.pulse(.puff, peak: 0.4, attack: 0.15, hold: 0.25, release: 0.4)
-        let wind = 0.45, strike = 0.12, follow = 0.14, back = 0.45
+        // Perfect slaps are also choreographed slower, so the moment reads even at full speed.
+        let wind = 0.45, strike = perfect ? 0.3 : 0.12, follow = perfect ? 0.5 : 0.14, back = 0.45
         var landed = false
         let cheekPoint = SCNVector3(cheek.x, cheek.y, cheek.z)
         arm.runAction(.customAction(duration: wind + strike + follow + back) { [weak self] node, elapsed in
@@ -154,16 +164,16 @@ final class SlapGame: ObservableObject {
                 node.simdOrientation = simd_slerp(qHit, qRest, k * k * (3 - 2 * k))
                 node.scale = SCNVector3(1, stretch + (1 - stretch) * k, 1)
             }
-        })
+        }, forKey: "slap")
 
         if perfect {
             clock.after(wind - 0.04) { [weak self] in
                 guard let self else { return }
-                self.scene.rootNode.speed = 0.18            // slow motion for everything in the scene
+                self.setSlowMotion(0.25)                    // slow motion for everything in the scene
                 let shot = D.closeUp(side: 0.6)
                 self.cameraRig.fly(to: shot.position, lookAt: shot.target, duration: 0.5)
                 self.callout = "PERFECT SLAP!"
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in self?.scene.rootNode.speed = 1 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in self?.setSlowMotion(1) }
             }
         }
     }
@@ -175,6 +185,7 @@ final class SlapGame: ObservableObject {
         D.rig.pulse(.puff, peak: CGFloat(0.3 + 0.5 * power), attack: 0.03, hold: 0.1, release: 0.9)
         D.rig.pulse(.mouthOpen, peak: CGFloat(0.5 * power), attack: 0.05, hold: 0.1, release: 0.8)
         D.rig.wobbleHit(sideways: dir * (0.6 + pw), back: 0.25, strength: 0.8 + pw)
+        if slowFactor < 1 { setSlowMotion(slowFactor) }   // the reactions just started play in slow motion too
         Effects.burst(in: scene, at: point, color: UIColor(red: 0.75, green: 0.9, blue: 1, alpha: 1), count: CGFloat(30 + power * 70),
                       velocity: CGFloat(2.5 + power * 3), size: CGFloat(0.03 + 0.06 * D.headScale),
                       direction: SCNVector3(-dir, 0.4, 0.2), spread: 60, lifespan: 0.7)
