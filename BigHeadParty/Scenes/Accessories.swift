@@ -170,8 +170,11 @@ enum Accessories {
         let cornea = SCNMaterial()
         cornea.lightingModel = .blinn
         cornea.diffuse.contents = UIColor.black
-        cornea.specular.contents = UIColor.white
-        cornea.shininess = 80
+        cornea.ambient.contents = UIColor.black
+        cornea.specular.contents = UIColor(white: 0.8, alpha: 1)
+        // Tight, so it reads as a catch-light. At 80 the blue fill light spread over the whole cap
+        // and laid a milky film across the eyes.
+        cornea.shininess = 400
         cornea.blendMode = .add          // adds only the highlights
         cornea.writesToDepthBuffer = false
         for u in [FaceLayout.leftEye.x, FaceLayout.rightEye.x] {

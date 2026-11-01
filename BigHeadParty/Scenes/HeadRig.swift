@@ -21,6 +21,10 @@ enum HeadGeometryCache {
 ///   root ─ idle ─ wobble ─ head (mesh, morpher) ─ splats / accessories
 final class HeadRig {
     static let neckOffset: Float = 1.2
+    /// Dry skin: soft sheen only. Photos already carry their own shine, and more on top read as
+    /// a white, sweaty forehead.
+    static let dryRoughness: CGFloat = 0.68
+    static let dryClearCoat: CGFloat = 0.02
 
     let character: GameCharacter
     let root = SCNNode()
@@ -42,7 +46,7 @@ final class HeadRig {
         material.diffuse.wrapT = .clamp
         material.diffuse.mipFilter = .linear
         material.diffuse.maxAnisotropy = 16   // keeps the photo sharp where the face curves away
-        material.roughness.contents = 0.55
+        material.roughness.contents = HeadRig.dryRoughness
         material.metalness.contents = 0.0
         // Fine pore detail and a faint skin sheen.
         material.normal.contents = Effects.skinNormalMap
@@ -50,7 +54,7 @@ final class HeadRig {
         material.normal.wrapS = .repeat
         material.normal.wrapT = .repeat
         material.normal.contentsTransform = SCNMatrix4MakeScale(9, 9, 1)
-        material.clearCoat.contents = 0.05
+        material.clearCoat.contents = HeadRig.dryClearCoat
         material.clearCoatRoughness.contents = 0.5
         geometry.materials = [material]
         head.geometry = geometry
@@ -184,8 +188,8 @@ final class HeadRig {
     /// Soaked: glossy, a little darker, dripping for a few seconds.
     func setWet(_ wet: Bool, in scene: SCNScene? = nil) {
         guard let m = head.geometry?.firstMaterial else { return }
-        m.roughness.contents = wet ? 0.18 : 0.55
-        m.clearCoat.contents = wet ? 0.9 : 0.05
+        m.roughness.contents = wet ? 0.18 : HeadRig.dryRoughness
+        m.clearCoat.contents = wet ? 0.9 : HeadRig.dryClearCoat
         m.clearCoatRoughness.contents = wet ? 0.08 : 0.5
         m.multiply.contents = wet ? UIColor(white: 0.84, alpha: 1) : UIColor.white
         guard wet, let scene else { return }

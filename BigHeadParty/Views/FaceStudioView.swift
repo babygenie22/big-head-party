@@ -13,6 +13,7 @@ final class FaceStudioModel: ObservableObject {
     static let stepTitles = [
         "Finding the face",
         "Mapping 76 facial landmarks",
+        "Touching up the lighting",
         "Cutting out the background",
         "Sculpting a 3D head to match",
         "Wrapping skin & painting hair",

@@ -11,6 +11,7 @@ struct BuiltFace {
 
 /// Warps a photo into the head's texture space.
 ///
+/// 0. `touchUp` gives every photo flattering, even light first (see there).
 /// 1. A similarity transform (rotate + scale + move) puts the pupils exactly on the canonical
 ///    eye positions. No non-rigid warping, so the person's real proportions survive; the mesh
 ///    adapts to *them* instead (see `HeadMeshBuilder`).
@@ -67,7 +68,7 @@ enum FaceTextureBuilder {
                                                    lipHeight: halfExtent(lipsUV, \.y).map { $0 * 2 }))
 
         // ---- Aligned photo, mask and sampled colors --------------------------------
-        let photo = CIImage(cgImage: capture.image).transformed(by: align)
+        let photo = touchUp(CIImage(cgImage: capture.image), pupils: [capture.eyes.0, capture.eyes.1]).transformed(by: align)
         let black = CIImage(color: .black).cropped(to: canvas)
 
         var personMask: CIImage?
@@ -106,6 +107,57 @@ enum FaceTextureBuilder {
     }
 
     // MARK: - Pieces
+
+    /// A gentle automatic retouch so people like how they look: Core Image's own auto-enhance
+    /// (face-aware color balance, tone curve, vibrance, shadows) at 75% so it stays natural,
+    /// calmer shine, a little noise cleanup, crisper detail, and concealer under the eyes that
+    /// lifts only as much as the under-eyes are darker than the cheeks (none on a well-lit face).
+    /// `pupils` are in image pixels, bottom-left origin (Vision and Core Image agree).
+    static func touchUp(_ image: CIImage, pupils: [CGPoint]) -> CIImage {
+        let clean = image.applyingFilter("CINoiseReduction", parameters: ["inputNoiseLevel": 0.015, "inputSharpness": 0.5])
+        var auto = clean
+        for filter in clean.autoAdjustmentFilters(options: [.redEye: false]) {
+            filter.setValue(auto, forKey: kCIInputImageKey)
+            auto = filter.outputImage ?? auto
+        }
+        var out = clean.applyingFilter("CIDissolveTransition", parameters: ["inputTargetImage": auto, "inputTime": 0.75])
+        out = out.applyingFilter("CIHighlightShadowAdjust", parameters: ["inputHighlightAmount": 0.8, "inputShadowAmount": 0.35])
+        out = out.applyingFilter("CISharpenLuminance", parameters: ["inputSharpness": 0.35, "inputRadius": 1.5])
+
+        guard pupils.count == 2 else { return out.cropped(to: image.extent) }
+        let ipd = hypot(pupils[1].x - pupils[0].x, pupils[1].y - pupils[0].y)
+        func luminance(at c: CGPoint) -> CGFloat {
+            let r = ipd * 0.12
+            let rect = CGRect(x: c.x - r, y: c.y - r / 2, width: 2 * r, height: r)
+            guard let avg = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: out, kCIInputExtentKey: CIVector(cgRect: rect)])?.outputImage
+            else { return 1 }
+            var px = [UInt8](repeating: 0, count: 4)
+            ciContext.render(avg, toBitmap: &px, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                             format: .RGBA8, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
+            return max(0.02, (0.3 * CGFloat(px[0]) + 0.59 * CGFloat(px[1]) + 0.11 * CGFloat(px[2])) / 255)
+        }
+        let gap = pupils.map { p in
+            log2(luminance(at: CGPoint(x: p.x, y: p.y - ipd * 0.55)) / luminance(at: CGPoint(x: p.x, y: p.y - ipd * 0.24)))
+        }.reduce(0, +) / 2
+        let ev = min(max(gap * 1.3, 0), 0.75)
+        guard ev > 0.02 else { return out.cropped(to: image.extent) }
+
+        var mask = CIImage(color: .black).cropped(to: image.extent)
+        for p in pupils {
+            guard let crescent = CIFilter(name: "CIRadialGradient", parameters: [
+                "inputCenter": CIVector(x: 0, y: 0), "inputRadius0": 0.5, "inputRadius1": 1.0,
+                "inputColor0": CIColor(red: 0.9, green: 0.9, blue: 0.9), "inputColor1": CIColor.black,
+            ])?.outputImage else { continue }
+            mask = crescent
+                .transformed(by: CGAffineTransform(scaleX: ipd * 0.34, y: ipd * 0.17)
+                    .concatenating(CGAffineTransform(translationX: p.x, y: p.y - ipd * 0.24)))
+                .applyingFilter("CIMaximumCompositing", parameters: [kCIInputBackgroundImageKey: mask])
+        }
+        let lifted = out.applyingFilter("CIExposureAdjust", parameters: ["inputEV": ev])
+        return lifted
+            .applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: out, kCIInputMaskImageKey: mask.cropped(to: image.extent)])
+            .cropped(to: image.extent)
+    }
 
     /// Rotation + uniform scale + translation mapping a1→b1 and a2→b2.
     static func similarity(from a1: CGPoint, _ a2: CGPoint, to b1: CGPoint, _ b2: CGPoint) -> CGAffineTransform {
