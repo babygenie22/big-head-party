@@ -112,6 +112,8 @@ struct HomeView: View {
         } else if let raw = defaults.string(forKey: "demoGame"), let kind = GameKind(rawValue: raw), store.defaults.count >= 2 {
             let cast = store.defaults
             debugGame = GameConfig(kind: kind, players: kind.isSolo ? [cast[0]] : [cast[0], cast[1]], vsCPU: true)
+        } else if defaults.bool(forKey: "studioCamera") {
+            showStudio = true
         }
         #endif
     }

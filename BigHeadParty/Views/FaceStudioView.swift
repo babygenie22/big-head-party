@@ -51,6 +51,11 @@ final class FaceStudioModel: ObservableObject {
                     self.markDone(0)
                 }
                 let face = FaceTextureBuilder.build(from: capture)
+                #if targetEnvironment(simulator)
+                if let out = UserDefaults.standard.string(forKey: "studioDumpTexture") {
+                    try? face.texture.pngData()?.write(to: URL(fileURLWithPath: out))
+                }
+                #endif
                 let character = self.makeCharacter(face)
                 _ = HeadGeometryCache.output(for: character)   // sculpt off the main thread
 
@@ -69,6 +74,12 @@ final class FaceStudioModel: ObservableObject {
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35 * Double(Self.stepTitles.count) + 0.3) {
                         self.preview.show(character)
+                        #if DEBUG
+                        // `-studioSpin 90` shows the result from the side.
+                        if let deg = UserDefaults.standard.string(forKey: "studioSpin"), let d = Float(deg) {
+                            self.preview.turn(to: d * .pi / 180)
+                        }
+                        #endif
                         withAnimation(.spring) { self.stage = .review }
                     }
                 }
@@ -146,6 +157,9 @@ struct FaceStudioView: View {
         }
         .onAppear {
             if let testImage, model.stage == .pick { model.process(testImage) }
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "studioCamera") { showCamera = true }   // layout check
+            #endif
         }
         .onChange(of: pickerItem) { _, item in
             guard let item else { return }
@@ -157,7 +171,7 @@ struct FaceStudioView: View {
             }
         }
         .fullScreenCover(isPresented: $showCamera) {
-            CameraPicker(isPresented: $showCamera) { image in model.process(image) }.ignoresSafeArea()
+            GuidedCameraView { image in model.process(image) }
         }
     }
 
@@ -343,35 +357,5 @@ struct FaceStudioView: View {
             Button("Try another photo") { model.reset() }.buttonStyle(ChunkyButtonStyle())
         }
         .padding(30)
-    }
-}
-
-/// UIKit camera wrapper (front camera by default — selfies welcome).
-struct CameraPicker: UIViewControllerRepresentable {
-    @Binding var isPresented: Bool
-    let onImage: (UIImage) -> Void
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        if UIImagePickerController.isCameraDeviceAvailable(.front) { picker.cameraDevice = .front }
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ controller: UIImagePickerController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraPicker
-        init(_ parent: CameraPicker) { self.parent = parent }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            if let image = info[.originalImage] as? UIImage { parent.onImage(image) }
-            parent.isPresented = false
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.isPresented = false }
     }
 }

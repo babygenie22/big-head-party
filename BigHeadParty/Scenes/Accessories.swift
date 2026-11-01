@@ -144,25 +144,64 @@ enum Accessories {
         }
     }
 
-    /// Ears, half-buried in the side of the head at the temples.
+    /// Ears: an ear-shaped plate with a raised rim (helix) and a darker bowl, front edge tucked
+    /// into the side of the head and the back edge flaring out a little, in the person's skin tone
+    /// with the same sheen as the head so they read as part of it.
     static func addEars(to rig: HeadRig) {
         let skin = UIColor(rgb: rig.character.meta.skinRGB)
-        let outerM = material(skin.darker(0.88), roughness: 0.6)
-        let innerM = material(skin.darker(0.62), roughness: 0.7)
+        func skinMaterial(_ shade: CGFloat) -> SCNMaterial {
+            let m = material(skin.darker(shade), roughness: HeadRig.dryRoughness)
+            m.normal.contents = Effects.skinNormalMap
+            m.normal.intensity = 0.3
+            return m
+        }
+        let plateM = skinMaterial(0.86), rimM = skinMaterial(0.92), bowlM = skinMaterial(0.62)
         for side: Float in [-1, 1] {
+            // Outline in the ear's own plane: x runs backwards from where it joins the head, y up.
+            let mirror: CGFloat = side > 0 ? 1 : -1
+            let outline = earOutline(mirror: mirror, inset: 0)
+            let plate = SCNShape(path: outline, extrusionDepth: 0.035)
+            plate.chamferRadius = 0.012
+            let ring = earOutline(mirror: mirror, inset: 0)
+            ring.append(earOutline(mirror: mirror, inset: 0.035))
+            ring.usesEvenOddFillRule = true
+            let rim = SCNShape(path: ring, extrusionDepth: 0.075)
+            rim.chamferRadius = 0.03
             let ear = SCNNode()
-            ear.position = SCNVector3(side * rig.anchors.templeW * 0.96, rig.anchors.eyeY - 0.18, -0.15)
-            ear.eulerAngles = SCNVector3(0.1, side * 0.55, 0)
-            let outer = node(SCNSphere(radius: 1), outerM, at: SCNVector3(0, 0, 0))
-            outer.scale = SCNVector3(0.07, 0.25, 0.16)
-            let rim = node(SCNTorus(ringRadius: 0.13, pipeRadius: 0.032), outerM, at: SCNVector3(side * 0.035, 0.02, 0))
-            rim.eulerAngles.z = .pi / 2          // ring stands upright in the ear's plane
-            rim.scale = SCNVector3(1.6, 1, 1)    // taller than wide (local x is vertical after the turn)
-            let inner = node(SCNSphere(radius: 1), innerM, at: SCNVector3(side * 0.04, -0.02, 0.01))
-            inner.scale = SCNVector3(0.035, 0.15, 0.085)
-            [outer, rim, inner].forEach(ear.addChildNode)
+            ear.position = SCNVector3(side * rig.anchors.templeW * 0.9, rig.anchors.eyeY - 0.2, -0.08)
+            // Ear faces outwards and a little forwards; slight backward tilt like a real ear.
+            ear.eulerAngles = SCNVector3(0, side * (Float.pi / 2 - 0.42), side * 0.08)
+            ear.addChildNode(node(plate, plateM, at: SCNVector3(0, 0, 0)))
+            ear.addChildNode(node(rim, rimM, at: SCNVector3(0, 0, 0.01)))
+            let bowl = node(SCNSphere(radius: 1), bowlM, at: SCNVector3(Float(mirror) * 0.075, -0.05, 0.015))
+            bowl.scale = SCNVector3(0.06, 0.09, 0.02)
+            ear.addChildNode(bowl)
             rig.head.addChildNode(ear)
         }
+    }
+
+    /// Ear silhouette (model units, ~0.25 wide × 0.5 tall): rounded top, lobe at the bottom.
+    private static func earOutline(mirror: CGFloat, inset: CGFloat) -> UIBezierPath {
+        let pts: [(CGFloat, CGFloat)] = [(0.00, 0.17), (0.08, 0.25), (0.18, 0.22), (0.24, 0.10), (0.22, -0.05),
+                                         (0.15, -0.17), (0.09, -0.26), (0.02, -0.25), (0.00, -0.15), (0.01, 0.02)]
+        let cx: CGFloat = 0.11, cy: CGFloat = 0
+        let p = pts.map { (x, y) -> CGPoint in
+            // Shrink toward the middle for the rim's inner edge.
+            let k = inset == 0 ? 1 : 1 - inset / 0.12
+            return CGPoint(x: (cx + (x - cx) * k) * mirror, y: cy + (y - cy) * (inset == 0 ? 1 : 1 - inset / 0.25) + (inset == 0 ? 0 : 0.015))
+        }
+        // Closed Catmull-Rom through the points.
+        let path = UIBezierPath()
+        path.move(to: p[0])
+        for i in 0..<p.count {
+            let p0 = p[(i - 1 + p.count) % p.count], p1 = p[i], p2 = p[(i + 1) % p.count], p3 = p[(i + 2) % p.count]
+            path.addCurve(to: p2,
+                          controlPoint1: CGPoint(x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6),
+                          controlPoint2: CGPoint(x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6))
+        }
+        path.close()
+        path.flatness = 0.002
+        return path
     }
 
     /// Clear, glossy caps over the painted/photo eyes so they catch light like real eyes.

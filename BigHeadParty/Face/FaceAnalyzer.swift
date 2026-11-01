@@ -47,6 +47,9 @@ enum FaceAnalyzer {
         // 2048² texture; 1600 px left typical faces upscaled and soft.
         guard let cg = uiImage.normalizedCGImage(maxDimension: 3200) else { throw FaceAnalyzerError.unreadableImage }
         let size = CGSize(width: cg.width, height: cg.height)
+        #if targetEnvironment(simulator)
+        if let canned = cannedCapture(cg) { return canned }
+        #endif
 
         let landmarksRequest = VNDetectFaceLandmarksRequest()
         landmarksRequest.revision = VNDetectFaceLandmarksRequestRevision3
@@ -105,6 +108,40 @@ enum FaceAnalyzer {
                            faceCount: faces.count)
     }
 }
+
+#if targetEnvironment(simulator)
+/// Vision's landmark model gives garbage on the simulator's CPU, so debug runs of
+/// `-studioTestImage photo.jpg` read landmarks computed on a Mac from `photo.jpg.lm.json`
+/// (and `photo.jpg.mask.png`), written by a small macOS Vision script.
+private func cannedCapture(_ cg: CGImage) -> FaceCapture? {
+    guard let path = UserDefaults.standard.string(forKey: "studioTestImage"),
+          let data = FileManager.default.contents(atPath: path + ".lm.json"),
+          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+    func pts(_ key: String) -> [CGPoint] { ((json[key] as? [[Double]]) ?? []).map { CGPoint(x: $0[0], y: $0[1]) } }
+    func centroid(_ p: [CGPoint]) -> CGPoint { CGPoint(x: p.map(\.x).reduce(0, +) / CGFloat(p.count), y: p.map(\.y).reduce(0, +) / CGFloat(p.count)) }
+    let a = centroid(pts("leftPupil")), b = centroid(pts("rightPupil"))
+    let w = CGFloat(cg.width), h = CGFloat(cg.height)
+    let box = (json["box"] as? [Double]) ?? [0, 0, 1, 1]
+    var mask: CVPixelBuffer?
+    if let m = UIImage(contentsOfFile: path + ".mask.png")?.cgImage {
+        CVPixelBufferCreate(nil, m.width, m.height, kCVPixelFormatType_OneComponent8, nil, &mask)
+        if let mask {
+            CVPixelBufferLockBaseAddress(mask, [])
+            let ctx = CGContext(data: CVPixelBufferGetBaseAddress(mask), width: m.width, height: m.height, bitsPerComponent: 8,
+                                bytesPerRow: CVPixelBufferGetBytesPerRow(mask), space: CGColorSpaceCreateDeviceGray(), bitmapInfo: 0)
+            ctx?.draw(m, in: CGRect(x: 0, y: 0, width: m.width, height: m.height))
+            CVPixelBufferUnlockBaseAddress(mask, [])
+        }
+    }
+    return FaceCapture(image: cg, eyes: a.x < b.x ? (a, b) : (b, a), nose: pts("nose"), outerLips: pts("outerLips"),
+                       contour: pts("faceContour"), eyebrows: [pts("leftEyebrow"), pts("rightEyebrow")],
+                       eyeOutlines: [pts("leftEye"), pts("rightEye")],
+                       overlayPoints: pts("allPoints").map { CGPoint(x: $0.x / w, y: 1 - $0.y / h) },
+                       overlayBox: CGRect(x: box[0], y: 1 - box[1] - box[3], width: box[2], height: box[3]),
+                       personMask: mask, yaw: json["yaw"] as? Double ?? 0, roll: json["roll"] as? Double ?? 0,
+                       faceCount: json["faceCount"] as? Int ?? 1)
+}
+#endif
 
 extension UIImage {
     /// Redraws the image upright (applying EXIF orientation) and caps its size.

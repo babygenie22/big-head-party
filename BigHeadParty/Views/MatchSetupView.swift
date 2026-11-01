@@ -118,6 +118,8 @@ struct GameHost: View {
     @EnvironmentObject private var store: CharacterStore
     @State private var rematch = 0
     @Environment(\.dismiss) private var dismiss
+    /// Outlives rematches, so one recording can span several rounds.
+    @StateObject private var recorder = GameRecorder()
 
     var body: some View {
         Group {
@@ -135,5 +137,13 @@ struct GameHost: View {
             }
         }
         .id(rematch)
+        .overlay(alignment: .topTrailing) {
+            if recorder.isAvailable {
+                RecordButton(recorder: recorder)
+                    .padding(.top, 160)   // below every game's top bar and banner
+                    .padding(.trailing, 14)
+            }
+        }
+        .onDisappear { recorder.stop() }
     }
 }

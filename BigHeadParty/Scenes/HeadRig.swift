@@ -1,5 +1,6 @@
 import SceneKit
 import UIKit
+import CoreImage
 
 /// Caches sculpted meshes so each character is only sculpted once per launch.
 enum HeadGeometryCache {
@@ -25,6 +26,22 @@ final class HeadRig {
     /// a white, sweaty forehead.
     static let dryRoughness: CGFloat = 0.68
     static let dryClearCoat: CGFloat = 0.02
+    /// Skin sheen on the face; matte where every texture puts hair (crown, sides, back) so the
+    /// back of the head reads as hair rather than a shiny grey cap.
+    static let dryRoughnessMap: UIImage = {
+        let T: CGFloat = 256
+        let img = UIGraphicsImageRenderer(size: CGSize(width: T, height: T)).image { ctx in
+            UIColor(white: dryRoughness, alpha: 1).setFill(); ctx.fill(CGRect(x: 0, y: 0, width: T, height: T))
+            UIColor(white: 0.97, alpha: 1).setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: T, height: 0.14 * T))
+            ctx.fill(CGRect(x: 0, y: 0, width: 0.17 * T, height: 0.62 * T))
+            ctx.fill(CGRect(x: 0.83 * T, y: 0, width: 0.17 * T, height: 0.62 * T))
+        }
+        let blurred = CIImage(image: img)!.clampedToExtent()
+            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 8])
+            .cropped(to: CGRect(x: 0, y: 0, width: T, height: T))
+        return CIContext().createCGImage(blurred, from: blurred.extent).map { UIImage(cgImage: $0) } ?? img
+    }()
 
     let character: GameCharacter
     let root = SCNNode()
@@ -46,7 +63,7 @@ final class HeadRig {
         material.diffuse.wrapT = .clamp
         material.diffuse.mipFilter = .linear
         material.diffuse.maxAnisotropy = 16   // keeps the photo sharp where the face curves away
-        material.roughness.contents = HeadRig.dryRoughness
+        material.roughness.contents = HeadRig.dryRoughnessMap
         material.metalness.contents = 0.0
         // Fine pore detail and a faint skin sheen.
         material.normal.contents = Effects.skinNormalMap
@@ -188,7 +205,7 @@ final class HeadRig {
     /// Soaked: glossy, a little darker, dripping for a few seconds.
     func setWet(_ wet: Bool, in scene: SCNScene? = nil) {
         guard let m = head.geometry?.firstMaterial else { return }
-        m.roughness.contents = wet ? 0.18 : HeadRig.dryRoughness
+        m.roughness.contents = wet ? 0.18 : HeadRig.dryRoughnessMap
         m.clearCoat.contents = wet ? 0.9 : HeadRig.dryClearCoat
         m.clearCoatRoughness.contents = wet ? 0.08 : 0.5
         m.multiply.contents = wet ? UIColor(white: 0.84, alpha: 1) : UIColor.white

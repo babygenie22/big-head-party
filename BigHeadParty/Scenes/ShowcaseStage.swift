@@ -76,4 +76,11 @@ final class ShowcaseStage {
     }
 
     func clean() { rig?.clearCream() }
+
+    /// Turns the turntable (radians) — used to check a head from the side and back.
+    func turn(to angle: Float) {
+        turntable.removeAllActions()
+        turntable.eulerAngles.y = angle
+        rig?.idle.removeAllActions()
+    }
 }

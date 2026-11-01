@@ -19,7 +19,9 @@ struct BuiltFace {
 /// 3. Skin and hair colors sampled from the photo fill the rest of the head (sides, back, crown)
 ///    so the photo blends into a complete 3D head.
 enum FaceTextureBuilder {
-    static let ciContext = CIContext(options: [.workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any])
+    /// Default (linear) working space: the touch-up was tuned there, and in gamma sRGB the shadow
+    /// lift turned dark brown irises grey-blue.
+    static let ciContext = CIContext()
 
     static func build(from capture: FaceCapture) -> BuiltFace {
         let T = FaceLayout.photoTextureSize
@@ -79,13 +81,15 @@ enum FaceTextureBuilder {
             personMask = raw.transformed(by: toImage.concatenating(align)).composited(over: black).cropped(to: canvas)
         }
 
-        let skin = averageColor(of: photo, in: [ciRect(u: 0.33, v: 0.53, w: 0.06, h: 0.05),
-                                                ciRect(u: 0.61, v: 0.53, w: 0.06, h: 0.05)])
+        // Cheeks and forehead: the cheeks alone sit in the nose's shadow and read too dark.
+        let skin = averageColor(of: photo, in: [ciRect(u: 0.31, v: 0.50, w: 0.06, h: 0.05),
+                                                ciRect(u: 0.63, v: 0.50, w: 0.06, h: 0.05),
+                                                ciRect(u: 0.45, v: 0.22, w: 0.10, h: 0.05)])
             ?? UIColor(red: 0.85, green: 0.68, blue: 0.56, alpha: 1)
-        let hair = hairColor(photo: photo, mask: personMask, skin: skin)
+        let detectedHair = hairColor(photo: photo, mask: personMask, skin: skin)
+        let hair = detectedHair ?? skin.darker(0.8)
 
         // ---- Composite ---------------------------------------------------------------
-        let fill = CIImage(cgImage: fillImage(skin: skin, hair: hair, size: T))
         // The photo oval follows THIS face: its fade lands on the measured jawline and chin. A fixed
         // oval reached past narrow faces onto the sides of the head, where a frontal photo smears.
         // (The gradient is solid to 0.78 of the radius and gone at 1.0, so 0.89 is the fade's middle.)
@@ -94,8 +98,20 @@ enum FaceTextureBuilder {
         let ry = min(max((shape.chin.y + 0.02 - 0.41) / 0.89, 0.40), 0.56)
         var mask = ellipseMask(center: ciPoint(uv: CGPoint(x: shape.midlineU, y: 0.41)), rx: rx * T, ry: ry * T, canvas: canvas)
         if let personMask {
-            mask = personMask.applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: mask])
+            // Pull the cut-out in a touch and soften it: a hard silhouette left a line down the
+            // side of the head where the photo met the fill.
+            let soft = personMask
+                .applyingFilter("CIMorphologyMinimum", parameters: [kCIInputRadiusKey: 0.004 * T])
+                .clampedToExtent()
+                .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 0.008 * T])
+                .cropped(to: canvas)
+            mask = soft.applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: mask])
         }
+        // Flat skin, then the photo's own colours carried past its edge, then hair on top so the
+        // crown and back stay hair even where the photo's skin colour spreads.
+        let layers = fillLayers(skin: skin, hair: detectedHair, size: T)
+        var fill = extendColors(of: photo, mask: mask, canvas: canvas).composited(over: CIImage(cgImage: layers.skin))
+        if let hairLayer = layers.hair { fill = CIImage(cgImage: hairLayer).composited(over: fill) }
         let composed = photo
             .applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: fill,
                                                             kCIInputMaskImageKey: mask])
@@ -126,6 +142,17 @@ enum FaceTextureBuilder {
 
         guard pupils.count == 2 else { return out.cropped(to: image.extent) }
         let ipd = hypot(pupils[1].x - pupils[0].x, pupils[1].y - pupils[0].y)
+        // Keep the eyes' own colour: lifting shadows and balancing skin tones greys out dark irises.
+        var irises = CIImage(color: .black).cropped(to: image.extent)
+        for p in pupils {
+            guard let dot = CIFilter(name: "CIRadialGradient", parameters: [
+                "inputCenter": CIVector(x: p.x, y: p.y), "inputRadius0": ipd * 0.08, "inputRadius1": ipd * 0.13,
+                "inputColor0": CIColor.white, "inputColor1": CIColor.black,
+            ])?.outputImage else { continue }
+            irises = dot.applyingFilter("CIMaximumCompositing", parameters: [kCIInputBackgroundImageKey: irises])
+        }
+        out = clean.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: out,
+                                                                    kCIInputMaskImageKey: irises.cropped(to: image.extent)])
         func luminance(at c: CGPoint) -> CGFloat {
             let r = ipd * 0.12
             let rect = CGRect(x: c.x - r, y: c.y - r / 2, width: 2 * r, height: r)
@@ -171,6 +198,26 @@ enum FaceTextureBuilder {
             .concatenating(CGAffineTransform(translationX: b1.x, y: b1.y))
     }
 
+    /// Carries the photo's own colours a little way past its edge (a normalized blur: the average
+    /// of nearby photo pixels, weighted by the mask), so the temples, sideburns and jaw fade into
+    /// matching skin and hair instead of meeting a flat fill colour.
+    private static func extendColors(of photo: CIImage, mask: CIImage, canvas: CGRect) -> CIImage {
+        let clear = CIImage(color: .clear).cropped(to: canvas)
+        let cut = photo.applyingFilter("CIBlendWithMask", parameters: [kCIInputBackgroundImageKey: clear,
+                                                                       kCIInputMaskImageKey: mask])
+        var out = clear
+        for (radius, gain) in [(CGFloat(0.08), CGFloat(3)), (0.025, 4)] {
+            let layer = cut
+                .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: radius * canvas.width])
+                .cropped(to: canvas)
+                // RGB stays the weighted average; alpha (coverage) is boosted so it fades out late.
+                .applyingFilter("CIColorMatrix", parameters: ["inputAVector": CIVector(x: 0, y: 0, z: 0, w: gain)])
+                .applyingFilter("CIColorClamp")
+            out = layer.composited(over: out)
+        }
+        return out
+    }
+
     private static func ellipseMask(center: CGPoint, rx: CGFloat, ry: CGFloat, canvas: CGRect) -> CIImage {
         let gradient = CIFilter(name: "CIRadialGradient", parameters: [
             "inputCenter": CIVector(x: 0, y: 0),
@@ -203,40 +250,66 @@ enum FaceTextureBuilder {
         return UIColor(red: min(acc.r / n, 1), green: min(acc.g / n, 1), blue: min(acc.b / n, 1), alpha: 1)
     }
 
-    /// Skin everywhere, hair on the crown and around the back; softened so it blends.
-    private static func fillImage(skin: UIColor, hair: UIColor, size T: CGFloat) -> CGImage {
+    /// Flat skin, plus (if they have any) a hair layer over the crown and down the back to a nape
+    /// that curves up behind the ears. The back of the head samples the texture's outer columns
+    /// from both sides (u → 0 and u → 1 meet at the back), so hair is drawn for the left half and
+    /// mirrored: no seam back there.
+    private static func fillLayers(skin: UIColor, hair: UIColor?, size T: CGFloat) -> (skin: CGImage, hair: CGImage?) {
         let px = T / 1024   // tuned at 1024²
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        format.opaque = true
-        let hard = UIGraphicsImageRenderer(size: CGSize(width: T, height: T), format: format).image { ctx in
-            skin.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: T, height: T))
-            hair.setFill()
-            ctx.fill(CGRect(x: 0, y: 0, width: T, height: 0.16 * T))
-            ctx.fill(CGRect(x: 0, y: 0, width: 0.17 * T, height: 0.62 * T))
-            ctx.fill(CGRect(x: 0.83 * T, y: 0, width: 0.17 * T, height: 0.62 * T))
-        }
         let canvas = CGRect(x: 0, y: 0, width: T, height: T)
-        let blurred = CIImage(cgImage: hard.cgImage!)
-            .clampedToExtent()
-            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 28 * px])
-            .cropped(to: canvas)
-        let soft = ciContext.createCGImage(blurred, from: canvas) ?? hard.cgImage!
-        // Strand texture over the crown, the sides and the back.
-        let region = CGMutablePath()
-        region.addRect(CGRect(x: 0, y: 0, width: T, height: 0.17 * T))
-        region.addRect(CGRect(x: 0, y: 0, width: 0.18 * T, height: 0.62 * T))
-        region.addRect(CGRect(x: 0.82 * T, y: 0, width: 0.18 * T, height: 0.62 * T))
-        var rng = SeededRandom(seed: 17)
-        let detailed = UIGraphicsImageRenderer(size: CGSize(width: T, height: T), format: format).image { ctx in
-            UIImage(cgImage: soft).draw(in: CGRect(x: 0, y: 0, width: T, height: T))
-            HairStrands.draw(in: ctx.cgContext, color: hair, region: region, count: Int(3000 * px * px), rng: &rng, size: T)
+        let opaque = UIGraphicsImageRendererFormat()
+        opaque.scale = 1
+        opaque.opaque = true
+        // Photos carry soft shading; flat fill reads brighter than the face.
+        let skinImage = UIGraphicsImageRenderer(size: canvas.size, format: opaque).image { ctx in
+            skin.darker(0.95).setFill(); ctx.fill(canvas)
+        }.cgImage!
+        guard let hair else { return (skinImage, nil) }
+
+        // One outline (overlapping sub-shapes cancel out under the non-zero fill rule).
+        let hairShape = CGMutablePath()
+        hairShape.move(to: CGPoint(x: 0, y: 0))
+        hairShape.addLine(to: CGPoint(x: T / 2, y: 0))
+        hairShape.addLine(to: CGPoint(x: T / 2, y: 0.19 * T))
+        hairShape.addLine(to: CGPoint(x: 0.19 * T, y: 0.19 * T))
+        hairShape.addLine(to: CGPoint(x: 0.19 * T, y: 0.47 * T))
+        hairShape.addCurve(to: CGPoint(x: 0, y: 0.70 * T),
+                           control1: CGPoint(x: 0.15 * T, y: 0.56 * T), control2: CGPoint(x: 0.09 * T, y: 0.70 * T))
+        hairShape.closeSubpath()
+
+        let clearFormat = UIGraphicsImageRendererFormat()
+        clearFormat.scale = 1
+        clearFormat.opaque = false
+        // Soft-edged coverage...
+        let hard = UIGraphicsImageRenderer(size: canvas.size, format: clearFormat).image { ctx in
+            ctx.cgContext.addPath(hairShape)
+            ctx.cgContext.setFillColor(hair.cgColor)
+            ctx.cgContext.fillPath()
         }
-        return detailed.cgImage ?? soft
+        let soft = CIImage(cgImage: hard.cgImage!)
+            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 22 * px])
+            .cropped(to: canvas)
+        let softCG = ciContext.createCGImage(soft, from: canvas) ?? hard.cgImage!
+        // ...then strands, clipped to the same shape.
+        var rng = SeededRandom(seed: 17)
+        let detailed = UIGraphicsImageRenderer(size: canvas.size, format: clearFormat).image { ctx in
+            UIImage(cgImage: softCG).draw(in: canvas)
+            HairStrands.draw(in: ctx.cgContext, color: hair, region: hairShape, count: Int(1700 * px * px), rng: &rng, size: T)
+        }.cgImage!
+        // Left half, mirrored onto the right.
+        let half = detailed.cropping(to: CGRect(x: 0, y: 0, width: T / 2, height: T))!
+        let mirrored = UIGraphicsImageRenderer(size: canvas.size, format: clearFormat).image { ctx in
+            let c = ctx.cgContext
+            c.translateBy(x: 0, y: T); c.scaleBy(x: 1, y: -1)   // CG draws images bottom-up
+            c.draw(half, in: CGRect(x: 0, y: 0, width: T / 2, height: T))
+            c.translateBy(x: T, y: 0); c.scaleBy(x: -1, y: 1)
+            c.draw(half, in: CGRect(x: 0, y: 0, width: T / 2, height: T))
+        }.cgImage
+        return (skinImage, mirrored ?? detailed)
     }
 
-    /// Hair = person pixels above the brows that are clearly not skin. Too few means bald.
-    private static func hairColor(photo: CIImage, mask: CIImage?, skin: UIColor) -> UIColor {
+    /// Hair = person pixels above the brows that are clearly not skin. Too few means bald (nil).
+    private static func hairColor(photo: CIImage, mask: CIImage?, skin: UIColor) -> UIColor? {
         let T = FaceLayout.photoTextureSize
         let region = CGRect(x: 0.2 * T, y: 0.7 * T, width: 0.6 * T, height: 0.3 * T)   // top 30% of the texture (CI is bottom-up)
         let w = Int(region.width), h = Int(region.height)
@@ -251,7 +324,7 @@ enum FaceTextureBuilder {
         }
         let s = skin.rgba
         let skinLum = 0.3 * s.r + 0.59 * s.g + 0.11 * s.b
-        var sum = (r: CGFloat(0), g: CGFloat(0), b: CGFloat(0)), n = 0, person = 0
+        var hairPx: [(r: CGFloat, g: CGFloat, b: CGFloat)] = [], person = 0
         for i in stride(from: 0, to: px.count, by: 16) {
             guard px[i + 3] > 250 else { continue }
             if let mk, mk[i] < 128 { continue }
@@ -259,10 +332,13 @@ enum FaceTextureBuilder {
             let r = CGFloat(px[i]) / 255, g = CGFloat(px[i + 1]) / 255, b = CGFloat(px[i + 2]) / 255
             let lum = 0.3 * r + 0.59 * g + 0.11 * b
             let dist = ((r - s.r) * (r - s.r) + (g - s.g) * (g - s.g) + (b - s.b) * (b - s.b)).squareRoot()
-            if dist > 0.22 && abs(lum - skinLum) > 0.12 { sum.r += r; sum.g += g; sum.b += b; n += 1 }
+            if dist > 0.22 && abs(lum - skinLum) > 0.12 { hairPx.append((r, g, b)) }
         }
-        guard n > max(30, person / 25) else { return skin.darker(0.8) }
-        return UIColor(red: sum.r / CGFloat(n), green: sum.g / CGFloat(n), blue: sum.b / CGFloat(n), alpha: 1)
+        guard hairPx.count > max(30, person / 25) else { return nil }
+        // Median, not mean: shine, grey strands and soft mask edges pulled the mean light brown.
+        func median(_ xs: [CGFloat]) -> CGFloat { xs.sorted()[xs.count / 2] }
+        // A shade deeper: hair seen in the photo is lifted by the touch-up and its own shine.
+        return UIColor(red: median(hairPx.map(\.r)), green: median(hairPx.map(\.g)), blue: median(hairPx.map(\.b)), alpha: 1).darker(0.8)
     }
 
     private static func fillCG(skin: UIColor) -> CGImage {

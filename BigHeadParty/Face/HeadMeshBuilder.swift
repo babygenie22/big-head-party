@@ -143,7 +143,11 @@ enum HeadMeshBuilder {
                     // face is never mirrored onto the back. Continuous with the front at the sides.
                     let side: Float = (sa > 0 || (sa == 0 && a > 0)) ? 1 : -1
                     let edge = ring.w / (2 * S)
-                    u = 0.5 + side * (edge + (0.49 - edge) * (-ca))
+                    // Just behind the ear, step quickly out past the photo (into u < 0.19 / u > 0.81)
+                    // so the upper back never samples photo pixels — that drew streaks there.
+                    let t = -ca, knee = max(0.31, edge + 0.35 * (0.49 - edge))
+                    let off = t < 0.35 ? lerp(edge, knee, t: t / 0.35) : lerp(knee, 0.49, t: (t - 0.35) / 0.65)
+                    u = 0.5 + side * off
                 }
                 positions.append(SIMD3(x, y, z))
                 uvs.append(SIMD2(u, simd_clamp(v, 0.005, 0.995)))
