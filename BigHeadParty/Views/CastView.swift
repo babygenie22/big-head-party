@@ -16,29 +16,40 @@ struct CastView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         if let selected {
-                            ZStack(alignment: .bottom) {
-                                SceneContainer(scene: preview.stage.scene, pointOfView: preview.stage.camera, allowsCameraControl: true)
-                                    .frame(height: 280)
-                                VStack(spacing: 4) {
-                                    Text(selected.name).font(.party(24))
-                                    Text(selected.meta.tagline).font(.subheadline).opacity(0.75)
+                            VStack(spacing: 4) {
+                                ZStack {
+                                    Theme.sky
+                                    Circle().fill(Theme.cream.opacity(0.35)).frame(width: 220, height: 220)
+                                    SceneContainer(scene: preview.stage.scene, pointOfView: preview.stage.camera, allowsCameraControl: true)
                                 }
-                                .padding(.bottom, 10)
+                                .frame(height: 260)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.ink, lineWidth: Theme.outline))
+                                .padding(12)
+                                Text(selected.name).font(.party(24))
+                                Text(selected.meta.tagline).font(.system(size: 15, weight: .semibold, design: .rounded)).opacity(0.7)
+                                    .padding(.bottom, 14)
                             }
-                            .background(RoundedRectangle(cornerRadius: 24).fill(.white.opacity(0.06)))
+                            .foregroundStyle(Theme.ink)
+                            .sticker(Theme.cream, cornerRadius: 24, drop: 6)
                             if !selected.meta.isDefault {
                                 Button(role: .destructive) { confirmDelete = true } label: {
                                     Label("Remove from cast", systemImage: "trash")
+                                        .font(.system(size: 15, weight: .black, design: .rounded))
+                                        .foregroundStyle(Theme.ink)
+                                        .padding(.horizontal, 16).padding(.vertical, 9)
+                                        .stickerCapsule(Theme.tomato)
                                 }
                             }
                         }
-                        section("Your faces", store.custom, empty: "No custom faces yet. Tap Face Studio on the home screen to make one!")
+                        section("Your faces", store.custom, empty: "No custom faces yet. Tap “Make a big head” on the home screen to add one.")
                         section("House cast", store.defaults, empty: "")
                     }
                     .padding()
                 }
             }
             .navigationTitle("Cast")
+            .toolbarBackground(Theme.paper, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
             .onAppear {
                 if selected == nil { select(store.star) }
@@ -65,19 +76,19 @@ struct CastView: View {
     @ViewBuilder
     private func section(_ title: String, _ list: [GameCharacter], empty: String) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.party(20))
+            Text(title).font(.party(22)).foregroundStyle(Theme.ink)
             if list.isEmpty {
-                Text(empty).font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                Text(empty).font(.system(size: 15, weight: .medium, design: .rounded)).foregroundStyle(Theme.ink.opacity(0.7))
             } else {
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(list) { c in
                         Button { select(c) } label: {
                             VStack(spacing: 6) {
-                                AvatarView(character: c, size: 80, ring: selected?.id == c.id ? Theme.yellow : .white)
-                                Text(c.name).font(.caption.weight(.bold)).lineLimit(1)
+                                AvatarView(character: c, size: 80, ring: selected?.id == c.id ? Theme.highlight : nil)
+                                Text(c.name).font(.system(size: 12, weight: .heavy, design: .rounded)).lineLimit(1)
                             }
                         }
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.ink)
                     }
                 }
             }

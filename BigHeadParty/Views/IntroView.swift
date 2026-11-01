@@ -67,20 +67,21 @@ private struct DemoPage: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            PartyTitle(text: "BIG HEAD\nPARTY", size: 50)
+            PartyTitle(text: "Big Head\nParty", size: 52)
                 .multilineTextAlignment(.center)
                 .padding(.top, 20)
             Text("Turn your friends & family into 3D characters.\nThen hit them with pies.")
-                .font(.headline)
+                .font(.system(size: 17, weight: .bold, design: .rounded))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(Theme.ink.opacity(0.8))
             ZStack(alignment: .bottom) {
                 if let d = director.director {
                     SceneContainer(scene: d.stage.scene, pointOfView: d.stage.camera)
-                        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
                     DemoCaption(director: d)
                 }
             }
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .sticker(Theme.deep, cornerRadius: 22, drop: 6)
             .frame(maxHeight: .infinity)
             .padding(.horizontal)
             Button("Show me how") { onNext() }
@@ -106,8 +107,9 @@ private struct DemoCaption: View {
     var body: some View {
         Text(director.caption)
             .font(.party(18))
+            .foregroundStyle(Theme.ink)
             .padding(.horizontal, 16).padding(.vertical, 8)
-            .background(.ultraThinMaterial, in: Capsule())
+            .stickerCapsule(Theme.cream)
             .padding(.bottom, 14)
             .animation(.spring, value: director.caption)
     }
@@ -129,18 +131,22 @@ private struct HowItWorksPage: View {
             ForEach(Array(steps.enumerated()), id: \.offset) { i, step in
                 HStack(alignment: .top, spacing: 16) {
                     ZStack {
-                        Circle().fill([Theme.pink, Theme.yellow, Theme.teal, Theme.blue][i]).frame(width: 54, height: 54)
-                        Image(systemName: step.0).font(.title2.weight(.bold)).foregroundStyle(.black)
+                        Circle().fill([Theme.bubblegum, Theme.sky, Theme.mint, Theme.tomato][i])
+                            .overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.outline))
+                            .background(Circle().fill(Theme.ink).offset(x: 3, y: 3))
+                            .frame(width: 54, height: 54)
+                        Image(systemName: step.0).font(.title2.weight(.bold)).foregroundStyle(Theme.ink)
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(i + 1). \(step.1)").font(.party(20))
-                        Text(LocalizedStringKey(step.2)).font(.subheadline).foregroundStyle(.white.opacity(0.8))
+                        Text("\(i + 1). \(step.1)").font(.party(20)).foregroundStyle(Theme.ink)
+                        Text(LocalizedStringKey(step.2)).font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(Theme.ink.opacity(0.75))
                     }
                 }
             }
             Spacer()
             Button("Next") { onNext() }
-                .buttonStyle(ChunkyButtonStyle(color: Theme.yellow, textColor: .black))
+                .buttonStyle(ChunkyButtonStyle(color: Theme.sky))
                 .padding(.bottom, 50)
         }
         .padding(.horizontal, 28)
@@ -153,8 +159,10 @@ private struct PlayNicePage: View {
         VStack(spacing: 22) {
             Spacer()
             Image(systemName: "hand.raised.fingers.spread.fill")
-                .font(.system(size: 70))
-                .foregroundStyle(Theme.yellow)
+                .font(.system(size: 64))
+                .foregroundStyle(Theme.ink)
+                .frame(width: 120, height: 120)
+                .sticker(Theme.bubblegum, cornerRadius: 60, drop: 5)
             PartyTitle(text: "Play nice", size: 40)
             VStack(alignment: .leading, spacing: 14) {
                 Label("Photos are processed on your iPhone. They never leave your device.", systemImage: "iphone")
@@ -162,9 +170,10 @@ private struct PlayNicePage: View {
                 Label("Only use photos of people who are in on the joke.", systemImage: "person.2.fill")
                 Label("It's slapstick. No mean stuff, no grown-up stuff.", systemImage: "face.smiling")
             }
-            .font(.headline)
+            .font(.system(size: 16, weight: .bold, design: .rounded))
+            .foregroundStyle(Theme.ink)
             .padding(20)
-            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 20))
+            .sticker(Theme.cream, cornerRadius: 20)
             Spacer()
             Button("Let's party!") { onFinish() }
                 .buttonStyle(ChunkyButtonStyle())

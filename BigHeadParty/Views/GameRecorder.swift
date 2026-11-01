@@ -76,18 +76,18 @@ struct RecordButton: View {
                 Circle()
                     .fill(Color.red)
                     .frame(width: 12, height: 12)
+                    .overlay(Circle().strokeBorder(Theme.ink, lineWidth: 1.5))
                     .opacity(recorder.isRecording && pulse ? 0.3 : 1)
                 Text(recorder.isRecording ? String(format: "%d:%02d", recorder.elapsed / 60, recorder.elapsed % 60) : "REC")
-                    .font(.caption.weight(.black))
+                    .font(.system(size: 13, weight: .black, design: .rounded))
                     .monospacedDigit()
                 if recorder.isRecording { Image(systemName: "stop.fill").font(.caption2) }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().strokeBorder(recorder.isRecording ? Color.red : .clear, lineWidth: 2))
+            .stickerCapsule(recorder.isRecording ? Theme.tomato : Theme.cream)
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Theme.ink)
         .accessibilityLabel(recorder.isRecording ? "Stop recording and share" : "Record this game")
         .onChange(of: recorder.isRecording) { _, on in
             pulse = false

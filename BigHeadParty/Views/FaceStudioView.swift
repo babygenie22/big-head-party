@@ -139,9 +139,11 @@ struct FaceStudioView: View {
             Theme.background
             VStack(spacing: 16) {
                 HStack {
-                    Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").font(.title) }
+                    Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 20, height: 20) }
+                        .buttonStyle(StickerIconButtonStyle())
+                        .accessibilityLabel("Close")
                     Spacer()
-                    Text("Face Studio").font(.party(24))
+                    PartyTitle(text: "Face Studio", size: 26, shadow: Theme.bubblegum)
                     Spacer()
                     Color.clear.frame(width: 30, height: 30)
                 }
@@ -181,17 +183,22 @@ struct FaceStudioView: View {
         VStack(spacing: 22) {
             Spacer()
             ZStack {
-                Circle().fill(Theme.pink.opacity(0.2)).frame(width: 220, height: 220)
-                Image(systemName: "face.dashed").font(.system(size: 110, weight: .light)).foregroundStyle(Theme.yellow)
+                Circle().fill(Theme.sky)
+                    .overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.outline))
+                    .background(Circle().fill(Theme.ink).offset(x: 6, y: 6))
+                    .frame(width: 210, height: 210)
+                Image(systemName: "face.dashed").font(.system(size: 104, weight: .regular)).foregroundStyle(Theme.ink)
             }
-            Text("Who's getting the big-head treatment?").font(.party(24)).multilineTextAlignment(.center)
+            Text("Who's getting the big-head treatment?").font(.party(24)).multilineTextAlignment(.center).foregroundStyle(Theme.ink)
             VStack(alignment: .leading, spacing: 8) {
                 Label("Face the camera, eyes open", systemImage: "eye")
                 Label("Good, even light — no heavy shadows", systemImage: "sun.max")
                 Label("No sunglasses or hands on the face", systemImage: "eyeglasses")
             }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.white.opacity(0.85))
+            .font(.system(size: 15, weight: .bold, design: .rounded))
+            .foregroundStyle(Theme.ink)
+            .padding(16)
+            .sticker(Theme.cream, cornerRadius: 18, drop: 4)
             Spacer()
             PhotosPicker(selection: $pickerItem, matching: .images) {
                 Label("Choose a Photo", systemImage: "photo.on.rectangle")
@@ -199,7 +206,7 @@ struct FaceStudioView: View {
             .buttonStyle(ChunkyButtonStyle())
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button { showCamera = true } label: { Label("Take a Photo", systemImage: "camera.fill") }
-                    .buttonStyle(ChunkyButtonStyle(color: Theme.yellow, textColor: .black))
+                    .buttonStyle(ChunkyButtonStyle(color: Theme.tomato))
             }
         }
         .padding(.horizontal, 28)
@@ -220,12 +227,12 @@ struct FaceStudioView: View {
                             ZStack(alignment: .topLeading) {
                                 if model.faceBox != .zero {
                                     Rectangle()
-                                        .stroke(Theme.yellow, lineWidth: 2)
+                                        .stroke(Theme.paper, lineWidth: 2)
                                         .frame(width: model.faceBox.width * size.width, height: model.faceBox.height * size.height)
                                         .offset(x: model.faceBox.minX * size.width, y: model.faceBox.minY * size.height)
                                 }
                                 ForEach(Array(model.landmarks.enumerated()), id: \.offset) { _, p in
-                                    Circle().fill(Theme.teal)
+                                    Circle().fill(Theme.mint)
                                         .frame(width: 5, height: 5)
                                         .offset(x: p.x * size.width - 2.5, y: p.y * size.height - 2.5)
                                 }
@@ -240,10 +247,11 @@ struct FaceStudioView: View {
                 ForEach(model.steps) { step in
                     HStack(spacing: 12) {
                         Image(systemName: step.done ? "checkmark.circle.fill" : "circle.dotted")
-                            .foregroundStyle(step.done ? Theme.teal : .white.opacity(0.5))
-                            .font(.title3)
+                            .foregroundStyle(step.done ? Theme.ink : Theme.ink.opacity(0.4))
+                            .font(.title3.weight(.bold))
                             .symbolEffect(.pulse, isActive: !step.done)
-                        Text(step.title).font(.headline).opacity(step.done ? 1 : 0.6)
+                        Text(step.title).font(.system(size: 17, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Theme.ink).opacity(step.done ? 1 : 0.5)
                     }
                 }
             }
@@ -257,7 +265,8 @@ struct FaceStudioView: View {
     private var reviewView: some View {
         VStack(spacing: 12) {
             ZStack(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 28).fill(RadialGradient(colors: [Theme.pink.opacity(0.5), Theme.deep], center: .center, startRadius: 10, endRadius: 240))
+                Theme.sky
+                Circle().fill(Theme.cream.opacity(0.35)).frame(width: 240, height: 240).frame(maxHeight: .infinity)
                 SceneContainer(scene: model.preview.scene, pointOfView: model.preview.camera, allowsCameraControl: true)
                 HStack(spacing: 8) {
                     expressionButton("Pie", "birthday.cake") { model.preview.throwPie() }
@@ -269,24 +278,28 @@ struct FaceStudioView: View {
                 .padding(.bottom, 10)
             }
             .frame(height: 330)
-            .clipShape(RoundedRectangle(cornerRadius: 28))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .sticker(Theme.sky, cornerRadius: 24, drop: 6)
             .padding(.horizontal)
-            Text("Drag to spin them around").font(.caption).foregroundStyle(.white.opacity(0.6))
+            Text("Drag to spin them around").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(Theme.ink.opacity(0.65))
 
             ForEach(model.warnings, id: \.self) { w in
                 Label(w, systemImage: "exclamationmark.triangle.fill")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.yellow)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                    .padding(10)
+                    .sticker(Theme.bubblegum, cornerRadius: 12, drop: 3)
                     .padding(.horizontal)
             }
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     TextField("Who is this? (e.g. Uncle Ray)", text: $model.name)
-                        .font(.headline)
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.ink)
                         .padding(14)
-                        .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
-                    Text("Hat").font(.headline)
+                        .sticker(Theme.cream, cornerRadius: 14, drop: 3)
+                    Text("Hat").font(.party(18)).foregroundStyle(Theme.ink)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
                             ForEach(HatStyle.allCases) { h in
@@ -294,22 +307,24 @@ struct FaceStudioView: View {
                             }
                         }
                     }
-                    Text("Hair").font(.headline)
+                    Text("Hair").font(.party(18)).foregroundStyle(Theme.ink)
                     HStack {
                         ForEach(HairVolume.allCases) { h in
                             chip(h.label, symbol: nil, selected: model.hair == h) { model.hair = h }
                         }
                     }
-                    Toggle(isOn: $model.googly) { Text("Googly eyes 👀").font(.headline) }
-                        .tint(Theme.pink)
+                    Toggle(isOn: $model.googly) {
+                        Label("Googly eyes", systemImage: "eyes").font(.party(18)).foregroundStyle(Theme.ink)
+                    }
+                    .tint(Theme.tomato)
                 }
                 .padding(.horizontal, 20)
             }
             HStack(spacing: 12) {
                 Button("Retake") { model.reset() }
-                    .buttonStyle(ChunkyButtonStyle(color: .gray))
+                    .buttonStyle(ChunkyButtonStyle(color: Theme.cream))
                     .frame(width: 130)
-                Button("Add to Cast") {
+                Button("Add to cast") {
                     model.save(to: store)
                     dismiss()
                 }
@@ -324,12 +339,13 @@ struct FaceStudioView: View {
         Button(action: action) {
             VStack(spacing: 2) {
                 Image(systemName: symbol)
-                Text(title).font(.caption2.weight(.heavy))
+                Text(title).font(.system(size: 11, weight: .heavy, design: .rounded))
             }
             .frame(width: 56, height: 44)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .sticker(Theme.cream, cornerRadius: 12, drop: 3)
         }
-        .foregroundStyle(.white)
+        .buttonStyle(.plain)
+        .foregroundStyle(Theme.ink)
     }
 
     private func chip(_ title: String, symbol: String?, selected: Bool, action: @escaping () -> Void) -> some View {
@@ -338,11 +354,12 @@ struct FaceStudioView: View {
                 if let symbol { Image(systemName: symbol) }
                 Text(title)
             }
-            .font(.subheadline.weight(.bold))
+            .font(.system(size: 15, weight: .heavy, design: .rounded))
             .padding(.horizontal, 14).padding(.vertical, 9)
-            .background(selected ? Theme.pink : .white.opacity(0.1), in: Capsule())
+            .stickerCapsule(selected ? Theme.tomato : Theme.cream, drop: selected ? 3 : 2)
         }
-        .foregroundStyle(.white)
+        .buttonStyle(.plain)
+        .foregroundStyle(Theme.ink)
     }
 
     // MARK: Failed
@@ -350,9 +367,11 @@ struct FaceStudioView: View {
     private func failedView(_ message: String) -> some View {
         VStack(spacing: 20) {
             Spacer()
-            Image(systemName: "face.dashed.fill").font(.system(size: 90)).foregroundStyle(Theme.pink)
-            Text("Hmm, that didn't work").font(.party(26))
-            Text(message).multilineTextAlignment(.center).foregroundStyle(.white.opacity(0.8))
+            Image(systemName: "face.dashed.fill").font(.system(size: 80)).foregroundStyle(Theme.ink)
+                .frame(width: 140, height: 140)
+                .sticker(Theme.bubblegum, cornerRadius: 70, drop: 5)
+            Text("Hmm, that didn't work").font(.party(26)).foregroundStyle(Theme.ink)
+            Text(message).font(.system(size: 16, weight: .semibold, design: .rounded)).multilineTextAlignment(.center).foregroundStyle(Theme.ink.opacity(0.8))
             Spacer()
             Button("Try another photo") { model.reset() }.buttonStyle(ChunkyButtonStyle())
         }

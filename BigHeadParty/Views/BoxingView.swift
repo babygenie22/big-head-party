@@ -23,8 +23,8 @@ struct BoxingView: View {
                 if let callout = game.callout {
                     Text(callout)
                         .font(.party(callout.count > 8 ? 40 : 64))
-                        .foregroundStyle(LinearGradient(colors: [Theme.yellow, .orange], startPoint: .top, endPoint: .bottom))
-                        .shadow(color: .black, radius: 0, x: 4, y: 5)
+                        .foregroundStyle(Theme.paper)
+                        .background(Text(callout).font(.party(callout.count > 8 ? 40 : 64)).foregroundStyle(Theme.ink).offset(x: 4, y: 5))
                         .rotationEffect(.degrees(-6))
                         .transition(.scale(scale: 2.5).combined(with: .opacity))
                         .id(callout)
@@ -56,13 +56,15 @@ struct BoxingView: View {
             healthBar(0, color: Theme.blue)
             VStack(spacing: 2) {
                 Text("\(game.timeLeft)").font(.party(26)).monospacedDigit()
-                Button { game.stop(); onExit() } label: { Image(systemName: "xmark.circle.fill").font(.title3) }
-                    .foregroundStyle(.white.opacity(0.7))
+                Button { game.stop(); onExit() } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .black)) }
+                    .buttonStyle(StickerIconButtonStyle())
+                    .accessibilityLabel("Quit game")
             }
             healthBar(1, color: Theme.red)
         }
         .padding(10)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .foregroundStyle(Theme.ink)
+                .sticker(Theme.cream, cornerRadius: 18, drop: 4)
     }
 
     private func healthBar(_ i: Int, color: Color) -> some View {
@@ -72,13 +74,15 @@ struct BoxingView: View {
                 Text(game.players[i].name).font(.caption.weight(.heavy)).lineLimit(1)
                 GeometryReader { geo in
                     ZStack(alignment: i == 0 ? .leading : .trailing) {
-                        Capsule().fill(.white.opacity(0.2))
-                        Capsule().fill(game.hp[i] > 30 ? color : Theme.yellow)
+                        Capsule().fill(Theme.ink.opacity(0.12))
+                        Capsule().fill(game.hp[i] > 30 ? color : Theme.tomato)
                             .frame(width: geo.size.width * game.hp[i] / 100)
                             .animation(.spring, value: game.hp[i])
                     }
+                    .clipShape(Capsule())
+                    .overlay(Capsule().strokeBorder(Theme.ink, lineWidth: 2))
                 }
-                .frame(height: 12)
+                .frame(height: 14)
             }
             if i == 1 { AvatarView(character: game.players[1], size: 42, ring: color) }
         }
@@ -88,7 +92,8 @@ struct BoxingView: View {
         let size: CGFloat = compact ? 58 : 76
         return VStack(spacing: 10) {
             if game.vsCPU && game.combo >= 2 {
-                Text("Combo ×\(game.combo)").font(.party(16)).foregroundStyle(Theme.yellow)
+                Text("Combo ×\(game.combo)").font(.party(16)).foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 10).padding(.vertical, 3).stickerCapsule(Theme.paper, drop: 2)
             }
             HStack(spacing: compact ? 8 : 14) {
                 if compact {
@@ -108,7 +113,11 @@ struct BoxingView: View {
                 }
             }
             if !compact {
-                Text("Tap to punch • Hold BLOCK to cover up").font(.caption.weight(.semibold)).opacity(0.7)
+                Text("Tap to punch • Hold BLOCK to cover up")
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 12).padding(.vertical, 5)
+                    .stickerCapsule(Theme.cream, drop: 2)
             }
         }
     }
@@ -118,10 +127,9 @@ struct BoxingView: View {
             Text(punch.label)
                 .font(.party(size > 60 ? 16 : 13))
                 .frame(width: size, height: size)
-                .background(Circle().fill(color).shadow(color: .black.opacity(0.4), radius: 0, y: 4))
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.ink)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PunchButtonStyle(color: color))
     }
 
     private var finishedCard: some View {
@@ -131,14 +139,15 @@ struct BoxingView: View {
                 Button { if let img = game.snapshot() { snapshot = IdentifiableImage(image: img) } } label: {
                     Label("Snap", systemImage: "camera.fill")
                 }
-                .buttonStyle(ChunkyButtonStyle(color: Theme.teal, textColor: .black))
+                .buttonStyle(ChunkyButtonStyle(color: Theme.mint))
                 Button("Rematch") { onRematch() }
                     .buttonStyle(ChunkyButtonStyle())
             }
-            Button("Back to menu") { game.stop(); onExit() }.font(.headline)
+            Button("Back to menu") { game.stop(); onExit() }.font(.party(16))
         }
         .padding(20)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24))
+        .foregroundStyle(Theme.ink)
+                .sticker(Theme.cream, cornerRadius: 24, drop: 4)
     }
 }
 
@@ -152,9 +161,10 @@ private struct BlockButton: View {
         Text("BLOCK")
             .font(.party(size > 60 ? 15 : 12))
             .frame(width: size, height: size)
-            .background(Circle().fill(pressed ? Theme.yellow : Color.gray.opacity(0.85)))
-            .foregroundStyle(pressed ? Color.black : Color.white)
-            .scaleEffect(pressed ? 0.92 : 1)
+            .foregroundStyle(Theme.ink)
+            .background(Circle().fill(pressed ? Theme.paper : Theme.cream).overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.outline)))
+            .offset(x: pressed ? 4 : 0, y: pressed ? 4 : 0)
+            .background(Circle().fill(Theme.ink).offset(x: 4, y: 4))
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in
@@ -165,5 +175,19 @@ private struct BlockButton: View {
                         onChange(false)
                     }
             )
+    }
+}
+
+/// Round sticker punch buttons that press into their shadow.
+private struct PunchButtonStyle: ButtonStyle {
+    let color: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        let pressed = configuration.isPressed
+        return configuration.label
+            .background(Circle().fill(color).overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.outline)))
+            .offset(x: pressed ? 4 : 0, y: pressed ? 4 : 0)
+            .background(Circle().fill(Theme.ink).offset(x: 4, y: 4))
+            .animation(.spring(response: 0.15, dampingFraction: 0.5), value: pressed)
     }
 }

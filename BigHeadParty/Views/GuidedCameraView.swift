@@ -197,15 +197,18 @@ struct GuidedCameraView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            // Kept dark on purpose: a bright yellow screen would tint the selfie.
+            Theme.deep.ignoresSafeArea()
             VStack(spacing: 14) {
                 HStack {
-                    Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").font(.title) }
+                    Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 20, height: 20) }
+                        .buttonStyle(StickerIconButtonStyle())
+                        .accessibilityLabel("Close")
                     Spacer()
-                    Button { camera.flip() } label: { Image(systemName: "arrow.triangle.2.circlepath.camera.fill").font(.title) }
+                    Button { camera.flip() } label: { Image(systemName: "arrow.triangle.2.circlepath.camera.fill").frame(width: 24, height: 20) }
+                        .buttonStyle(StickerIconButtonStyle())
                         .accessibilityLabel(camera.front ? "Switch to the back camera" : "Switch to the selfie camera")
                 }
-                .foregroundStyle(.white)
                 .padding(.horizontal)
 
                 hintBanner
@@ -215,15 +218,16 @@ struct GuidedCameraView: View {
                     ZStack(alignment: .topLeading) {
                         CameraPreview(session: camera.session)
                         Ellipse()
-                            .stroke(camera.hint.ready ? Theme.teal : .white.opacity(0.85),
+                            .stroke(camera.hint.ready ? Theme.mint : Theme.paper,
                                     style: StrokeStyle(lineWidth: camera.hint.ready ? 6 : 3, dash: camera.hint.ready ? [] : [10, 8]))
                             .frame(width: o.width * geo.size.width, height: o.height * geo.size.height)
                             .offset(x: o.minX * geo.size.width, y: o.minY * geo.size.height)
-                            .shadow(color: camera.hint.ready ? Theme.teal.opacity(0.8) : .clear, radius: 12)
+
                     }
                 }
                 .aspectRatio(3 / 4, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
+                .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(camera.hint.ready ? Theme.mint : Theme.cream, lineWidth: Theme.outline))
                 .padding(.horizontal, 10)
 
                 Spacer(minLength: 0)
@@ -234,8 +238,11 @@ struct GuidedCameraView: View {
                     }
                 } label: {
                     ZStack {
-                        Circle().fill(camera.hint.ready ? Theme.teal : .white).frame(width: 74, height: 74)
-                        Circle().stroke(.white, lineWidth: 4).frame(width: 88, height: 88)
+                        Circle().fill(Theme.ink).frame(width: 84, height: 84).offset(x: 5, y: 5)
+                        Circle().fill(camera.hint.ready ? Theme.mint : Theme.cream)
+                            .overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.outline))
+                            .frame(width: 84, height: 84)
+                        Image(systemName: "camera.fill").font(.system(size: 28, weight: .bold)).foregroundStyle(Theme.ink)
                     }
                 }
                 .accessibilityLabel("Take photo")
@@ -246,6 +253,7 @@ struct GuidedCameraView: View {
             if camera.denied {
                 VStack(spacing: 14) {
                     Text("Camera access is off").font(.party(24))
+                        .foregroundStyle(Theme.ink)
                     Text("Allow camera access for Big Head Party in Settings, or choose a photo instead.")
                         .multilineTextAlignment(.center)
                     Button("Open Settings") {
@@ -253,9 +261,9 @@ struct GuidedCameraView: View {
                     }
                     .buttonStyle(ChunkyButtonStyle())
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(Theme.ink)
                 .padding(30)
-                .background(Theme.deep, in: RoundedRectangle(cornerRadius: 24))
+                .sticker(Theme.cream, cornerRadius: 24)
                 .padding()
             }
         }
@@ -265,11 +273,11 @@ struct GuidedCameraView: View {
 
     private var hintBanner: some View {
         Label(camera.hint.text, systemImage: camera.hint.symbol)
-            .font(.headline)
-            .foregroundStyle(camera.hint.ready ? .black : .white)
+            .font(.system(size: 17, weight: .heavy, design: .rounded))
+            .foregroundStyle(Theme.ink)
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
-            .background(camera.hint.ready ? Theme.teal : Color.white.opacity(0.15), in: Capsule())
+            .stickerCapsule(camera.hint.ready ? Theme.mint : Theme.cream, drop: 3)
             .id(camera.hint.text)
             .transition(.opacity.combined(with: .scale(scale: 0.95)))
             .accessibilityAddTraits(.updatesFrequently)

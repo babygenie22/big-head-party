@@ -8,8 +8,8 @@ struct BigHeadPartyApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(store)
-                .preferredColorScheme(.dark)
-                .tint(Theme.pink)
+                .preferredColorScheme(.light)
+                .tint(Theme.ink)
         }
     }
 }
