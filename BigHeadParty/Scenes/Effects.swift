@@ -233,8 +233,11 @@ enum Effects {
         camera.zNear = 0.1
         camera.zFar = 100
         camera.wantsHDR = true
+        // The studio rig sums to roughly 2.5x a neutral light, which blew photo skin (already lit
+        // in the photo) out to white. Pull exposure down instead of retuning every light.
+        camera.exposureOffset = -0.7
         camera.bloomIntensity = 0.4
-        camera.bloomThreshold = 0.85
+        camera.bloomThreshold = 1.0
         camera.vignettingIntensity = 0.4
         let node = SCNNode()
         node.camera = camera

@@ -31,11 +31,30 @@ final class ShowcaseStage {
         newRig.root.position = SCNVector3(0, -HeadRig.neckOffset, 0)
         turntable.addChildNode(newRig.root)
         newRig.startIdle()
+        frame(newRig)
         if animated {
             newRig.root.scale = SCNVector3(0.01, 0.01, 0.01)
             newRig.root.runAction(.sequence([.scale(to: 1.12, duration: 0.25), .scale(to: 0.96, duration: 0.12), .scale(to: 1, duration: 0.1)]))
         }
         rig = newRig
+    }
+
+    /// Bottom share of every showcase card covered by overlays (reaction buttons, name labels).
+    static let bottomOverlay: Float = 0.22
+    static let topMargin: Float = 0.05
+    static let designFOV: Float = 34
+
+    /// Frames this head (hat and hair included) from crown to chin above the card's overlays.
+    /// A fixed camera suited an average face; longer faces lost their chin behind the buttons.
+    private func frame(_ rig: HeadRig) {
+        let (lo, hi) = rig.root.boundingBox
+        let top = hi.y - HeadRig.neckOffset, bottom = lo.y - HeadRig.neckOffset
+        let tanHalf = tan(Self.designFOV * .pi / 360)
+        let usable = 1 - Self.bottomOverlay - Self.topMargin
+        let span = max((top - bottom) / usable, 2 * 5.6 * tanHalf)   // never closer than the original shot
+        let center = top + Self.topMargin * span - span / 2
+        cameraRig.position = SCNVector3(0, center + 0.2, span / 2 / tanHalf)
+        cameraRig.look(at: SCNVector3(0, center, 0))
     }
 
     func react(_ morph: Morph) {
