@@ -4,19 +4,19 @@ GitHub builds, signs and uploads the app for you. You set four values once and n
 Total time: about 15 minutes of clicking, then about 20 minutes of waiting for the first build.
 
 App identity used by the project:
-- **Bundle ID:** `com.domqinvestments.bigheadparty`
+- **Bundle ID:** `com.domq.bigheadparty`
 - **Display name:** Big Head Party
 
 ## 1. Register the bundle ID (2 minutes)
 1. Open <https://developer.apple.com/account/resources/identifiers/list> and sign in with your developer account.
 2. Click **+** → **App IDs** → **App** → Continue.
-3. Description: `Big Head Party`. Bundle ID: **Explicit**, `com.domqinvestments.bigheadparty`.
+3. Description: `Big Head Party`. Bundle ID: **Explicit**, `com.domq.bigheadparty`.
 4. Leave the capabilities unticked → Continue → Register.
 
 ## 2. Create the app in App Store Connect (2 minutes)
 1. Open <https://appstoreconnect.apple.com/apps> → **+** → **New App**.
 2. Platform **iOS**. Name: `Big Head Party`. App names must be unique on the App Store, so if it's taken try `Big Head Party Game`. The name on your home screen stays "Big Head Party" either way.
-3. Language: English. Bundle ID: pick `com.domqinvestments.bigheadparty`. SKU: `bigheadparty`. Access: Full.
+3. Language: English. Bundle ID: pick `com.domq.bigheadparty`. SKU: `bigheadparty`. Access: Full.
 
 ## 3. Create an App Store Connect API key (3 minutes)
 1. App Store Connect → **Users and Access** → **Integrations** → **App Store Connect API** → **Team Keys**.
@@ -52,7 +52,7 @@ You can also push a version tag (e.g. `git tag v0.2 && git push --tags`) to uplo
 
 ## If something fails
 - **"Missing repository secrets"**: one of the four secrets in step 5 is missing or misspelled.
-- **"No profiles for 'com.domqinvestments.bigheadparty' were found"** or **"Cloud signing permission error"**: the API key needs **Admin** access (step 3).
+- **"No profiles for 'com.domq.bigheadparty' were found"** or **"Cloud signing permission error"**: the API key needs **Admin** access (step 3).
 - **"No suitable application records were found"**: create the app in App Store Connect (step 2) with exactly this bundle ID.
 - **Agreements**: App Store Connect → **Business** must show the free apps agreement as active.
 - Each run's `testflight-logs` artifact has the full Xcode output. Send me the error and I'll fix it.

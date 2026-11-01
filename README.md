@@ -67,7 +67,7 @@ The key idea: the photo is never stretched to fit a generic head. The **head is 
 Requires a Mac with **Xcode 16 or newer**, and iOS 17+ on the device or simulator.
 
 1. Open `BigHeadParty.xcodeproj`. It uses Xcode 16's synchronized folders, so every file in `BigHeadParty/` is included automatically.
-2. Select the **BigHeadParty** target → *Signing & Capabilities* → choose your team (bundle id: `com.domqinvestments.bigheadparty`).
+2. Select the **BigHeadParty** target → *Signing & Capabilities* → choose your team (bundle id: `com.domq.bigheadparty`).
 3. Run on a **real iPhone** for the best results. Vision's person segmentation and the camera aren't available in the Simulator. Without segmentation the app still works and shows a warning that edges may be busy.
 
 If the project file gives you trouble, regenerate it with XcodeGen: `brew install xcodegen && xcodegen` (spec in `project.yml`).

@@ -31,7 +31,7 @@ jobs:
           # t SECONDS CMD...: run with a time limit (macOS has no `timeout`)
           t() { perl -e 'alarm shift; exec @ARGV' "$@"; }
           APP=build/sim/Build/Products/Debug-iphonesimulator/BigHeadParty.app
-          BUNDLE=com.domqinvestments.bigheadparty
+          BUNDLE=com.domq.bigheadparty
           xcrun simctl list runtimes | grep -i ios
           DEVTYPE=$(xcrun simctl list devicetypes | grep -E "^iPhone 1[5-7] \(" | head -1 | sed -E 's/.*\((com[^)]+)\).*/\1/')
           RUNTIME=$(xcrun simctl list runtimes | grep -E "^iOS .*com.apple" | tail -1 | sed -E 's/.* - (com[^ ]+).*/\1/')
