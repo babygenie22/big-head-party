@@ -22,6 +22,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     private let queue = DispatchQueue(label: "guided-camera")
     private var frame = 0
     private var usingFront = true   // queue-side copy of `front`
+    private var rotation: AVCaptureDevice.RotationCoordinator?
     private var onPhoto: ((UIImage) -> Void)?
 
     /// Where the oval sits in the 3:4 picture (normalized, top-left origin).
@@ -51,6 +52,12 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     func capture(_ done: @escaping (UIImage) -> Void) {
         onPhoto = done
         queue.async {
+            // Upright for however the phone is held right now (set at capture time: an angle set
+            // once at setup didn't stick, and photos came out sideways).
+            if let c = self.photoOutput.connection(with: .video) {
+                let angle = self.rotation?.videoRotationAngleForHorizonLevelCapture ?? 90
+                if c.isVideoRotationAngleSupported(angle) { c.videoRotationAngle = angle }
+            }
             let settings = AVCapturePhotoSettings()
             settings.photoQualityPrioritization = .quality
             self.photoOutput.capturePhoto(with: settings, delegate: self)
@@ -67,6 +74,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
             return
         }
         session.addInput(input)
+        rotation = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
         if !session.outputs.contains(videoOutput), session.canAddOutput(videoOutput) {
             videoOutput.alwaysDiscardsLateVideoFrames = true
             videoOutput.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange]

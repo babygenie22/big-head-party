@@ -45,20 +45,26 @@ enum FaceAnalyzer {
     static func analyze(_ uiImage: UIImage) throws -> FaceCapture {
         // Big enough that a face filling only part of a phone photo still has the pixels for a
         // 2048² texture; 1600 px left typical faces upscaled and soft.
-        guard let cg = uiImage.normalizedCGImage(maxDimension: 3200) else { throw FaceAnalyzerError.unreadableImage }
-        let size = CGSize(width: cg.width, height: cg.height)
+        guard var cg = uiImage.normalizedCGImage(maxDimension: 3200) else { throw FaceAnalyzerError.unreadableImage }
         #if targetEnvironment(simulator)
         if let canned = cannedCapture(cg) { return canned }
         #endif
 
-        let landmarksRequest = VNDetectFaceLandmarksRequest()
-        landmarksRequest.revision = VNDetectFaceLandmarksRequestRevision3
-        let handler = VNImageRequestHandler(cgImage: cg, orientation: .up, options: [:])
-        try handler.perform([landmarksRequest])
-
-        guard let faces = landmarksRequest.results, !faces.isEmpty else { throw FaceAnalyzerError.noFace }
-        // The biggest face wins (group photos: the person closest to the camera).
-        let face = faces.max { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height }!
+        guard var found = try biggestFace(in: cg) else { throw FaceAnalyzerError.noFace }
+        // A sideways or upside-down photo: turn it upright and look again. Left as it was, the eyes
+        // sort into the wrong order and the face gets "straightened" onto the head upside down.
+        if let roll = found.0.roll?.doubleValue, abs(roll) > .pi / 4 {
+            let quarter = Int((roll / (.pi / 2)).rounded())
+            for turns in [quarter, -quarter] {
+                guard let turned = cg.rotated(quarterTurns: turns), let upright = try biggestFace(in: turned),
+                      abs(upright.0.roll?.doubleValue ?? 0) < .pi / 4 else { continue }
+                cg = turned
+                found = upright
+                break
+            }
+        }
+        let (face, faceCount) = found
+        let size = CGSize(width: cg.width, height: cg.height)
         guard let lm = face.landmarks else { throw FaceAnalyzerError.missingLandmarks }
 
         func points(_ region: VNFaceLandmarkRegion2D?) -> [CGPoint] {
@@ -105,7 +111,34 @@ enum FaceAnalyzer {
                            personMask: mask,
                            yaw: face.yaw?.doubleValue ?? 0,
                            roll: face.roll?.doubleValue ?? 0,
-                           faceCount: faces.count)
+                           faceCount: faceCount)
+    }
+
+    /// The biggest face (group photos: the person closest to the camera) and how many there are.
+    private static func biggestFace(in cg: CGImage) throws -> (VNFaceObservation, Int)? {
+        let request = VNDetectFaceLandmarksRequest()
+        request.revision = VNDetectFaceLandmarksRequestRevision3
+        try VNImageRequestHandler(cgImage: cg, orientation: .up, options: [:]).perform([request])
+        guard let faces = request.results, !faces.isEmpty else { return nil }
+        let face = faces.max { $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height }!
+        return (face, faces.count)
+    }
+}
+
+extension CGImage {
+    /// Rotated by quarter turns (positive = counter-clockwise).
+    func rotated(quarterTurns: Int) -> CGImage? {
+        let k = ((quarterTurns % 4) + 4) % 4
+        guard k != 0 else { return self }
+        let w = CGFloat(width), h = CGFloat(height)
+        let (nw, nh) = k % 2 == 1 ? (height, width) : (width, height)
+        guard let ctx = CGContext(data: nil, width: nw, height: nh, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!,
+                                  bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return nil }
+        ctx.translateBy(x: CGFloat(nw) / 2, y: CGFloat(nh) / 2)
+        ctx.rotate(by: CGFloat(k) * .pi / 2)
+        ctx.draw(self, in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
+        return ctx.makeImage()
     }
 }
 
