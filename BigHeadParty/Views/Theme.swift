@@ -145,6 +145,25 @@ struct PartyTitle: View {
     }
 }
 
+/// Announcer pop for game moments ("Perfect!", "KO!"): a tilted coral badge that springs in.
+struct CalloutBadge: View {
+    let text: String
+    var size: CGFloat = 40
+
+    var body: some View {
+        Text(text)
+            .font(.display(text.count > 12 ? size * 0.7 : size, relativeTo: .largeTitle))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 22).padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Theme.coral).softShadow(1.4))
+            .rotationEffect(.degrees(-4))
+            .transition(.asymmetric(insertion: .scale(scale: 0.3).combined(with: .opacity),
+                                    removal: .scale(scale: 1.15).combined(with: .opacity)))
+            .accessibilityAddTraits(.isStaticText)
+    }
+}
+
 /// Shows a captured moment with a share button.
 struct SnapshotSheet: View {
     let image: UIImage

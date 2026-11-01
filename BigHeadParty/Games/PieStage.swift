@@ -16,7 +16,7 @@ final class PieStage {
         scene.background.contents = CandySet.backdrop(CandySet.blush, CandySet.cream)
         cameraRig.addChildNode(camera)
         scene.rootNode.addChildNode(cameraRig)
-        CandySet.light(scene, rim: CandySet.bubblegum, camera: camera)
+        CandySet.light(scene, rim: CandySet.bubblegum, camera: camera, level: 0.34)   // pinkest, brightest set
         buildSet(showSign: showSign)
 
         for (i, character) in characters.prefix(2).enumerated() {

@@ -32,9 +32,9 @@ enum CandySet {
     /// unlit signs and backdrops. Here the camera runs at normal exposure and the lights are dimmed
     /// instead (auto exposure also used to darken these bright sets): lit surfaces keep their look,
     /// unlit ones show true colors.
-    static func light(_ scene: SCNScene, rim: UIColor, camera: SCNNode) {
+    static func light(_ scene: SCNScene, rim: UIColor, camera: SCNNode, level: CGFloat = 0.42) {
         Effects.addStudioLights(to: scene, rim: rim, fill: UIColor(red: 1, green: 0.93, blue: 0.95, alpha: 1))
-        let k: CGFloat = 0.42   // tuned by eye on photo and painted heads
+        let k = level   // 0.42 tuned by eye on photo and painted heads; brighter sets want less
         camera.camera?.exposureOffset = 0
         // Auto exposure darkened the bright sets; the vignette greyed their corners.
         camera.camera?.wantsExposureAdaptation = false

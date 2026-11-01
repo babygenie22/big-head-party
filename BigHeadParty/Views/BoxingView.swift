@@ -21,13 +21,7 @@ struct BoxingView: View {
                 hud
                 Spacer()
                 if let callout = game.callout {
-                    Text(callout)
-                        .font(.party(callout.count > 8 ? 40 : 64))
-                        .foregroundStyle(Theme.butter)
-                        .background(Text(callout).font(.party(callout.count > 8 ? 40 : 64)).foregroundStyle(Theme.ink).offset(x: 4, y: 5))
-                        .rotationEffect(.degrees(-6))
-                        .transition(.scale(scale: 2.5).combined(with: .opacity))
-                        .id(callout)
+                    CalloutBadge(text: callout, size: callout.count > 8 ? 40 : 56).id(callout)
                 }
                 Spacer()
                 if game.phase == .finished {

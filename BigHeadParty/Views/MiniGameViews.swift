@@ -29,20 +29,10 @@ private struct Callout: View {
     var body: some View {
         ZStack {
             if let text {
-                Text(text)
-                    .font(.party(text.count > 12 ? 30 : 46))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Theme.butter)
-                    .background(
-                        Text(text).font(.party(text.count > 12 ? 30 : 46)).multilineTextAlignment(.center)
-                            .foregroundStyle(Theme.ink).offset(x: 3, y: 4)
-                    )
-                    .rotationEffect(.degrees(-5))
-                    .transition(.scale(scale: 2).combined(with: .opacity))
-                    .id(text)
+                CalloutBadge(text: text).id(text)
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: text)
+        .animation(.spring(response: 0.35, dampingFraction: 0.55), value: text)
     }
 }
 
