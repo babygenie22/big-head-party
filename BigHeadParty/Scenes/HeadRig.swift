@@ -41,6 +41,7 @@ final class HeadRig {
         material.diffuse.wrapS = .clamp
         material.diffuse.wrapT = .clamp
         material.diffuse.mipFilter = .linear
+        material.diffuse.maxAnisotropy = 16   // keeps the photo sharp where the face curves away
         material.roughness.contents = 0.55
         material.metalness.contents = 0.0
         // Fine pore detail and a faint skin sheen.

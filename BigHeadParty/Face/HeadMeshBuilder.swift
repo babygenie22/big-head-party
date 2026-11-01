@@ -250,16 +250,25 @@ enum HeadMeshBuilder {
         let mx = Float(shape.mouthCenter.x), my = Float(shape.mouthCenter.y)
         let mw = Float(shape.mouthWidth)
         let cx = Float(shape.chin.x), cy = Float(shape.chin.y)
+        // Measured from the photo when available; the constants are the original average face.
+        let eyeW = Float(shape.eyeHalfWidth ?? 0.065) / 0.065
+        let eyeH = Float(shape.eyeHalfHeight ?? 0.022) / 0.022
+        // The bony ridge sits above the brow hairs Vision traces: shift it by how far this
+        // person's brows are from a typical 0.04, rather than putting it on the hairs.
+        let brow = 0.065 + Float((shape.browLift ?? 0.04) - 0.04)
+        let wing = Float(shape.noseHalfWidth.map { $0 * 0.75 } ?? 0.04)
+        let lipSigma = Float(shape.lipHeight.map { $0 * 0.3 } ?? 0.024)
 
         var z: Float = 0
-        // Eye sockets, then the eyeballs inside them.
-        z -= 0.11 * g2(u, v, lx, ly, 0.055, 0.035)
-        z -= 0.11 * g2(u, v, rx, ry, 0.055, 0.035)
-        z += 0.05 * g2(u, v, lx, ly, 0.028, 0.017)
-        z += 0.05 * g2(u, v, rx, ry, 0.028, 0.017)
-        // Brow ridge.
-        z += 0.07 * g2(u, v, lx, ly - 0.065, 0.07, 0.025)
-        z += 0.07 * g2(u, v, rx, ry - 0.065, 0.07, 0.025)
+        // Eye sockets, then the eyeballs inside them, sized to the person's eye opening.
+        let sockU = 0.055 * eyeW, sockV = 0.035 * simd_clamp(eyeH, 0.8, 1.25)
+        z -= 0.11 * g2(u, v, lx, ly, sockU, sockV)
+        z -= 0.11 * g2(u, v, rx, ry, sockU, sockV)
+        z += 0.05 * g2(u, v, lx, ly, 0.028 * eyeW, 0.017 * eyeH)
+        z += 0.05 * g2(u, v, rx, ry, 0.028 * eyeW, 0.017 * eyeH)
+        // Brow ridge, at the person's own brow height.
+        z += 0.07 * g2(u, v, lx, ly - brow, 0.07, 0.025)
+        z += 0.07 * g2(u, v, rx, ry - brow, 0.07, 0.025)
         // Nose: a ridge from between the eyes down to the tip, getting taller and wider.
         let noseLen = max(ny - eyeV, 0.05)
         let t = simd_clamp((v - eyeV) / noseLen, 0, 1)
@@ -270,10 +279,10 @@ enum HeadMeshBuilder {
         if v > ny { ridge *= exp(-0.5 * pow((v - ny) / 0.016, 2)) }
         z += ridge
         z += 0.07 * g2(u, v, nx, ny - 0.008, 0.03, 0.024)                  // tip
-        z += 0.05 * g2(u, v, nx - 0.04, ny + 0.002, 0.02, 0.018)          // nostril wings
-        z += 0.05 * g2(u, v, nx + 0.04, ny + 0.002, 0.02, 0.018)
-        // Lips and the line between them.
-        z += 0.07 * g2(u, v, mx, my, mw * 0.5, 0.024)
+        z += 0.05 * g2(u, v, nx - wing, ny + 0.002, 0.02, 0.018)          // nostril wings
+        z += 0.05 * g2(u, v, nx + wing, ny + 0.002, 0.02, 0.018)
+        // Lips (as full as the person's) and the line between them.
+        z += 0.07 * g2(u, v, mx, my, mw * 0.5, lipSigma)
         z -= 0.03 * g2(u, v, mx, my, mw * 0.45, 0.006)
         // Cheekbones.
         z += 0.05 * g2(u, v, lx - 0.02, eyeV + 0.10, 0.06, 0.05)

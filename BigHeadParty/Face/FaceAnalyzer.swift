@@ -11,6 +11,9 @@ struct FaceCapture {
     let nose: [CGPoint]
     let outerLips: [CGPoint]
     let contour: [CGPoint]
+    /// Both eyebrows and both eye outlines, used to place the brow ridge and size the eye sockets.
+    let eyebrows: [[CGPoint]]
+    let eyeOutlines: [[CGPoint]]
     /// All 76 landmarks normalized to the image (0...1, origin top-left) for the overlay UI.
     let overlayPoints: [CGPoint]
     /// Normalized face box (origin top-left) for the overlay UI.
@@ -40,7 +43,9 @@ enum FaceAnalyzer {
     /// Runs Apple's Vision face-landmark model (76 points) plus person segmentation.
     /// Everything stays on device.
     static func analyze(_ uiImage: UIImage) throws -> FaceCapture {
-        guard let cg = uiImage.normalizedCGImage(maxDimension: 1600) else { throw FaceAnalyzerError.unreadableImage }
+        // Big enough that a face filling only part of a phone photo still has the pixels for a
+        // 2048² texture; 1600 px left typical faces upscaled and soft.
+        guard let cg = uiImage.normalizedCGImage(maxDimension: 3200) else { throw FaceAnalyzerError.unreadableImage }
         let size = CGSize(width: cg.width, height: cg.height)
 
         let landmarksRequest = VNDetectFaceLandmarksRequest()
@@ -90,6 +95,8 @@ enum FaceAnalyzer {
                            nose: nose,
                            outerLips: lips,
                            contour: contour,
+                           eyebrows: [points(lm.leftEyebrow), points(lm.rightEyebrow)].filter { !$0.isEmpty },
+                           eyeOutlines: [points(lm.leftEye), points(lm.rightEye)].filter { $0.count >= 4 },
                            overlayPoints: overlay,
                            overlayBox: overlayBox,
                            personMask: mask,

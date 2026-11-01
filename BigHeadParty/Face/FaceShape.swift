@@ -19,6 +19,17 @@ struct FaceShape: Codable, Equatable {
     var chin: CGPoint
     /// Jawline from ear to ear through the chin (Vision's faceContour, 7–17 points).
     var contour: [CGPoint]
+    // Finer measurements from the rest of Vision's 76 landmarks. Optional so characters saved
+    // before they existed (and the painted house cast) keep their original sculpt.
+    /// Eye line to the eyebrow hairs (Vision's eyebrow points, typically ~0.04), in v.
+    var browLift: CGFloat? = nil
+    /// Half-size of the eye opening (u, v).
+    var eyeHalfWidth: CGFloat? = nil
+    var eyeHalfHeight: CGFloat? = nil
+    /// Half-width of the nose at the nostrils.
+    var noseHalfWidth: CGFloat? = nil
+    /// Top-to-bottom height of the lips.
+    var lipHeight: CGFloat? = nil
 
     var eyeLineV: CGFloat { (leftEye.y + rightEye.y) / 2 }
     var midlineU: CGFloat { (leftEye.x + rightEye.x) / 2 }
@@ -27,6 +38,8 @@ struct FaceShape: Codable, Equatable {
 enum FaceLayout {
     /// Texture resolution for generated faces.
     static let textureSize: CGFloat = 1024
+    /// Photo faces get twice the resolution so skin, eyes and hair keep their detail.
+    static let photoTextureSize: CGFloat = 2048
     /// Canonical eye positions. Every face texture is rotated/scaled so the eyes land here.
     static let leftEye = CGPoint(x: 0.36, y: 0.40)
     static let rightEye = CGPoint(x: 0.64, y: 0.40)
@@ -71,6 +84,11 @@ enum FaceLayout {
         out.chin.x = clamp(s.chin.x, 0.40, 0.60)
         out.chin.y = clamp(s.chin.y, out.mouthCenter.y + 0.06, 0.92)
         if s.contour.count < 5 { out.contour = std.contour }
+        out.browLift = s.browLift.map { clamp($0, 0.02, 0.08) }
+        out.eyeHalfWidth = s.eyeHalfWidth.map { clamp($0, 0.045, 0.085) }
+        out.eyeHalfHeight = s.eyeHalfHeight.map { clamp($0, 0.012, 0.035) }
+        out.noseHalfWidth = s.noseHalfWidth.map { clamp($0, 0.035, 0.08) }
+        out.lipHeight = s.lipHeight.map { clamp($0, 0.04, 0.11) }
         return out
     }
 }

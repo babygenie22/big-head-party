@@ -21,7 +21,7 @@ enum FaceTextureBuilder {
     static let ciContext = CIContext(options: [.workingColorSpace: CGColorSpace(name: CGColorSpace.sRGB) as Any])
 
     static func build(from capture: FaceCapture) -> BuiltFace {
-        let T = FaceLayout.textureSize
+        let T = FaceLayout.photoTextureSize
         let canvas = CGRect(x: 0, y: 0, width: T, height: T)
         // Core Image space is bottom-left origin, like Vision.
         func ciPoint(uv: CGPoint) -> CGPoint { CGPoint(x: uv.x * T, y: (1 - uv.y) * T) }
@@ -46,13 +46,25 @@ enum FaceTextureBuilder {
         let mouth = CGPoint(x: lipsUV.map(\.x).reduce(0, +) / CGFloat(lipsUV.count),
                             y: lipsUV.map(\.y).reduce(0, +) / CGFloat(lipsUV.count))
         let chin = contourUV.max(by: { $0.y < $1.y }) ?? CGPoint(x: 0.5, y: 0.8)
+        func halfExtent(_ pts: [CGPoint], _ axis: KeyPath<CGPoint, CGFloat>) -> CGFloat? {
+            guard let lo = pts.map({ $0[keyPath: axis] }).min(), let hi = pts.map({ $0[keyPath: axis] }).max() else { return nil }
+            return (hi - lo) / 2
+        }
+        func mean(_ xs: [CGFloat]) -> CGFloat? { xs.isEmpty ? nil : xs.reduce(0, +) / CGFloat(xs.count) }
+        let browVs = capture.eyebrows.flatMap { $0.map(uv) }.map(\.y)
+        let eyesUV = capture.eyeOutlines.map { $0.map(uv) }
         let shape = FaceLayout.sanitized(FaceShape(leftEye: FaceLayout.leftEye,
                                                    rightEye: FaceLayout.rightEye,
                                                    noseTip: noseTip,
                                                    mouthCenter: mouth,
                                                    mouthWidth: lipsMaxX - lipsMinX,
                                                    chin: chin,
-                                                   contour: contourUV))
+                                                   contour: contourUV,
+                                                   browLift: mean(browVs).map { FaceLayout.leftEye.y - $0 },
+                                                   eyeHalfWidth: mean(eyesUV.compactMap { halfExtent($0, \.x) }),
+                                                   eyeHalfHeight: mean(eyesUV.compactMap { halfExtent($0, \.y) }),
+                                                   noseHalfWidth: halfExtent(noseUV, \.x),
+                                                   lipHeight: halfExtent(lipsUV, \.y).map { $0 * 2 }))
 
         // ---- Aligned photo, mask and sampled colors --------------------------------
         let photo = CIImage(cgImage: capture.image).transformed(by: align)
@@ -72,8 +84,14 @@ enum FaceTextureBuilder {
         let hair = hairColor(photo: photo, mask: personMask, skin: skin)
 
         // ---- Composite ---------------------------------------------------------------
-        let fill = CIImage(cgImage: fillImage(skin: skin, hair: hair))
-        var mask = ellipseMask(center: ciPoint(uv: CGPoint(x: 0.5, y: 0.41)), rx: 0.31 * T, ry: 0.44 * T, canvas: canvas)
+        let fill = CIImage(cgImage: fillImage(skin: skin, hair: hair, size: T))
+        // The photo oval follows THIS face: its fade lands on the measured jawline and chin. A fixed
+        // oval reached past narrow faces onto the sides of the head, where a frontal photo smears.
+        // (The gradient is solid to 0.78 of the radius and gone at 1.0, so 0.89 is the fade's middle.)
+        let jawHalfWidth = shape.contour.map { abs($0.x - shape.midlineU) }.max() ?? 0.28
+        let rx = min(max(jawHalfWidth / 0.92, 0.24), 0.34)
+        let ry = min(max((shape.chin.y + 0.02 - 0.41) / 0.89, 0.40), 0.56)
+        var mask = ellipseMask(center: ciPoint(uv: CGPoint(x: shape.midlineU, y: 0.41)), rx: rx * T, ry: ry * T, canvas: canvas)
         if let personMask {
             mask = personMask.applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: mask])
         }
@@ -134,8 +152,8 @@ enum FaceTextureBuilder {
     }
 
     /// Skin everywhere, hair on the crown and around the back; softened so it blends.
-    private static func fillImage(skin: UIColor, hair: UIColor) -> CGImage {
-        let T = FaceLayout.textureSize
+    private static func fillImage(skin: UIColor, hair: UIColor, size T: CGFloat) -> CGImage {
+        let px = T / 1024   // tuned at 1024²
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         format.opaque = true
@@ -149,7 +167,7 @@ enum FaceTextureBuilder {
         let canvas = CGRect(x: 0, y: 0, width: T, height: T)
         let blurred = CIImage(cgImage: hard.cgImage!)
             .clampedToExtent()
-            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 28])
+            .applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: 28 * px])
             .cropped(to: canvas)
         let soft = ciContext.createCGImage(blurred, from: canvas) ?? hard.cgImage!
         // Strand texture over the crown, the sides and the back.
@@ -160,14 +178,14 @@ enum FaceTextureBuilder {
         var rng = SeededRandom(seed: 17)
         let detailed = UIGraphicsImageRenderer(size: CGSize(width: T, height: T), format: format).image { ctx in
             UIImage(cgImage: soft).draw(in: CGRect(x: 0, y: 0, width: T, height: T))
-            HairStrands.draw(in: ctx.cgContext, color: hair, region: region, count: 3000, rng: &rng)
+            HairStrands.draw(in: ctx.cgContext, color: hair, region: region, count: Int(3000 * px * px), rng: &rng, size: T)
         }
         return detailed.cgImage ?? soft
     }
 
     /// Hair = person pixels above the brows that are clearly not skin. Too few means bald.
     private static func hairColor(photo: CIImage, mask: CIImage?, skin: UIColor) -> UIColor {
-        let T = FaceLayout.textureSize
+        let T = FaceLayout.photoTextureSize
         let region = CGRect(x: 0.2 * T, y: 0.7 * T, width: 0.6 * T, height: 0.3 * T)   // top 30% of the texture (CI is bottom-up)
         let w = Int(region.width), h = Int(region.height)
         let space = CGColorSpace(name: CGColorSpace.sRGB)
@@ -196,7 +214,7 @@ enum FaceTextureBuilder {
     }
 
     private static func fillCG(skin: UIColor) -> CGImage {
-        let T = FaceLayout.textureSize
+        let T = FaceLayout.photoTextureSize
         return UIGraphicsImageRenderer(size: CGSize(width: T, height: T)).image { ctx in
             skin.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: T, height: T))
         }.cgImage!
