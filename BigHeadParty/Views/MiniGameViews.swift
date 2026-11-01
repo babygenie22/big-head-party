@@ -32,7 +32,7 @@ private struct Callout: View {
                 Text(text)
                     .font(.party(text.count > 12 ? 30 : 46))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(Theme.paper)
+                    .foregroundStyle(Theme.butter)
                     .background(
                         Text(text).font(.party(text.count > 12 ? 30 : 46)).multilineTextAlignment(.center)
                             .foregroundStyle(Theme.ink).offset(x: 3, y: 4)
@@ -59,14 +59,14 @@ private struct ResultCard: View {
             Text(line).font(.party(22)).multilineTextAlignment(.center)
             HStack(spacing: 10) {
                 Button { if let img = snap() { snapshot = IdentifiableImage(image: img) } } label: { Label("Snap", systemImage: "camera.fill") }
-                    .buttonStyle(ChunkyButtonStyle(color: Theme.mint))
-                Button("Rematch", action: onRematch).buttonStyle(ChunkyButtonStyle())
+                    .buttonStyle(CandyButtonStyle(color: Theme.lime))
+                Button("Rematch", action: onRematch).buttonStyle(CandyButtonStyle())
             }
             Button("Back to menu", action: onExit).font(.party(16))
         }
         .padding(20)
         .foregroundStyle(Theme.ink)
-                .sticker(Theme.cream, cornerRadius: 24, drop: 4)
+                .card(Theme.surface, cornerRadius: 24)
         .sheet(item: $snapshot) { SnapshotSheet(image: $0.image) }
     }
 }
@@ -75,7 +75,7 @@ private struct CloseButton: View {
     let action: () -> Void
     var body: some View {
         Button(action: action) { Image(systemName: "xmark").font(.system(size: 14, weight: .black)) }
-            .buttonStyle(StickerIconButtonStyle())
+            .buttonStyle(IconButtonStyle())
             .accessibilityLabel("Quit game")
     }
 }
@@ -108,7 +108,7 @@ struct SlapView: View {
                 }
                 .padding(10)
                 .foregroundStyle(Theme.ink)
-                .sticker(Theme.cream, cornerRadius: 18, drop: 4)
+                .card(Theme.surface, cornerRadius: 18)
                 Spacer()
                 Callout(text: game.callout)
                 Spacer()
@@ -135,7 +135,7 @@ struct SlapView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 12).fill(Theme.ink.opacity(0.12))
-                    Rectangle().fill(Theme.paper)
+                    Rectangle().fill(Theme.butter)
                         .frame(width: geo.size.width * SlapGame.perfectZone)
                         .offset(x: geo.size.width * (0.5 - SlapGame.perfectZone / 2))
                     Capsule().fill(Theme.ink)
@@ -143,18 +143,18 @@ struct SlapView: View {
                         .offset(x: geo.size.width * game.needle - 3)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.ink, lineWidth: 2.5))
+                
             }
             .frame(height: 36)
             .accessibilityHidden(true)
             Button("SLAP!") { game.slap() }
-                .buttonStyle(ChunkyButtonStyle(color: Theme.red))
+                .buttonStyle(CandyButtonStyle(color: Theme.red))
                 .disabled(!(game.phase == .aiming && game.isHumanTurn))
                 .opacity(game.phase == .aiming && game.isHumanTurn ? 1 : 0.4)
         }
         .padding(16)
         .foregroundStyle(Theme.ink)
-                .sticker(Theme.cream, cornerRadius: 24, drop: 4)
+                .card(Theme.surface, cornerRadius: 24)
     }
 }
 
@@ -186,13 +186,13 @@ struct DunkView: View {
                 }
                 .padding(10)
                 .foregroundStyle(Theme.ink)
-                .sticker(Theme.cream, cornerRadius: 18, drop: 4)
+                .card(Theme.surface, cornerRadius: 18)
                 Text(game.hostLine)
                     .font(.subheadline.weight(.bold))
                     .padding(10)
                     .frame(maxWidth: .infinity)
                     .foregroundStyle(Theme.ink)
-                    .sticker(Theme.cream, cornerRadius: 14, drop: 4)
+                    .card(Theme.surface, cornerRadius: 14)
                 Spacer()
                 Callout(text: game.callout)
                 Spacer()
@@ -202,13 +202,13 @@ struct DunkView: View {
                     VStack(spacing: 8) {
                         Text("Ball \(min(game.ball + 1, game.ballsPerHalf)) of \(game.ballsPerHalf)").font(.headline)
                         Button("THROW") { game.throwBall() }
-                            .buttonStyle(ChunkyButtonStyle(color: Theme.red))
+                            .buttonStyle(CandyButtonStyle(color: Theme.red))
                             .disabled(!(game.phase == .aiming && game.isHumanTurn))
                             .opacity(game.phase == .aiming && game.isHumanTurn ? 1 : 0.4)
                     }
                     .padding(16)
                     .foregroundStyle(Theme.ink)
-                .sticker(Theme.cream, cornerRadius: 24, drop: 4)
+                .card(Theme.surface, cornerRadius: 24)
                 }
             }
             .padding(.horizontal, 14)
@@ -249,11 +249,11 @@ struct WhackView: View {
                         CloseButton { game.stop(); onExit() }
                     }
                     Spacer()
-                    PlayerBadge(character: game.player, value: "\(game.best)", label: "Best", trailing: true, color: Theme.paper)
+                    PlayerBadge(character: game.player, value: "\(game.best)", label: "Best", trailing: true, color: Theme.butter)
                 }
                 .padding(10)
                 .foregroundStyle(Theme.ink)
-                .sticker(Theme.cream, cornerRadius: 18, drop: 4)
+                .card(Theme.surface, cornerRadius: 18)
                 Spacer()
                 Callout(text: game.callout).allowsHitTesting(false)
                 Spacer()
@@ -265,7 +265,7 @@ struct WhackView: View {
                         .font(.headline)
                         .padding(12)
                         .foregroundStyle(Theme.ink)
-                .stickerCapsule(Theme.cream)
+                .pill(Theme.surface)
                         .allowsHitTesting(false)
                 }
             }

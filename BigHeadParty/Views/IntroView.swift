@@ -81,11 +81,11 @@ private struct DemoPage: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .sticker(Theme.deep, cornerRadius: 22, drop: 6)
+            .card(Theme.deep, cornerRadius: 22)
             .frame(maxHeight: .infinity)
             .padding(.horizontal)
             Button("Show me how") { onNext() }
-                .buttonStyle(ChunkyButtonStyle())
+                .buttonStyle(CandyButtonStyle())
                 .padding(.horizontal, 30)
                 .padding(.bottom, 50)
         }
@@ -109,7 +109,7 @@ private struct DemoCaption: View {
             .font(.party(18))
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 16).padding(.vertical, 8)
-            .stickerCapsule(Theme.cream)
+            .pill(Theme.surface)
             .padding(.bottom, 14)
             .animation(.spring, value: director.caption)
     }
@@ -131,9 +131,9 @@ private struct HowItWorksPage: View {
             ForEach(Array(steps.enumerated()), id: \.offset) { i, step in
                 HStack(alignment: .top, spacing: 16) {
                     ZStack {
-                        Circle().fill([Theme.bubblegum, Theme.sky, Theme.mint, Theme.tomato][i])
-                            .overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.outline))
-                            .background(Circle().fill(Theme.ink).offset(x: 3, y: 3))
+                        Circle().fill([Theme.bubblegum, Theme.sky, Theme.lime, Theme.coral][i])
+                            
+                            .softShadow(0.6)
                             .frame(width: 54, height: 54)
                         Image(systemName: step.0).font(.title2.weight(.bold)).foregroundStyle(Theme.ink)
                     }
@@ -146,7 +146,7 @@ private struct HowItWorksPage: View {
             }
             Spacer()
             Button("Next") { onNext() }
-                .buttonStyle(ChunkyButtonStyle(color: Theme.sky))
+                .buttonStyle(CandyButtonStyle(color: Theme.sky))
                 .padding(.bottom, 50)
         }
         .padding(.horizontal, 28)
@@ -162,7 +162,7 @@ private struct PlayNicePage: View {
                 .font(.system(size: 64))
                 .foregroundStyle(Theme.ink)
                 .frame(width: 120, height: 120)
-                .sticker(Theme.bubblegum, cornerRadius: 60, drop: 5)
+                .card(Theme.bubblegum, cornerRadius: 60)
             PartyTitle(text: "Play nice", size: 40)
             VStack(alignment: .leading, spacing: 14) {
                 Label("Photos are processed on your iPhone. They never leave your device.", systemImage: "iphone")
@@ -173,10 +173,10 @@ private struct PlayNicePage: View {
             .font(.system(size: 16, weight: .bold, design: .rounded))
             .foregroundStyle(Theme.ink)
             .padding(20)
-            .sticker(Theme.cream, cornerRadius: 20)
+            .card(Theme.surface, cornerRadius: 20)
             Spacer()
             Button("Let's party!") { onFinish() }
-                .buttonStyle(ChunkyButtonStyle())
+                .buttonStyle(CandyButtonStyle())
                 .padding(.bottom, 50)
         }
         .padding(.horizontal, 28)

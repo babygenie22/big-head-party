@@ -44,12 +44,14 @@ enum GameKind: String, Identifiable, CaseIterable {
     var color: Color {
         switch self {
         case .pieShow: return Theme.bubblegum
-        case .slap: return Theme.tomato
+        case .slap: return Theme.butter
         case .dunk: return Theme.sky
-        case .whack: return Theme.mint
+        case .whack: return Theme.lime
         case .boxing: return Theme.lilac
         }
     }
+    /// A real render of the game, used as its poster.
+    var cover: String { "cover-\(rawValue)" }
     /// Whack-a-Head is solo; everything else is head-to-head.
     var isSolo: Bool { self == .whack }
 }
@@ -69,25 +71,25 @@ struct HomeView: View {
         ZStack {
             Theme.background
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(alignment: .leading, spacing: 22) {
                     header
-                    heroCard
+                    starStage
                     Button {
                         showStudio = true
                     } label: {
                         Label("Make a big head", systemImage: "camera.fill")
                     }
-                    .buttonStyle(ChunkyButtonStyle(color: Theme.tomato))
-
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)], spacing: 18) {
-                        ForEach(GameKind.allCases) { gameCard($0) }
-                    }
+                    .buttonStyle(CandyButtonStyle())
+                    sectionTitle("Pick a game")
+                    gameMosaic
                     castRow
                     comingSoon
                 }
-                .padding(.horizontal, 18)
-                .padding(.bottom, 30)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 36)
             }
+            .scrollIndicators(.hidden)
+            .defaultScrollAnchor(Self.debugScrollAnchor)
         }
         .onAppear {
             hero.show(store.star, animated: false)
@@ -99,6 +101,14 @@ struct HomeView: View {
         .fullScreenCover(item: $debugGame) { GameHost(config: $0) }
         .sheet(isPresented: $showCast) { CastView() }
         .sheet(item: $setupGame) { kind in MatchSetupView(kind: kind) }
+    }
+
+    /// Debug: `-homeBottom YES` opens the home screen scrolled to the end (for screenshots).
+    private static var debugScrollAnchor: UnitPoint {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "homeBottom") { return .bottom }
+        #endif
+        return .top
     }
 
     /// Debug builds only: launch arguments that jump straight to a screen, used by the CI
@@ -119,8 +129,10 @@ struct HomeView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
-            PartyTitle(text: "Big Head Party", size: 32)
+        HStack(alignment: .center, spacing: 10) {
+            PartyTitle(text: "Big Head Party", size: 34)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             Spacer()
             Menu {
                 Picker("Head size", selection: $headSize) {
@@ -128,177 +140,177 @@ struct HomeView: View {
                 }
             } label: {
                 Image(systemName: headSize == .big ? "person.crop.circle.badge.plus" : "person.crop.circle")
-                    .frame(width: 22, height: 22)
-                    .padding(10)
-                    .background(Circle().fill(Theme.cream).overlay(Circle().strokeBorder(Theme.ink, lineWidth: 2.5)))
-                    .background(Circle().fill(Theme.ink).offset(x: 3, y: 3))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.ink)
+                    .frame(width: 24, height: 24)
+                    .padding(10)
+                    .background(Circle().fill(Theme.surface).softShadow(0.6))
             }
             .accessibilityLabel("Head size: \(headSize.label)")
-            Button {
-                hasSeenIntro = false
-            } label: {
-                Image(systemName: "play.fill").frame(width: 22, height: 22)
-            }
-            .buttonStyle(StickerIconButtonStyle())
-            .accessibilityLabel("Watch the demo again")
+            Button { hasSeenIntro = false } label: { Image(systemName: "play.fill") }
+                .buttonStyle(IconButtonStyle())
+                .accessibilityLabel("Watch the demo again")
         }
-        .padding(.top, 8)
+        .padding(.top, 6)
     }
 
-    /// The signature piece: today's star standing in a collector box, like a bobblehead on a shelf.
-    private var heroCard: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("SERIES 1")
-                Spacer()
-                Text("COLLECT 'EM ALL")
-            }
-            .font(.system(size: 12, weight: .black, design: .rounded))
-            .tracking(1.5)
-            .foregroundStyle(Theme.cream)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .background(Theme.tomato)
-            .overlay(alignment: .bottom) { Rectangle().fill(Theme.ink).frame(height: Theme.outline) }
-
-            // The box window.
-            ZStack {
-                Theme.sky
-                Circle().fill(Theme.cream.opacity(0.35)).frame(width: 250, height: 250)
-                Circle().fill(Theme.cream.opacity(0.35)).frame(width: 170, height: 170)
-                SceneContainer(scene: hero.stage.scene, pointOfView: hero.stage.camera)
-            }
-            .frame(height: 280)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.ink, lineWidth: Theme.outline))
-            .padding(12)
-
-            VStack(spacing: 10) {
+    /// The thesis: today's star, big and live. Tap them and they get a pie.
+    private var starStage: some View {
+        VStack(spacing: 12) {
+            ZStack(alignment: .bottomLeading) {
+                Theme.blush
+                Circle().fill(.white.opacity(0.7)).frame(width: 280, height: 280).blur(radius: 40).offset(y: -20)
+                SceneContainer(scene: hero.stage.scene, pointOfView: hero.stage.camera,
+                               onTap: { _, _ in hero.stage.throwPie() })
                 if let star = store.star {
-                    Text(star.meta.isDefault ? "Starring \(star.name)" : "Now starring \(star.name)")
-                        .font(.party(20))
-                        .foregroundStyle(Theme.ink)
-                }
-                HStack(spacing: 8) {
-                    reactButton("Pie", "birthday.cake.fill", Theme.bubblegum) { hero.stage.throwPie() }
-                    reactButton("Bonk", "hand.point.right.fill", Theme.mint) { hero.stage.react(.skewLeft) }
-                    reactButton("Scream", "mouth.fill", Theme.lilac) { hero.stage.react(.mouthOpen) }
-                    reactButton("Clean", "drop.fill", Theme.sky) { hero.stage.clean() }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(star.name).font(.display(28)).foregroundStyle(Theme.ink)
+                        Text("Tap them for a pie").font(.ui(13)).foregroundStyle(Theme.inkSoft)
+                    }
+                    .padding(18)
+                    .allowsHitTesting(false)
                 }
             }
-            .padding(.bottom, 14)
+            .frame(height: 340)
+            .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+            .softShadow(1.2)
+
+            HStack(spacing: 8) {
+                reactButton("Bonk", "hand.point.right.fill") { hero.stage.react(.skewLeft) }
+                reactButton("Scream", "mouth.fill") { hero.stage.react(.mouthOpen) }
+                reactButton("Clean up", "drop.fill") { hero.stage.clean() }
+            }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .sticker(Theme.cream, cornerRadius: 24, drop: 6)
     }
 
-    private func reactButton(_ title: String, _ symbol: String, _ color: Color, action: @escaping () -> Void) -> some View {
+    private func reactButton(_ title: String, _ symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 2) {
-                Image(systemName: symbol).font(.system(size: 16, weight: .bold))
-                Text(title).font(.system(size: 12, weight: .heavy, design: .rounded))
-            }
-            .foregroundStyle(Theme.ink)
-            .frame(width: 66, height: 48)
-            .sticker(color, cornerRadius: 12, drop: 3)
+            Label(title, systemImage: symbol)
+                .font(.ui(14, .bold))
+                .foregroundStyle(Theme.ink)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .pill()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleButtonStyle())
     }
 
-    private func gameCard(_ kind: GameKind) -> some View {
-        let index = GameKind.allCases.firstIndex(of: kind) ?? 0
-        return Button {
-            setupGame = kind
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                Image(systemName: kind.symbol)
-                    .font(.system(size: 24, weight: .bold))
-                    .frame(width: 48, height: 48)
-                    .background(Circle().fill(Theme.cream).overlay(Circle().strokeBorder(Theme.ink, lineWidth: 2.5)))
-                Text(kind.title).font(.party(19)).multilineTextAlignment(.leading)
-                Text(kind.blurb).font(.system(size: 13, weight: .semibold, design: .rounded)).multilineTextAlignment(.leading)
-                    .foregroundStyle(Theme.ink.opacity(0.75))
-                Spacer(minLength: 0)
-                Label("Play", systemImage: "play.fill")
-                    .font(.system(size: 14, weight: .black, design: .rounded))
-                    .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(Capsule().fill(Theme.cream).overlay(Capsule().strokeBorder(Theme.ink, lineWidth: 2)))
+    private func sectionTitle(_ text: String) -> some View {
+        Text(text).font(.display(24)).foregroundStyle(Theme.ink).padding(.top, 6)
+    }
+
+    /// Game posters in a mosaic: one hero, two stacked, then wide strips.
+    private var gameMosaic: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 14) {
+                gameTile(.pieShow, height: 304, big: true)
+                VStack(spacing: 14) {
+                    gameTile(.slap, height: 145)
+                    gameTile(.dunk, height: 145)
+                }
             }
-            .foregroundStyle(Theme.ink)
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 186, alignment: .topLeading)
-            .sticker(kind.color, cornerRadius: 22)
-            // Stuck on slightly crooked, like real stickers.
-            .rotationEffect(.degrees(index.isMultiple(of: 2) ? -1.2 : 1.2))
+            gameTile(.boxing, height: 196, big: true)
+            gameTile(.whack, height: 156)
         }
-        .buttonStyle(.plain)
+    }
+
+    private func gameTile(_ kind: GameKind, height: CGFloat, big: Bool = false) -> some View {
+        Button { setupGame = kind } label: {
+            // Clear base sets the size; the poster fills it without pushing the layout wider.
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+                .overlay { Image(kind.cover).resizable().scaledToFill() }
+                .clipped()
+                .overlay(alignment: .bottomLeading) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(kind.title).font(.display(big ? 22 : 17)).lineLimit(2).multilineTextAlignment(.leading)
+                        if big { Text(kind.blurb).font(.ui(13)).lineLimit(2).multilineTextAlignment(.leading) }
+                    }
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 12).padding(.vertical, 9)
+                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(kind.color))
+                    .padding(10)
+                }
+                .overlay(alignment: .topTrailing) {
+                    Text(kind.isSolo ? "Solo" : "2 players")
+                        .font(.ui(11, .heavy))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 9).padding(.vertical, 5)
+                        .background(Capsule().fill(.white.opacity(0.9)))
+                        .padding(10)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .softShadow()
+        }
+        .buttonStyle(PressScaleButtonStyle())
+        .accessibilityLabel("\(kind.title). \(kind.blurb)")
     }
 
     private var castRow: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Your cast").font(.party(24)).foregroundStyle(Theme.ink)
+            HStack(alignment: .firstTextBaseline) {
+                sectionTitle("Your cast")
                 Spacer()
                 Button("See all") { showCast = true }
-                    .font(.system(size: 15, weight: .black, design: .rounded))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.horizontal, 14).padding(.vertical, 7)
-                    .stickerCapsule(Theme.cream)
+                    .font(.ui(15, .bold))
+                    .foregroundStyle(Theme.coral)
+                    .frame(minHeight: 44)
             }
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
+                HStack(alignment: .top, spacing: 16) {
                     Button { showStudio = true } label: {
                         VStack(spacing: 6) {
-                            ZStack {
-                                Circle().fill(Theme.cream)
-                                Circle().strokeBorder(Theme.ink, style: StrokeStyle(lineWidth: 3, dash: [7, 5]))
-                                Image(systemName: "plus").font(.title.weight(.black))
-                            }
-                            .frame(width: 66, height: 66)
-                            Text("New").font(.system(size: 12, weight: .heavy, design: .rounded))
+                            Image(systemName: "plus")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 70, height: 70)
+                                .background(Circle().fill(Theme.coral).softShadow(0.6))
+                            Text("New").font(.ui(12, .bold)).foregroundStyle(Theme.ink)
                         }
                     }
-                    .foregroundStyle(Theme.ink)
+                    .buttonStyle(PressScaleButtonStyle())
                     ForEach(store.characters) { c in
                         Button { hero.show(c) } label: {
                             VStack(spacing: 6) {
-                                AvatarView(character: c, size: 66, ring: hero.shownID == c.id ? Theme.highlight : nil)
-                                Text(c.name).font(.system(size: 12, weight: .heavy, design: .rounded)).lineLimit(1).frame(width: 78)
+                                AvatarView(character: c, size: 64, ring: hero.shownID == c.id ? Theme.coral : nil)
+                                Text(c.name).font(.ui(12, .bold)).foregroundStyle(Theme.ink).lineLimit(1).frame(width: 80)
                             }
                         }
-                        .foregroundStyle(Theme.ink)
+                        .buttonStyle(PressScaleButtonStyle())
                     }
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, 8)
                 .padding(.horizontal, 4)
             }
         }
     }
 
     private var comingSoon: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Coming soon").font(.party(24)).foregroundStyle(Theme.ink)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    teaser("Bobble Kart", "car.fill")
-                    teaser("Bobble Sumo", "figure.wrestling")
-                    teaser("Wedding Cake Wars", "gift.fill")
-                }
-                .padding(.vertical, 4)
+        VStack(alignment: .leading, spacing: 10) {
+            sectionTitle("Coming soon")
+            HStack(spacing: 8) {
+                teaser("Bobble Kart", "car.fill")
+                teaser("Sumo", "figure.wrestling")
+                teaser("Cake Wars", "gift.fill")
             }
         }
     }
 
     private func teaser(_ title: String, _ symbol: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: symbol)
-            Text(title).font(.system(size: 15, weight: .heavy, design: .rounded))
-            Image(systemName: "lock.fill").font(.caption)
-        }
-        .foregroundStyle(Theme.ink.opacity(0.7))
-        .padding(.horizontal, 14).padding(.vertical, 11)
-        .background(Capsule().fill(Theme.cream.opacity(0.6)))
-        .overlay(Capsule().strokeBorder(Theme.ink.opacity(0.7), style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
+        Label(title, systemImage: symbol)
+            .font(.ui(13, .bold))
+            .foregroundStyle(Theme.inkSoft)
+            .lineLimit(1)
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .background(Capsule().fill(Theme.ink.opacity(0.06)))
+    }
+}
+
+/// Gentle squish for tappable cards and chips.
+struct PressScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }

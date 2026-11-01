@@ -1,146 +1,119 @@
 import SwiftUI
+import CoreText
 
-/// "Toy box": sunny packaging yellow, black ink outlines, sticker-colored pieces with hard
-/// offset shadows — like a bobblehead in its collector box.
+/// "Candy studio": a warm, light canvas; candy-colored stages and real game renders; chunky
+/// Bricolage Grotesque for display moments; soft, lifted depth instead of outlines.
 enum Theme {
-    // Ground and ink.
-    static let paper = Color(red: 1.0, green: 0.875, blue: 0.29)      // #FFDF4A
-    static let cream = Color(red: 1.0, green: 0.97, blue: 0.88)       // #FFF7E0
-    static let ink = Color(red: 0.09, green: 0.075, blue: 0.06)       // #17130F
-    // Sticker colors (one per game, plus players).
-    static let tomato = Color(red: 1.0, green: 0.35, blue: 0.21)      // #FF5A36
-    static let sky = Color(red: 0.30, green: 0.66, blue: 1.0)         // #4DA8FF
-    static let mint = Color(red: 0.24, green: 0.86, blue: 0.52)       // #3DDC84
-    static let bubblegum = Color(red: 1.0, green: 0.56, blue: 0.82)   // #FF8FD0
-    static let lilac = Color(red: 0.73, green: 0.61, blue: 1.0)       // #B99CFF
+    // Canvas and text.
+    static let canvas = Color(red: 1.0, green: 0.957, blue: 0.925)    // #FFF4EC
+    static let surface = Color.white
+    static let ink = Color(red: 0.169, green: 0.106, blue: 0.180)     // #2B1B2E plum-black
+    static let inkSoft = ink.opacity(0.62)
+    // Candy colors. Text on them stays ink, except on coral (white, bold).
+    static let coral = Color(red: 1.0, green: 0.42, blue: 0.29)       // #FF6B4A
+    static let sky = Color(red: 0.50, green: 0.78, blue: 1.0)         // #7FC8FF
+    static let lime = Color(red: 0.73, green: 0.91, blue: 0.42)       // #B9E86A
+    static let bubblegum = Color(red: 1.0, green: 0.62, blue: 0.75)   // #FF9EC0
+    static let lilac = Color(red: 0.79, green: 0.71, blue: 1.0)       // #C9B6FF
+    static let butter = Color(red: 1.0, green: 0.85, blue: 0.42)      // #FFD86B
+    static let blush = Color(red: 1.0, green: 0.84, blue: 0.89)       // #FFD6E4 the star's stage
 
-    // Roles used across screens.
-    static let pink = bubblegum
-    static let yellow = paper
-    static let teal = mint
-    static let blue = sky
-    static let red = tomato
-    /// Selection rings and "your turn" markers: must read on yellow paper.
-    static let highlight = tomato
-    /// Night-time stage behind 3D scenes (kept dark so lit heads pop).
-    static let deep = Color(red: 0.12, green: 0.09, blue: 0.07)
+    // Roles.
+    static let highlight = coral
+    static let blue = Color(red: 0.25, green: 0.55, blue: 1.0)        // player 1
+    static let red = Color(red: 1.0, green: 0.36, blue: 0.40)         // player 2
+    static let success = Color(red: 0.36, green: 0.78, blue: 0.42)
+    /// Dark surround for the camera only, so a bright screen doesn't tint selfies.
+    static let deep = Color(red: 0.11, green: 0.08, blue: 0.12)
 
-    static let outline: CGFloat = 3
-    static let drop: CGFloat = 5
+    static var background: some View { canvas.ignoresSafeArea() }
 
-    static var background: some View {
-        ZStack {
-            paper
-            HalftoneDots().foregroundStyle(ink.opacity(0.06))
-        }
-        .ignoresSafeArea()
-    }
-}
-
-/// The packaging print texture behind every screen.
-struct HalftoneDots: View {
-    var spacing: CGFloat = 16
-    var radius: CGFloat = 1.6
-
-    var body: some View {
-        Canvas { ctx, size in
-            var path = Path()
-            var row = 0
-            var y: CGFloat = 0
-            while y < size.height + spacing {
-                var x: CGFloat = row.isMultiple(of: 2) ? 0 : spacing / 2
-                while x < size.width + spacing {
-                    path.addEllipse(in: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2))
-                    x += spacing
-                }
-                y += spacing * 0.87
-                row += 1
-            }
-            ctx.fill(path, with: .foreground)
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+    /// Registers the bundled display face once at launch.
+    static func registerFonts() {
+        guard let url = Bundle.main.url(forResource: "BricolageGrotesque", withExtension: "ttf") else { return }
+        CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
     }
 }
 
 extension Font {
-    static func party(_ size: CGFloat) -> Font { .system(size: size, weight: .black, design: .rounded) }
+    /// Display voice: Bricolage Grotesque ExtraBold (its 96 pt optical size), scaling with Dynamic Type.
+    static func display(_ size: CGFloat, relativeTo style: Font.TextStyle = .title) -> Font {
+        .custom("BricolageGrotesque-96ptExtraBold", size: size, relativeTo: style)
+    }
+    /// Buttons, scores and labels.
+    static func party(_ size: CGFloat) -> Font { display(size, relativeTo: .headline) }
+    /// Friendly UI text.
+    static func ui(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
+        .system(size: size, weight: weight, design: .rounded)
+    }
 }
 
-/// A die-cut sticker: flat fill, thick ink outline, hard ink shadow down and to the right.
-struct Sticker<S: InsettableShape>: ViewModifier {
-    var fill: Color
-    var shape: S
-    var drop: CGFloat = Theme.drop
-
+/// Soft, lifted depth: a tight contact shadow plus a wide, faint ambient one.
+struct SoftShadow: ViewModifier {
+    var lift: CGFloat = 1
     func body(content: Content) -> some View {
         content
-            .background(
-                shape
-                    .fill(fill)
-                    .overlay(shape.strokeBorder(Theme.ink, lineWidth: Theme.outline))
-                    .background(shape.fill(Theme.ink).offset(x: drop, y: drop))
-            )
+            .shadow(color: Theme.ink.opacity(0.10), radius: 2 * lift, y: 1 * lift)
+            .shadow(color: Theme.ink.opacity(0.10), radius: 14 * lift, y: 8 * lift)
     }
 }
 
 extension View {
-    func sticker(_ fill: Color = Theme.cream, cornerRadius: CGFloat = 20, drop: CGFloat = Theme.drop) -> some View {
-        modifier(Sticker(fill: fill, shape: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous), drop: drop))
+    func softShadow(_ lift: CGFloat = 1) -> some View { modifier(SoftShadow(lift: lift)) }
+
+    /// A rounded card in a candy (or white) fill, gently lifted off the canvas.
+    func card(_ fill: Color = Theme.surface, cornerRadius: CGFloat = 24, lift: CGFloat = 1) -> some View {
+        background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(fill).softShadow(lift))
     }
 
-    func stickerCapsule(_ fill: Color = Theme.cream, drop: CGFloat = 3) -> some View {
-        modifier(Sticker(fill: fill, shape: Capsule(), drop: drop))
+    func pill(_ fill: Color = Theme.surface, lift: CGFloat = 0.6) -> some View {
+        background(Capsule().fill(fill).softShadow(lift))
     }
 }
 
-/// Big, squishy, game-y buttons: a sticker that presses down into its shadow.
-struct ChunkyButtonStyle: ButtonStyle {
-    var color: Color = Theme.tomato
-    var textColor: Color = Theme.ink
+/// Primary buttons: chunky candy pills that squish when pressed.
+struct CandyButtonStyle: ButtonStyle {
+    var color: Color = Theme.coral
+    var textColor: Color? = nil
     @Environment(\.isEnabled) private var enabled
 
     func makeBody(configuration: Configuration) -> some View {
         let pressed = configuration.isPressed
-        let shape = RoundedRectangle(cornerRadius: 18, style: .continuous)
         return configuration.label
             .font(.party(20))
-            .foregroundStyle(textColor)
-            .padding(.vertical, 15)
-            .padding(.horizontal, 22)
+            .foregroundStyle(textColor ?? (color == Theme.coral ? .white : Theme.ink))
+            .padding(.vertical, 17)
+            .padding(.horizontal, 24)
             .frame(maxWidth: .infinity)
-            .background(
-                shape.fill(enabled ? color : Theme.cream)
-                    .overlay(shape.strokeBorder(Theme.ink, lineWidth: Theme.outline))
-            )
-            .offset(x: pressed ? Theme.drop : 0, y: pressed ? Theme.drop : 0)
-            .background(shape.fill(Theme.ink).offset(x: Theme.drop, y: Theme.drop))
-            .opacity(enabled ? 1 : 0.55)
-            .animation(.spring(response: 0.18, dampingFraction: 0.55), value: pressed)
+            .background(Capsule().fill(enabled ? color : Theme.ink.opacity(0.08)).softShadow(pressed ? 0.3 : 1))
+            .scaleEffect(pressed ? 0.96 : 1)
+            .opacity(enabled ? 1 : 0.6)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: pressed)
             .sensoryFeedback(.impact(weight: .light), trigger: pressed) { _, new in new }
     }
 }
 
-/// Small round sticker buttons for toolbars and reactions.
-struct StickerIconButtonStyle: ButtonStyle {
-    var color: Color = Theme.cream
+/// Round white icon buttons for toolbars and HUDs.
+struct IconButtonStyle: ButtonStyle {
+    var color: Color = Theme.surface
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 17, weight: .heavy, design: .rounded))
+            .font(.system(size: 16, weight: .bold, design: .rounded))
             .foregroundStyle(Theme.ink)
+            .frame(minWidth: 24, minHeight: 24)
             .padding(10)
-            .background(Circle().fill(color).overlay(Circle().strokeBorder(Theme.ink, lineWidth: 2.5)))
-            .offset(x: configuration.isPressed ? 3 : 0, y: configuration.isPressed ? 3 : 0)
-            .background(Circle().fill(Theme.ink).offset(x: 3, y: 3))
-            .animation(.spring(response: 0.18, dampingFraction: 0.55), value: configuration.isPressed)
+            .background(Circle().fill(color).softShadow(0.6))
+            .scaleEffect(configuration.isPressed ? 0.9 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+            .contentShape(Circle())
     }
 }
 
 struct AvatarView: View {
     let character: GameCharacter
     var size: CGFloat = 64
-    /// A colored ring around the outline marks selection or a player's side.
+    /// A colored ring marks selection or a player's side.
     var ring: Color?
 
     var body: some View {
@@ -148,34 +121,27 @@ struct AvatarView: View {
             .resizable()
             .scaledToFill()
             .frame(width: size, height: size)
-            .background(Theme.cream)
+            .background(Theme.blush)
             .clipShape(Circle())
-            .overlay(Circle().strokeBorder(Theme.ink, lineWidth: size > 50 ? 3 : 2))
-            .padding(ring == nil ? 0 : 4)
+            .padding(size > 50 ? 3 : 2)
+            .background(Circle().fill(Theme.surface))
+            .padding(ring == nil ? 0 : 3)
             .background(Circle().fill(ring ?? .clear))
-            .overlay(Circle().strokeBorder(ring == nil ? .clear : Theme.ink, lineWidth: 2))
-            .background(Circle().fill(Theme.ink).offset(x: 3, y: 3))
+            .softShadow(0.6)
             .accessibilityLabel(character.name)
     }
 }
 
-/// Title lettering: ink with a sticker-colored offset shadow, gently wobbling.
+/// Display lettering for screen titles.
 struct PartyTitle: View {
     let text: String
     var size: CGFloat = 44
-    var shadow: Color = Theme.tomato
-    @State private var wiggle = false
 
     var body: some View {
         Text(text)
-            .font(.party(size))
+            .font(.display(size, relativeTo: .largeTitle))
             .foregroundStyle(Theme.ink)
-            .background(
-                Text(text).font(.party(size)).foregroundStyle(shadow).offset(x: 3, y: 4)
-            )
-            .rotationEffect(.degrees(wiggle ? 1.5 : -1.5))
-            .animation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true), value: wiggle)
-            .onAppear { wiggle = true }
+            .tracking(-0.5)
     }
 }
 
@@ -186,18 +152,17 @@ struct SnapshotSheet: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            PartyTitle(text: "Frame-worthy.", size: 30)
+            PartyTitle(text: "Frame-worthy", size: 32)
             Image(uiImage: image)
                 .resizable()
                 .scaledToFit()
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(6)
-                .sticker(Theme.cream, cornerRadius: 22)
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .softShadow(1.4)
                 .padding(.horizontal)
             ShareLink(item: Image(uiImage: image), preview: SharePreview("Big Head Party", image: Image(uiImage: image))) {
                 Label("Share", systemImage: "square.and.arrow.up")
             }
-            .buttonStyle(ChunkyButtonStyle(color: Theme.mint))
+            .buttonStyle(CandyButtonStyle())
             .padding(.horizontal, 40)
             Button("Done") { dismiss() }.font(.party(17)).foregroundStyle(Theme.ink)
         }

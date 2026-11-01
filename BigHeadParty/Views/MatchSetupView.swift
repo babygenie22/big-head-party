@@ -29,7 +29,7 @@ struct MatchSetupView: View {
                 .font(.party(26))
                 .foregroundStyle(Theme.ink)
                 .padding(.horizontal, 20).padding(.vertical, 10)
-                .sticker(kind.color, cornerRadius: 18)
+                .card(kind.color, cornerRadius: 18)
                 .rotationEffect(.degrees(-1.5))
                 .padding(.top, 28)
                 Text(kind.blurb).font(.system(size: 15, weight: .semibold, design: .rounded)).foregroundStyle(Theme.ink.opacity(0.75))
@@ -37,9 +37,9 @@ struct MatchSetupView: View {
                 HStack(alignment: .center, spacing: 18) {
                     slot(0, p1, color: Theme.blue)
                     if !kind.isSolo {
-                        Text("VS").font(.party(30)).foregroundStyle(Theme.cream)
+                        Text("VS").font(.party(30)).foregroundStyle(Theme.surface)
                             .frame(width: 60, height: 60)
-                            .sticker(Theme.ink, cornerRadius: 30, drop: 3)
+                            .card(Theme.ink, cornerRadius: 30)
                             .rotationEffect(.degrees(-8))
                         slot(1, p2, color: Theme.red)
                     }
@@ -80,7 +80,7 @@ struct MatchSetupView: View {
                         game = GameConfig(kind: kind, players: [p1, p2], vsCPU: vsCPU)
                     }
                 }
-                .buttonStyle(ChunkyButtonStyle(color: kind.color))
+                .buttonStyle(CandyButtonStyle(color: kind.color))
                 .disabled(!ready)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 20)
@@ -103,13 +103,13 @@ struct MatchSetupView: View {
                         .scaleEffect(editing == index ? 1.06 : 1)
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: editing)
                 } else {
-                    Circle().strokeBorder(Theme.ink, style: StrokeStyle(lineWidth: 3, dash: [7, 5])).frame(width: 96, height: 96)
+                    Circle().strokeBorder(Theme.ink.opacity(0.25), style: StrokeStyle(lineWidth: 3, dash: [7, 5])).frame(width: 96, height: 96)
                 }
                 Text(c?.name ?? "?").font(.party(16)).lineLimit(1)
                 Text(index == 0 ? "P1" : (vsCPU ? "CPU" : "P2"))
                     .font(.system(size: 12, weight: .black, design: .rounded))
                     .padding(.horizontal, 10).padding(.vertical, 3)
-                    .stickerCapsule(editing == index ? color : Theme.cream, drop: 2)
+                    .pill(editing == index ? color : Theme.surface)
             }
             .frame(width: 120)
         }

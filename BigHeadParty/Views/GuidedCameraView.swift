@@ -202,11 +202,11 @@ struct GuidedCameraView: View {
             VStack(spacing: 14) {
                 HStack {
                     Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 20, height: 20) }
-                        .buttonStyle(StickerIconButtonStyle())
+                        .buttonStyle(IconButtonStyle())
                         .accessibilityLabel("Close")
                     Spacer()
                     Button { camera.flip() } label: { Image(systemName: "arrow.triangle.2.circlepath.camera.fill").frame(width: 24, height: 20) }
-                        .buttonStyle(StickerIconButtonStyle())
+                        .buttonStyle(IconButtonStyle())
                         .accessibilityLabel(camera.front ? "Switch to the back camera" : "Switch to the selfie camera")
                 }
                 .padding(.horizontal)
@@ -218,7 +218,7 @@ struct GuidedCameraView: View {
                     ZStack(alignment: .topLeading) {
                         CameraPreview(session: camera.session)
                         Ellipse()
-                            .stroke(camera.hint.ready ? Theme.mint : Theme.paper,
+                            .stroke(camera.hint.ready ? Theme.lime : Theme.butter,
                                     style: StrokeStyle(lineWidth: camera.hint.ready ? 6 : 3, dash: camera.hint.ready ? [] : [10, 8]))
                             .frame(width: o.width * geo.size.width, height: o.height * geo.size.height)
                             .offset(x: o.minX * geo.size.width, y: o.minY * geo.size.height)
@@ -227,7 +227,7 @@ struct GuidedCameraView: View {
                 }
                 .aspectRatio(3 / 4, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
-                .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(camera.hint.ready ? Theme.mint : Theme.cream, lineWidth: Theme.outline))
+                .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(camera.hint.ready ? Theme.lime : Theme.surface.opacity(0.6), lineWidth: 3))
                 .padding(.horizontal, 10)
 
                 Spacer(minLength: 0)
@@ -239,8 +239,8 @@ struct GuidedCameraView: View {
                 } label: {
                     ZStack {
                         Circle().fill(Theme.ink).frame(width: 84, height: 84).offset(x: 5, y: 5)
-                        Circle().fill(camera.hint.ready ? Theme.mint : Theme.cream)
-                            .overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.outline))
+                        Circle().fill(camera.hint.ready ? Theme.lime : Theme.surface)
+                            
                             .frame(width: 84, height: 84)
                         Image(systemName: "camera.fill").font(.system(size: 28, weight: .bold)).foregroundStyle(Theme.ink)
                     }
@@ -259,11 +259,11 @@ struct GuidedCameraView: View {
                     Button("Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     }
-                    .buttonStyle(ChunkyButtonStyle())
+                    .buttonStyle(CandyButtonStyle())
                 }
                 .foregroundStyle(Theme.ink)
                 .padding(30)
-                .sticker(Theme.cream, cornerRadius: 24)
+                .card(Theme.surface, cornerRadius: 24)
                 .padding()
             }
         }
@@ -277,7 +277,7 @@ struct GuidedCameraView: View {
             .foregroundStyle(Theme.ink)
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
-            .stickerCapsule(camera.hint.ready ? Theme.mint : Theme.cream, drop: 3)
+            .pill(camera.hint.ready ? Theme.lime : Theme.surface)
             .id(camera.hint.text)
             .transition(.opacity.combined(with: .scale(scale: 0.95)))
             .accessibilityAddTraits(.updatesFrequently)

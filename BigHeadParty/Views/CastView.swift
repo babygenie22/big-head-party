@@ -19,26 +19,26 @@ struct CastView: View {
                             VStack(spacing: 4) {
                                 ZStack {
                                     Theme.sky
-                                    Circle().fill(Theme.cream.opacity(0.35)).frame(width: 220, height: 220)
+                                    Circle().fill(Theme.surface.opacity(0.35)).frame(width: 220, height: 220)
                                     SceneContainer(scene: preview.stage.scene, pointOfView: preview.stage.camera, allowsCameraControl: true)
                                 }
                                 .frame(height: 260)
                                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Theme.ink, lineWidth: Theme.outline))
+                                
                                 .padding(12)
                                 Text(selected.name).font(.party(24))
                                 Text(selected.meta.tagline).font(.system(size: 15, weight: .semibold, design: .rounded)).opacity(0.7)
                                     .padding(.bottom, 14)
                             }
                             .foregroundStyle(Theme.ink)
-                            .sticker(Theme.cream, cornerRadius: 24, drop: 6)
+                            .card(Theme.surface, cornerRadius: 24)
                             if !selected.meta.isDefault {
                                 Button(role: .destructive) { confirmDelete = true } label: {
                                     Label("Remove from cast", systemImage: "trash")
                                         .font(.system(size: 15, weight: .black, design: .rounded))
                                         .foregroundStyle(Theme.ink)
                                         .padding(.horizontal, 16).padding(.vertical, 9)
-                                        .stickerCapsule(Theme.tomato)
+                                        .pill(Theme.coral)
                                 }
                             }
                         }
@@ -49,7 +49,7 @@ struct CastView: View {
                 }
             }
             .navigationTitle("Cast")
-            .toolbarBackground(Theme.paper, for: .navigationBar)
+            .toolbarBackground(Theme.butter, for: .navigationBar)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
             .onAppear {
                 if selected == nil { select(store.star) }

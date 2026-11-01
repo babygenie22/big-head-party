@@ -140,10 +140,10 @@ struct FaceStudioView: View {
             VStack(spacing: 16) {
                 HStack {
                     Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 20, height: 20) }
-                        .buttonStyle(StickerIconButtonStyle())
+                        .buttonStyle(IconButtonStyle())
                         .accessibilityLabel("Close")
                     Spacer()
-                    PartyTitle(text: "Face Studio", size: 26, shadow: Theme.bubblegum)
+                    PartyTitle(text: "Face Studio", size: 26)
                     Spacer()
                     Color.clear.frame(width: 30, height: 30)
                 }
@@ -184,8 +184,8 @@ struct FaceStudioView: View {
             Spacer()
             ZStack {
                 Circle().fill(Theme.sky)
-                    .overlay(Circle().strokeBorder(Theme.ink, lineWidth: Theme.outline))
-                    .background(Circle().fill(Theme.ink).offset(x: 6, y: 6))
+                    
+                    .softShadow(0.6)
                     .frame(width: 210, height: 210)
                 Image(systemName: "face.dashed").font(.system(size: 104, weight: .regular)).foregroundStyle(Theme.ink)
             }
@@ -198,15 +198,15 @@ struct FaceStudioView: View {
             .font(.system(size: 15, weight: .bold, design: .rounded))
             .foregroundStyle(Theme.ink)
             .padding(16)
-            .sticker(Theme.cream, cornerRadius: 18, drop: 4)
+            .card(Theme.surface, cornerRadius: 18)
             Spacer()
             PhotosPicker(selection: $pickerItem, matching: .images) {
                 Label("Choose a Photo", systemImage: "photo.on.rectangle")
             }
-            .buttonStyle(ChunkyButtonStyle())
+            .buttonStyle(CandyButtonStyle())
             if UIImagePickerController.isSourceTypeAvailable(.camera) {
                 Button { showCamera = true } label: { Label("Take a Photo", systemImage: "camera.fill") }
-                    .buttonStyle(ChunkyButtonStyle(color: Theme.tomato))
+                    .buttonStyle(CandyButtonStyle(color: Theme.coral))
             }
         }
         .padding(.horizontal, 28)
@@ -227,12 +227,12 @@ struct FaceStudioView: View {
                             ZStack(alignment: .topLeading) {
                                 if model.faceBox != .zero {
                                     Rectangle()
-                                        .stroke(Theme.paper, lineWidth: 2)
+                                        .stroke(Theme.butter, lineWidth: 2)
                                         .frame(width: model.faceBox.width * size.width, height: model.faceBox.height * size.height)
                                         .offset(x: model.faceBox.minX * size.width, y: model.faceBox.minY * size.height)
                                 }
                                 ForEach(Array(model.landmarks.enumerated()), id: \.offset) { _, p in
-                                    Circle().fill(Theme.mint)
+                                    Circle().fill(Theme.lime)
                                         .frame(width: 5, height: 5)
                                         .offset(x: p.x * size.width - 2.5, y: p.y * size.height - 2.5)
                                 }
@@ -266,7 +266,7 @@ struct FaceStudioView: View {
         VStack(spacing: 12) {
             ZStack(alignment: .bottom) {
                 Theme.sky
-                Circle().fill(Theme.cream.opacity(0.35)).frame(width: 240, height: 240).frame(maxHeight: .infinity)
+                Circle().fill(Theme.surface.opacity(0.35)).frame(width: 240, height: 240).frame(maxHeight: .infinity)
                 SceneContainer(scene: model.preview.scene, pointOfView: model.preview.camera, allowsCameraControl: true)
                 HStack(spacing: 8) {
                     expressionButton("Pie", "birthday.cake") { model.preview.throwPie() }
@@ -279,7 +279,7 @@ struct FaceStudioView: View {
             }
             .frame(height: 330)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .sticker(Theme.sky, cornerRadius: 24, drop: 6)
+            .card(Theme.sky, cornerRadius: 24)
             .padding(.horizontal)
             Text("Drag to spin them around").font(.system(size: 13, weight: .bold, design: .rounded)).foregroundStyle(Theme.ink.opacity(0.65))
 
@@ -288,7 +288,7 @@ struct FaceStudioView: View {
                     .font(.system(size: 13, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.ink)
                     .padding(10)
-                    .sticker(Theme.bubblegum, cornerRadius: 12, drop: 3)
+                    .card(Theme.bubblegum, cornerRadius: 12)
                     .padding(.horizontal)
             }
 
@@ -298,7 +298,7 @@ struct FaceStudioView: View {
                         .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.ink)
                         .padding(14)
-                        .sticker(Theme.cream, cornerRadius: 14, drop: 3)
+                        .card(Theme.surface, cornerRadius: 14)
                     Text("Hat").font(.party(18)).foregroundStyle(Theme.ink)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
@@ -316,19 +316,19 @@ struct FaceStudioView: View {
                     Toggle(isOn: $model.googly) {
                         Label("Googly eyes", systemImage: "eyes").font(.party(18)).foregroundStyle(Theme.ink)
                     }
-                    .tint(Theme.tomato)
+                    .tint(Theme.coral)
                 }
                 .padding(.horizontal, 20)
             }
             HStack(spacing: 12) {
                 Button("Retake") { model.reset() }
-                    .buttonStyle(ChunkyButtonStyle(color: Theme.cream))
+                    .buttonStyle(CandyButtonStyle(color: Theme.surface))
                     .frame(width: 130)
                 Button("Add to cast") {
                     model.save(to: store)
                     dismiss()
                 }
-                .buttonStyle(ChunkyButtonStyle())
+                .buttonStyle(CandyButtonStyle())
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
@@ -342,7 +342,7 @@ struct FaceStudioView: View {
                 Text(title).font(.system(size: 11, weight: .heavy, design: .rounded))
             }
             .frame(width: 56, height: 44)
-            .sticker(Theme.cream, cornerRadius: 12, drop: 3)
+            .card(Theme.surface, cornerRadius: 12)
         }
         .buttonStyle(.plain)
         .foregroundStyle(Theme.ink)
@@ -356,7 +356,7 @@ struct FaceStudioView: View {
             }
             .font(.system(size: 15, weight: .heavy, design: .rounded))
             .padding(.horizontal, 14).padding(.vertical, 9)
-            .stickerCapsule(selected ? Theme.tomato : Theme.cream, drop: selected ? 3 : 2)
+            .pill(selected ? Theme.coral : Theme.surface)
         }
         .buttonStyle(.plain)
         .foregroundStyle(Theme.ink)
@@ -369,11 +369,11 @@ struct FaceStudioView: View {
             Spacer()
             Image(systemName: "face.dashed.fill").font(.system(size: 80)).foregroundStyle(Theme.ink)
                 .frame(width: 140, height: 140)
-                .sticker(Theme.bubblegum, cornerRadius: 70, drop: 5)
+                .card(Theme.bubblegum, cornerRadius: 70)
             Text("Hmm, that didn't work").font(.party(26)).foregroundStyle(Theme.ink)
             Text(message).font(.system(size: 16, weight: .semibold, design: .rounded)).multilineTextAlignment(.center).foregroundStyle(Theme.ink.opacity(0.8))
             Spacer()
-            Button("Try another photo") { model.reset() }.buttonStyle(ChunkyButtonStyle())
+            Button("Try another photo") { model.reset() }.buttonStyle(CandyButtonStyle())
         }
         .padding(30)
     }

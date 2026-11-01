@@ -1,20 +1,25 @@
-# Big Head Party — "Toy box" design
+# Big Head Party — "Candy studio" design
 
-The app looks like bobblehead packaging: sunny yellow card stock, black ink outlines, and
-sticker-colored pieces with hard offset shadows. Tokens and components live in
-`BigHeadParty/Views/Theme.swift`.
+Light, bright and modern: a warm canvas, candy-colored stages, real renders of the games as
+posters, chunky display type and soft lifted depth. Tokens and components live in
+`BigHeadParty/Views/Theme.swift`. Built with the Impeccable, Taste and Design Motion
+Principles skills.
 
-- **Ground:** `Theme.paper` (#FFDF4A) with a faint halftone dot print (`Theme.background`).
-- **Ink:** `Theme.ink` (#17130F) for all text, outlines (3 pt) and shadows (5 pt down-right, no blur).
-- **Surfaces:** `Theme.cream` (#FFF7E0) panels via `.sticker()` / `.stickerCapsule()`.
-- **Sticker colors:** tomato (primary actions, highlights), sky (3D windows), mint (success,
-  "ready"), bubblegum, lilac. Each game owns one: Pie-Q bubblegum, Slap tomato, Dunk sky,
-  Whack mint, Boxing lilac.
-- **Type:** SF Rounded. `.party()` (black) for titles and buttons; heavy/bold rounded for body.
-  Sentence case.
-- **Buttons:** `ChunkyButtonStyle` (sticker that presses into its shadow, light haptic);
-  `StickerIconButtonStyle` for round icon buttons.
-- **Signature:** the home-screen star stands in a collector box ("Series 1 · Collect 'em all").
-- **Icons:** SF Symbols only, no emoji.
+- **Canvas:** `Theme.canvas` (#FFF4EC). Cards are white (`Theme.surface`) or candy fills.
+- **Text:** `Theme.ink` (#2B1B2E plum-black), `Theme.inkSoft` for supporting copy. Text on candy
+  fills stays ink; on coral it's white.
+- **Candy colors:** coral (primary actions, selection), blush (the star's stage), bubblegum,
+  butter, sky, lime, lilac. Each game owns one for its label: Pie-Q bubblegum, Slap butter,
+  Dunk sky, Whack lime, Boxing lilac.
+- **Type:** Bricolage Grotesque ExtraBold (bundled, OFL) via `Font.display()` / `.party()` for
+  titles, names, buttons and scores; SF Rounded (`Font.ui()`) for everything else. Both scale
+  with Dynamic Type. Sentence case.
+- **Depth:** `softShadow()`: a tight contact shadow plus a wide faint one. No outlines, no hard
+  block shadows.
+- **Components:** `.card()`, `.pill()`, `CandyButtonStyle` (squishy pill), `IconButtonStyle`
+  (round white), `PressScaleButtonStyle` (cards and chips), `AvatarView`.
+- **Home:** the star is live on a blush stage (tap for a pie); games are a mosaic of real
+  renders (`cover-<game>` assets) in varied sizes. No eyebrow labels above headings.
+- **Icons:** SF Symbols only, no emoji. Touch targets at least 44 pt.
 - **Exceptions:** 3D game stages keep their own lit sets; the camera screen stays dark so a
   bright screen doesn't tint selfies.

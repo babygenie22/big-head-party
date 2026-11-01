@@ -4,6 +4,8 @@ import SwiftUI
 struct BigHeadPartyApp: App {
     @StateObject private var store = CharacterStore()
 
+    init() { Theme.registerFonts() }
+
     var body: some Scene {
         WindowGroup {
             RootView()
