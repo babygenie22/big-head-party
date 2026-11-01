@@ -26,8 +26,8 @@ enum BodyBuilder {
         let g = SCNNode()
         let shirtM = Accessories.material(shirt, roughness: 0.85)
         let skinM = Accessories.material(skin, roughness: 0.6)
-        let pants = Accessories.material(UIColor(red: 0.17, green: 0.18, blue: 0.27, alpha: 1), roughness: 0.8)
-        let shoe = Accessories.material(UIColor(white: 0.1, alpha: 1), roughness: 0.5)
+        let pants = Accessories.material(UIColor(red: 0.36, green: 0.30, blue: 0.52, alpha: 1), roughness: 0.8)
+        let shoe = Accessories.material(.white, roughness: 0.5)   // candy sneakers
 
         g.addChildNode(Accessories.node(SCNCylinder(radius: 0.13, height: 0.32), skinM, at: SCNVector3(0, -0.04, 0)))
         let chest = Accessories.node(SCNCapsule(capRadius: 0.4, height: 1.35), shirtM, at: SCNVector3(0, -0.74, 0))

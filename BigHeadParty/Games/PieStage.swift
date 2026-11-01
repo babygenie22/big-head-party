@@ -13,10 +13,10 @@ final class PieStage {
     let neckY: Float = 2.0
 
     init(characters: [GameCharacter], showSign: Bool = true) {
-        scene.background.contents = UIColor(red: 0.08, green: 0.03, blue: 0.14, alpha: 1)
+        scene.background.contents = CandySet.backdrop(CandySet.blush, CandySet.cream)
         cameraRig.addChildNode(camera)
         scene.rootNode.addChildNode(cameraRig)
-        Effects.addStudioLights(to: scene, rim: .systemPink)
+        CandySet.light(scene, rim: CandySet.bubblegum, camera: camera)
         buildSet(showSign: showSign)
 
         for (i, character) in characters.prefix(2).enumerated() {
@@ -31,15 +31,12 @@ final class PieStage {
     }
 
     private func buildSet(showSign: Bool) {
-        let floor = SCNFloor()
-        floor.reflectivity = 0.18
-        floor.firstMaterial?.diffuse.contents = UIColor(red: 0.18, green: 0.08, blue: 0.25, alpha: 1)
-        scene.rootNode.addChildNode(SCNNode(geometry: floor))
+        scene.rootNode.addChildNode(CandySet.floor(UIColor(red: 1, green: 0.88, blue: 0.82, alpha: 1)))
 
         // Backdrop with a sunburst.
         let burst = UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 512)).image { ctx in
-            UIColor(red: 0.35, green: 0.08, blue: 0.45, alpha: 1).setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 1024, height: 512))
-            UIColor(red: 0.48, green: 0.12, blue: 0.55, alpha: 1).setFill()
+            CandySet.bubblegum.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 1024, height: 512))
+            UIColor(red: 1, green: 0.72, blue: 0.82, alpha: 1).setFill()
             let c = CGPoint(x: 512, y: 300)
             for i in 0..<24 where i % 2 == 0 {
                 let a0 = CGFloat(i) / 24 * 2 * .pi, a1 = CGFloat(i + 1) / 24 * 2 * .pi
@@ -74,26 +71,16 @@ final class PieStage {
         }
 
         if showSign {
-            let text = SCNText(string: "THE PIE-Q TEST", extrusionDepth: 0.4)
-            text.font = UIFont.systemFont(ofSize: 1, weight: .black)
-            text.flatness = 0.01
-            let neon = SCNMaterial()
-            neon.diffuse.contents = UIColor(red: 1, green: 0.35, blue: 0.7, alpha: 1)
-            neon.emission.contents = UIColor(red: 1, green: 0.2, blue: 0.6, alpha: 1)
-            text.materials = [neon]
-            let sign = SCNNode(geometry: text)
-            let (minB, maxB) = sign.boundingBox
-            sign.pivot = SCNMatrix4MakeTranslation((maxB.x - minB.x) / 2 + minB.x, 0, 0)
-            sign.scale = SCNVector3(0.75, 0.75, 0.75)
-            sign.position = SCNVector3(0, 4.7, -3.4)
+            let sign = CandySet.sign("The Pie-Q Test", fill: CandySet.coral, ink: .white, width: 5.6)
+            sign.position = SCNVector3(0, 5.0, -3.4)
             scene.rootNode.addChildNode(sign)
         }
 
         // Podiums.
-        let colors: [UIColor] = [UIColor(red: 0.15, green: 0.55, blue: 1, alpha: 1), UIColor(red: 1, green: 0.4, blue: 0.2, alpha: 1)]
+        let colors: [UIColor] = [CandySet.player1, CandySet.player2]
         for (i, x) in podiumX.enumerated() {
             let podium = SCNNode(geometry: SCNBox(width: 1.9, height: 1.55, length: 1.0, chamferRadius: 0.08))
-            podium.geometry?.materials = [Accessories.material(colors[i], roughness: 0.35)]
+            podium.geometry?.materials = [Accessories.material(colors[i], roughness: 0.55)]
             podium.position = SCNVector3(x, 0.775, 0.55)
             let stripe = SCNNode(geometry: SCNBox(width: 1.95, height: 0.12, length: 1.04, chamferRadius: 0.02))
             let glow = SCNMaterial()

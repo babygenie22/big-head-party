@@ -66,19 +66,6 @@ enum Effects {
         }
     }
 
-    /// Show title painted on a banner.
-    static func banner(_ text: String, background: UIColor) -> UIImage {
-        UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 256)).image { ctx in
-            background.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 1024, height: 256))
-            let font = UIFont.systemFont(ofSize: 130, weight: .black)
-            let style = NSMutableParagraphStyle(); style.alignment = .center
-            let shadow: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor(red: 0.93, green: 0.23, blue: 0.34, alpha: 1), .paragraphStyle: style]
-            let main: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor(red: 1, green: 0.81, blue: 0.29, alpha: 1), .paragraphStyle: style]
-            (text as NSString).draw(in: CGRect(x: 6, y: 50, width: 1024, height: 180), withAttributes: shadow)
-            (text as NSString).draw(in: CGRect(x: 0, y: 44, width: 1024, height: 180), withAttributes: main)
-        }
-    }
-
     static let dotImage: UIImage = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 64)).image { ctx in
         let colors = [UIColor.white.cgColor, UIColor.white.withAlphaComponent(0).cgColor] as CFArray
         let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0.55, 1])!

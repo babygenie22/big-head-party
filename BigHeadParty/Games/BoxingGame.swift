@@ -162,28 +162,25 @@ final class BoxingGame: ObservableObject {
     }
 
     private func buildRing() {
-        scene.background.contents = UIColor(red: 0.04, green: 0.04, blue: 0.08, alpha: 1)
-        Effects.addStudioLights(to: scene, rim: UIColor(red: 0.3, green: 0.8, blue: 1, alpha: 1), fill: UIColor(red: 1, green: 0.85, blue: 0.7, alpha: 1))
-        let floor = SCNFloor()
-        floor.reflectivity = 0.05
-        floor.firstMaterial?.diffuse.contents = UIColor(white: 0.08, alpha: 1)
-        scene.rootNode.addChildNode(SCNNode(geometry: floor))
+        scene.background.contents = CandySet.backdrop(CandySet.lilac, CandySet.blush)
+        CandySet.light(scene, rim: CandySet.sky, camera: camera)
+        scene.rootNode.addChildNode(CandySet.floor(UIColor(red: 0.62, green: 0.52, blue: 0.92, alpha: 1)))
 
         let canvas = Accessories.node(SCNBox(width: 7.5, height: 0.3, length: 5, chamferRadius: 0.05),
-                                      Accessories.material(UIColor(red: 0.85, green: 0.85, blue: 0.9, alpha: 1), roughness: 0.9),
+                                      Accessories.material(.white, roughness: 0.9),
                                       at: SCNVector3(0, 0.15, -0.5))
         scene.rootNode.addChildNode(canvas)
         let apron = Accessories.node(SCNBox(width: 7.6, height: 0.32, length: 5.1, chamferRadius: 0.02),
-                                     Accessories.material(UIColor(red: 0.1, green: 0.2, blue: 0.6, alpha: 1)),
+                                     Accessories.material(CandySet.lilac, roughness: 0.7),
                                      at: SCNVector3(0, 0.14, -0.5))
         scene.rootNode.addChildNode(apron)
 
-        let postMat = Accessories.material(UIColor(white: 0.85, alpha: 1), roughness: 0.3, metalness: 0.8)
+        let postMat = Accessories.material(.white, roughness: 0.45)
         let corners: [(Float, Float)] = [(-3.6, -2.8), (3.6, -2.8), (-3.6, 1.8), (3.6, 1.8)]
         for (x, z) in corners {
             scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 0.08, height: 2.2), postMat, at: SCNVector3(x, 1.4, z)))
         }
-        let ropeColors: [UIColor] = [.systemRed, .white, .systemBlue]
+        let ropeColors: [UIColor] = [CandySet.coral, .white, CandySet.sky]
         for (k, color) in ropeColors.enumerated() {
             let y = Float(1.0 + 0.45 * Double(k))
             let mat = Accessories.material(color, roughness: 0.6)

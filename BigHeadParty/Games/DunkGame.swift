@@ -189,25 +189,18 @@ final class DunkGame: ObservableObject {
     // MARK: - Set
 
     private func buildSet() {
-        scene.background.contents = UIColor(red: 0.16, green: 0.1, blue: 0.08, alpha: 1)
-        Effects.addStudioLights(to: scene, rim: UIColor(red: 1, green: 0.8, blue: 0.5, alpha: 1))
-        let floor = SCNFloor()
-        floor.reflectivity = 0
-        floor.firstMaterial?.diffuse.contents = UIColor(red: 0.29, green: 0.23, blue: 0.17, alpha: 1)
-        scene.rootNode.addChildNode(SCNNode(geometry: floor))
+        scene.background.contents = CandySet.backdrop(CandySet.sky, CandySet.cream)
+        CandySet.light(scene, rim: CandySet.sky, camera: camera)
+        scene.rootNode.addChildNode(CandySet.floor(CandySet.lime))
 
         let back = SCNMaterial()
-        back.diffuse.contents = Effects.stripes(UIColor(red: 0.85, green: 0.16, blue: 0.25, alpha: 1), UIColor(red: 0.96, green: 0.94, blue: 0.9, alpha: 1))
-        back.roughness.contents = 0.9
+        back.diffuse.contents = CandySet.stripes(CandySet.coral, CandySet.cream, count: 14)
+        back.lightingModel = .constant   // backdrop in true colors
         let backNode = SCNNode(geometry: SCNPlane(width: 18, height: 7))
         backNode.geometry?.materials = [back]
         backNode.position = SCNVector3(0, 3.5, -3.6)
         scene.rootNode.addChildNode(backNode)
-        let bannerM = SCNMaterial()
-        bannerM.lightingModel = .constant
-        bannerM.diffuse.contents = Effects.banner("DUNK TANK", background: UIColor(red: 0.17, green: 0.1, blue: 0.07, alpha: 1))
-        let banner = SCNNode(geometry: SCNPlane(width: 7, height: 1.75))
-        banner.geometry?.materials = [bannerM]
+        let banner = CandySet.sign("Dunk Tank", fill: CandySet.butter, width: 6.6)
         banner.position = SCNVector3(0, 6.1, -3.5)
         scene.rootNode.addChildNode(banner)
 
@@ -222,14 +215,14 @@ final class DunkGame: ObservableObject {
         glassNode.position = SCNVector3(tankX, 0.95, 0)
         glassNode.renderingOrder = 10
         scene.rootNode.addChildNode(glassNode)
-        let steel = Accessories.material(UIColor(red: 0.6, green: 0.64, blue: 0.68, alpha: 1), roughness: 0.3, metalness: 0.9)
+        let steel = Accessories.material(.white, roughness: 0.45)
         for (dx, dz) in [(-1.1, -0.8), (1.1, -0.8), (-1.1, 0.8), (1.1, 0.8)] as [(Float, Float)] {
             scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 0.08, height: 1.95, length: 0.08, chamferRadius: 0), steel,
                                                          at: SCNVector3(tankX + dx, 0.97, dz)))
         }
         let waterM = SCNMaterial()
         waterM.lightingModel = .physicallyBased
-        waterM.diffuse.contents = UIColor(red: 0.18, green: 0.56, blue: 0.84, alpha: 1)
+        waterM.diffuse.contents = UIColor(red: 0.30, green: 0.70, blue: 0.98, alpha: 1)
         waterM.roughness.contents = 0.08
         waterM.transparency = 0.55
         waterM.writesToDepthBuffer = false
@@ -253,7 +246,7 @@ final class DunkGame: ObservableObject {
         // Seat plank on a hinge at its back edge, plus its post.
         hinge.position = SCNVector3(tankX, seat, -0.55)
         hinge.addChildNode(Accessories.node(SCNBox(width: 1.2, height: 0.08, length: 0.75, chamferRadius: 0.01),
-                                            Accessories.material(UIColor(red: 0.54, green: 0.38, blue: 0.22, alpha: 1), roughness: 0.8),
+                                            Accessories.material(CandySet.butter, roughness: 0.7),
                                             at: SCNVector3(0, -0.04, 0.37)))
         scene.rootNode.addChildNode(hinge)
         scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 0.08, height: CGFloat(seat + 0.6), length: 0.08, chamferRadius: 0), steel,
@@ -261,7 +254,7 @@ final class DunkGame: ObservableObject {
 
         // Target with rings, on a post linked to the plank.
         let rings = UIGraphicsImageRenderer(size: CGSize(width: 512, height: 512)).image { _ in
-            let red = UIColor(red: 0.85, green: 0.16, blue: 0.25, alpha: 1)
+            let red = CandySet.coral
             for (r, c) in [(256.0, red), (196.0, UIColor.white), (140.0, red), (80.0, UIColor.white), (45.0, red)] as [(CGFloat, UIColor)] {
                 c.setFill()
                 UIBezierPath(ovalIn: CGRect(x: 256 - r, y: 256 - r, width: 2 * r, height: 2 * r)).fill()

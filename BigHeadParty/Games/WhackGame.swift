@@ -182,14 +182,12 @@ final class WhackGame: ObservableObject {
     // MARK: - Set
 
     private func buildSet() {
-        scene.background.contents = UIColor(red: 0.11, green: 0.08, blue: 0.15, alpha: 1)
-        Effects.addStudioLights(to: scene, rim: .systemTeal)
-        let floor = SCNFloor()
-        floor.reflectivity = 0
-        floor.firstMaterial?.diffuse.contents = UIColor(red: 0.11, green: 0.08, blue: 0.15, alpha: 1)
-        scene.rootNode.addChildNode(SCNNode(geometry: floor))
+        scene.background.contents = CandySet.backdrop(CandySet.lilac, CandySet.cream)
+        CandySet.light(scene, rim: CandySet.lilac, camera: camera)
+        scene.rootNode.addChildNode(CandySet.floor(UIColor(red: 0.62, green: 0.52, blue: 0.92, alpha: 1)))
         let back = SCNMaterial()
-        back.diffuse.contents = Effects.stripes(UIColor(red: 0.16, green: 0.5, blue: 0.83, alpha: 1), UIColor(red: 1, green: 0.81, blue: 0.29, alpha: 1), count: 20)
+        back.diffuse.contents = CandySet.stripes(CandySet.lilac, CandySet.cream, count: 16)
+        back.lightingModel = .constant   // backdrop in true colors
         let backNode = SCNNode(geometry: SCNPlane(width: 18, height: 8))
         backNode.geometry?.materials = [back]
         backNode.position = SCNVector3(0, 3.5, -3.4)
@@ -203,17 +201,17 @@ final class WhackGame: ObservableObject {
         let board = SCNShape(path: path, extrusionDepth: 0.12)
         board.chamferRadius = 0.02
         let boardNode = SCNNode(geometry: board)
-        boardNode.geometry?.materials = [Accessories.material(UIColor(red: 0.18, green: 0.56, blue: 0.36, alpha: 1), roughness: 0.55)]
+        boardNode.geometry?.materials = [Accessories.material(CandySet.lime, roughness: 0.6)]
         boardNode.eulerAngles.x = -.pi / 2
         boardNode.position = SCNVector3(0, 0.94, 0)
         scene.rootNode.addChildNode(boardNode)
-        let rimM = Accessories.material(UIColor(white: 0.1, alpha: 1), roughness: 0.4)
+        let rimM = Accessories.material(.white, roughness: 0.45)
         for h in holes {
             scene.rootNode.addChildNode(Accessories.node(SCNTorus(ringRadius: 0.5, pipeRadius: 0.05), rimM, at: SCNVector3(h.x, 1.02, h.z)))
         }
-        let inside = Accessories.material(UIColor(red: 0.05, green: 0.04, blue: 0.07, alpha: 1), roughness: 1)
+        let inside = Accessories.material(UIColor(red: 0.2, green: 0.12, blue: 0.24, alpha: 1), roughness: 1)
         scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 4.6, height: 0.05, length: 3.9, chamferRadius: 0), inside, at: SCNVector3(0, -0.6, 0)))
-        let wall = Accessories.material(UIColor(red: 0.85, green: 0.16, blue: 0.25, alpha: 1), roughness: 0.6)
+        let wall = Accessories.material(CandySet.bubblegum, roughness: 0.65)
         for (x, z, w, d) in [(0, 1.95, 4.6, 0.1), (0, -1.95, 4.6, 0.1), (-2.3, 0, 0.1, 3.9), (2.3, 0, 0.1, 3.9)] as [(Float, Float, CGFloat, CGFloat)] {
             scene.rootNode.addChildNode(Accessories.node(SCNBox(width: w, height: 1.6, length: d, chamferRadius: 0), wall, at: SCNVector3(x, 0.1, z)))
         }

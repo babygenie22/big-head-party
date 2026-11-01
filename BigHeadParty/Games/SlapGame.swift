@@ -228,32 +228,28 @@ final class SlapGame: ObservableObject {
     // MARK: - Set
 
     private func buildSet() {
-        scene.background.contents = UIColor(red: 0.07, green: 0.08, blue: 0.13, alpha: 1)
-        Effects.addStudioLights(to: scene, rim: .systemPink)
-        let floor = SCNFloor()
-        floor.reflectivity = 0.05
-        floor.firstMaterial?.diffuse.contents = UIColor(red: 0.09, green: 0.1, blue: 0.16, alpha: 1)
-        scene.rootNode.addChildNode(SCNNode(geometry: floor))
-        scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 2.45, height: 0.1),
-                                                     Accessories.material(UIColor(red: 0.66, green: 0.11, blue: 0.16, alpha: 1), roughness: 0.75),
-                                                     at: SCNVector3(0, 0.05, 0)))
-        scene.rootNode.addChildNode(Accessories.node(SCNPlane(width: 24, height: 12),
-                                                     Accessories.material(UIColor(red: 0.07, green: 0.08, blue: 0.13, alpha: 1), roughness: 0.95),
-                                                     at: SCNVector3(0, 5, -4.4)))
-        let banner = SCNMaterial()
-        banner.lightingModel = .constant
-        banner.diffuse.contents = Effects.banner("SLAP CHAMPS", background: UIColor(red: 0.07, green: 0.08, blue: 0.13, alpha: 1))
-        let bannerNode = SCNNode(geometry: SCNPlane(width: 8, height: 2))
-        bannerNode.geometry?.materials = [banner]
+        scene.background.contents = CandySet.backdrop(CandySet.butter, CandySet.cream)
+        CandySet.light(scene, rim: CandySet.butter, camera: camera)
+        scene.rootNode.addChildNode(CandySet.floor(UIColor(red: 1, green: 0.93, blue: 0.78, alpha: 1)))
+        // Round stage in coral with a cream lip.
+        scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 2.55, height: 0.08),
+                                                     Accessories.material(CandySet.cream, roughness: 0.7),
+                                                     at: SCNVector3(0, 0.04, 0)))
+        scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 2.4, height: 0.12),
+                                                     Accessories.material(CandySet.coral, roughness: 0.7),
+                                                     at: SCNVector3(0, 0.07, 0)))
+        scene.rootNode.addChildNode(CandySet.wall(CandySet.sunburst(CandySet.butter, UIColor(red: 1, green: 0.9, blue: 0.6, alpha: 1)),
+                                                  width: 24, height: 12, at: SCNVector3(0, 5, -4.4)))
+        let bannerNode = CandySet.sign("Slap Champs", fill: .white, width: 7.4)
         bannerNode.position = SCNVector3(0, 5.6, -4.3)
         scene.rootNode.addChildNode(bannerNode)
-        scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 0.42, height: 1.25, length: 0.8, chamferRadius: 0.03),
-                                                     Accessories.material(UIColor(white: 0.17, alpha: 1), roughness: 0.35, metalness: 0.4),
+        scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 0.42, height: 1.25, length: 0.8, chamferRadius: 0.12),
+                                                     Accessories.material(.white, roughness: 0.5),
                                                      at: SCNVector3(0, 0.72, -0.35)))
         let beam = SCNMaterial()
         beam.lightingModel = .constant
         beam.diffuse.contents = UIColor(red: 1, green: 0.95, blue: 0.77, alpha: 1)
-        beam.transparency = 0.05
+        beam.transparency = 0.08
         beam.isDoubleSided = true
         beam.writesToDepthBuffer = false
         for sx: Float in [-1, 1] {

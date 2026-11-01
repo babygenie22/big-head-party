@@ -21,5 +21,10 @@ Principles skills.
 - **Home:** the star is live on a blush stage (tap for a pie); games are a mosaic of real
   renders (`cover-<game>` assets) in varied sizes. No eyebrow labels above headings.
 - **Icons:** SF Symbols only, no emoji. Touch targets at least 44 pt.
-- **Exceptions:** 3D game stages keep their own lit sets; the camera screen stays dark so a
-  bright screen doesn't tint selfies.
+- **Game sets:** `Scenes/CandySet.swift`. Each game is a candy-colored set: soft gradient
+  backdrop, matte floor, unlit backdrop walls in true colors, rounded Bricolage signs. Pie-Q
+  bubblegum game show, Slap butter sunburst, Dunk sky carnival, Whack lilac arcade, Boxing
+  daylight lilac ring. Cameras run at normal exposure with auto exposure and vignette off; the
+  lights are dimmed instead, so skin looks the same as on the home screen.
+- **Posters:** `cover-<game>` assets are crops of the real sets; re-shoot them when a set changes.
+- **Exception:** the camera screen stays dark so a bright screen doesn't tint selfies.
