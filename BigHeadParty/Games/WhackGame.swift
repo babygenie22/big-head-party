@@ -394,7 +394,8 @@ final class WhackGame: ObservableObject {
     // MARK: - Set
 
     private func buildSet() {
-        Location.garage.apply(to: scene, camera: camera)
+        Location.fairground.apply(to: scene, camera: camera)
+        Fairground.build(in: scene)
 
         // Board with nine holes (even-odd fill punches them out).
         let path = UIBezierPath(rect: CGRect(x: -2.3, y: -1.95, width: 4.6, height: 3.9))

@@ -68,6 +68,14 @@ final class GameRecorder: NSObject, ObservableObject, RPPreviewViewControllerDel
 /// Small record button that sits over every game.
 struct RecordButton: View {
     @ObservedObject var recorder: GameRecorder
+    /// Debug: `-posterShot YES` hides it for the home-screen poster screenshots.
+    private static var hiddenForPoster: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "posterShot")
+        #else
+        false
+        #endif
+    }
     @State private var pulse = false
 
     var body: some View {
@@ -88,6 +96,7 @@ struct RecordButton: View {
             .pill(recorder.isRecording ? Theme.coral : Theme.surface)
         }
         .foregroundStyle(Theme.ink)
+        .opacity(Self.hiddenForPoster ? 0 : 1)
         .accessibilityLabel(recorder.isRecording ? "Stop recording and share" : "Record this game")
         .onChange(of: recorder.isRecording) { _, on in
             pulse = false

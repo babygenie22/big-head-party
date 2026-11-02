@@ -23,7 +23,9 @@ Each game sits in a real 360° HDR photo (Poly Haven, CC0) that is both the back
 light, with a matching sun for shadows and an invisible shadow-catcher floor:
 Pie-Q in a neon photo studio (black gloss riser, painted-metal podiums, LED strips), Slap in a
 house's back garden (wooden deck, stump), Dunk in an open park (glass tank, steel frame, tarp),
-Whack in an auto shop (red arcade cabinet, rubber top, chrome rims, bulbs), Boxing in an empty
+Whack at a county fair in a park at sunset (`Scenes/Fairground.swift`: striped prize booth with
+plush bears, marquee sign and chasing bulbs, scalloped awning, bunting, balloons, a boardwalk with
+confetti, popcorn and cotton candy; only props near the board show under the score bar), Boxing in an empty
 warehouse (canvas ring, steel posts, cloth ropes). Props use `Surface` materials (painted metal,
 steel, chrome, plastic, wood, canvas, glass).
 

@@ -7,14 +7,14 @@ import UIKit
 ///
 /// Scale: 1 scene unit ≈ 0.57 m (a body is 2.5 units neck to feet).
 enum Location {
-    case gameShow, backyard, park, garage, warehouse
+    case gameShow, backyard, park, fairground, warehouse
 
     var file: String {
         switch self {
         case .gameShow: return "neon_photostudio_2k"
         case .backyard: return "studio_garden_2k"
         case .park: return "je_gray_park_2k"
-        case .garage: return "autoshop_01_2k"
+        case .fairground: return "bryanston_park_sunrise_2k"
         case .warehouse: return "empty_warehouse_01_2k"
         }
     }
@@ -26,6 +26,7 @@ enum Location {
     var sun: SCNVector3 {
         switch self {
         case .backyard, .park: return SCNVector3(-0.9, 0.6, 0)
+        case .fairground: return SCNVector3(-0.45, -2.6, 0)   // low evening sun from behind the booth
         default: return SCNVector3(-1.2, 0.3, 0)
         }
     }
@@ -33,6 +34,7 @@ enum Location {
     var sunIntensity: CGFloat {
         switch self {
         case .backyard, .park: return 1400
+        case .fairground: return 900
         default: return 500
         }
     }
@@ -42,6 +44,7 @@ enum Location {
         switch self {
         case .backyard, .park: return 0.3
         case .gameShow: return 0.6
+        case .fairground: return 0.4
         default: return 0.5
         }
     }
@@ -57,7 +60,10 @@ enum Location {
             cam.exposureOffset = exposure
             cam.wantsExposureAdaptation = false
             cam.vignettingIntensity = 0.25
-            cam.bloomIntensity = 0
+            // Only the fair glows: its bulbs and marquee should halo like the real thing.
+            cam.bloomIntensity = self == .fairground ? 0.6 : 0
+            cam.bloomThreshold = 0.9
+            cam.bloomBlurRadius = 8
             // A real lens: the far background softens a touch (it's a 2K photo anyway).
             cam.screenSpaceAmbientOcclusionIntensity = 0
             cam.screenSpaceAmbientOcclusionRadius = 0.25
