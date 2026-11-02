@@ -259,6 +259,7 @@ function buildHead(rawShape, depth = null) {
   const left = [], right = [];
   for (const p of shape.contour) {
     const s = (p.y - eyeV) / Math.max(chinV - eyeV, 0.05), dx = (p.x - midU) * 2 * S;
+    if (s <= -0.25 || s >= 1.2 || Math.abs(p.x - midU) >= 0.42) continue;   // stray point
     if (dx <= 0.05) left.push({ s, w: -dx });
     if (dx >= -0.05) right.push({ s, w: dx });
   }
@@ -284,7 +285,7 @@ function buildHead(rawShape, depth = null) {
   for (let pass = 0; pass < 4; pass++) { const nx = jw.slice(); for (let k = 1; k < jw.length - 1; k++) nx[k] = (jw[k - 1] + 2 * jw[k] + jw[k + 1]) / 4; jw = nx; }
   for (let k = 1; k <= JAW; k++) {
     const s = k / JAW, tc = clamp((s - 0.8) / 0.2, 0, 1);
-    const w = Math.max(jw[k - 1], 0.30 * Math.sqrt(Math.max(0, 1 - tc * tc)));
+    const w = Math.min(Math.max(jw[k - 1], 0.30 * Math.sqrt(Math.max(0, 1 - tc * tc))), templeW * 1.08);
     const narrow = Math.sqrt(Math.min(1, w / 0.45)), e = Math.pow(s, 1.6);
     rings.push({ y: yEye + (yChin - yEye) * s, w, cz: lerp(-0.05, 0.45, e), front: lerp(1, 0.32, e) * narrow, back: lerp(1.15, 0.30, Math.pow(s, 1.2)) * narrow });
   }

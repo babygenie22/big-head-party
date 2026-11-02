@@ -6,7 +6,7 @@ import UIKit
 final class PieStage {
     let scene = SCNScene()
     let cameraRig = SCNNode()
-    let camera = Effects.makeCamera(fov: 38)
+    let camera = Effects.makeCamera(fov: 40, horizontal: true)
     private(set) var contestants: [Contestant] = []
     var rigs: [HeadRig] { contestants.map(\.rig) }
     let podiumX: [Float] = [-1.7, 1.7]

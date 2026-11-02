@@ -56,6 +56,8 @@ enum HeadMeshBuilder {
         var leftSide: [(s: Float, w: Float)] = [], rightSide: [(s: Float, w: Float)] = []
         for p in shape.contour {
             let s = (Float(p.y) - eyeV) / max(chinV - eyeV, 0.05)
+            // Ignore stray points: above the brows, below the chin, or wider than any real face.
+            guard s > -0.25, s < 1.2, abs(Float(p.x) - midU) < 0.42 else { continue }
             let dx = (Float(p.x) - midU) * 2 * S
             if dx <= 0.05 { leftSide.append((s, -dx)) }
             if dx >= -0.05 { rightSide.append((s, dx)) }
@@ -101,9 +103,9 @@ enum HeadMeshBuilder {
         }
         for k in 1...jawRings {
             let s = Float(k) / Float(jawRings)
-            // Never narrower than a rounded chin, so the jaw ends in a U rather than a point.
             let tc = simd_clamp((s - 0.8) / 0.2, 0, 1)
-            let w = max(jawWidths[k - 1], 0.30 * sqrt(max(0, 1 - tc * tc)))
+            // Never narrower than a rounded chin, never wider than the skull.
+            let w = min(max(jawWidths[k - 1], 0.30 * sqrt(max(0, 1 - tc * tc))), templeW * 1.08)
             let narrow = sqrt(min(1, w / 0.45))
             let e = pow(s, 1.6)
             rings.append(Ring(y: yEye + (yChin - yEye) * s,

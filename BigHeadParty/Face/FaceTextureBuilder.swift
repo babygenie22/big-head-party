@@ -93,6 +93,12 @@ enum FaceTextureBuilder {
                                             y: CGFloat(capture.image.height) / raw.extent.height)
             personMask = raw.transformed(by: toImage.concatenating(align)).composited(over: black).cropped(to: canvas)
         }
+        // A usable person mask must cover the middle of the face; otherwise ignore it rather than
+        // erase the photo (the Simulator, and some unusual photos, return an empty mask).
+        if let mask = personMask,
+           let cover = averageColor(of: mask, in: [ciRect(u: 0.38, v: 0.38, w: 0.24, h: 0.3)])?.rgba.r, cover < 0.5 {
+            personMask = nil
+        }
 
         // Cheeks and forehead: the cheeks alone sit in the nose's shadow and read too dark.
         let skin = averageColor(of: photo, in: [ciRect(u: 0.31, v: 0.50, w: 0.06, h: 0.05),

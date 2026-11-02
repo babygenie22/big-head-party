@@ -229,8 +229,11 @@ enum Effects {
         scene.rootNode.addChildNode(rimLight)
     }
 
-    static func makeCamera(fov: CGFloat = 40) -> SCNNode {
+    /// `horizontal: true` fixes the field of view across the screen's width, so wide scenes
+    /// (two contestants, a tank and a target) always fit a tall phone screen.
+    static func makeCamera(fov: CGFloat = 40, horizontal: Bool = false) -> SCNNode {
         let camera = SCNCamera()
+        camera.projectionDirection = horizontal ? .horizontal : .vertical
         camera.fieldOfView = fov
         camera.zNear = 0.1
         camera.zFar = 100
