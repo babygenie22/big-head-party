@@ -1,19 +1,19 @@
-# Big Head Party — "Night studio" design
+# Big Head Party — "Daylight studio" design
 
-Realistic people in real places, framed by a dark, premium broadcast UI. Replaces the earlier
-"Candy studio" look. Tokens and components live in `BigHeadParty/Views/Theme.swift`.
+Realistic people in real places, framed by a bright, airy UI that lets the sets and faces carry
+the color. Replaces the earlier "Candy studio" and "Night studio" looks. Tokens and components live in `BigHeadParty/Views/Theme.swift`.
 
 ## Screens
-- **Canvas:** `Theme.canvas` (#0B0B0D near-black); cards `Theme.surface` (#18181B) with a 1 pt
-  `Theme.hairline` edge and a soft black shadow.
-- **Text:** `Theme.ink` (#F4F1EC warm white), `Theme.inkSoft` for supporting copy.
-- **Accent:** one on-air red (`Theme.coral`, #FF5B3A) for primary actions and selection; white
-  text on it. Per-game tones are deep (Pie-Q wine, Slap ochre, Dunk navy, Whack forest, Boxing
-  indigo), with warm white text.
+- **Canvas:** `Theme.canvas` (#F3EFE8 warm paper); cards `Theme.surface` (white) with a 1 pt
+  `Theme.hairline` edge and a faint shadow.
+- **Text:** `Theme.ink` (#1A1917 near-black), `Theme.inkSoft` for supporting copy.
+- **Accent:** one on-air red (`Theme.coral`, #EC4A29) for primary actions and selection; white
+  text on it. Per-game tones are soft and muted (Pie-Q rose, Slap sand, Dunk mist blue, Whack
+  sage, Boxing lavender), with ink text.
 - **Type:** SF Pro Heavy Condensed via `Font.display()` / `.party()` for titles, names, buttons and
   scores (a broadcast lower-third voice); SF Pro (`Font.ui()`) for everything else. Scales with
   Dynamic Type. Sentence case.
-- **Game tiles:** Pie-Q featured full width, then a 2×2 grid. Each tile is a deep-toned card with
+- **Game tiles:** Pie-Q featured full width, then a 2×2 grid. Each tile is a soft-toned card with
   the poster in a framed window and the name, icon and player count below it.
 - **Icons:** SF Symbols only, no emoji. Touch targets at least 44 pt.
 - **Camera screen:** stays dark so the screen doesn't tint selfies.
@@ -37,7 +37,9 @@ pre-rotated when bundled, since the background ignores `contentsTransform`. Re-r
   through proxy nodes (slap) or two-bone IK to the gloves (boxing).
 - The default cast wears baked photo faces (`Cast/<id>.jpg` + `.json`, made with the player
   photo pipeline). Big heads are the default; real heads are in the menu.
-- Pie and mallet are real models. Pie hits leave a cream layer molded to the face, whipped
-  dollops, crust crumbs and drips (`Scenes/Cream.swift`).
+- Pie and mallet are real models. Pie hits add cream to a head-shaped coat (`CreamCoat` in
+  `Scenes/Cream.swift`) that spreads and thickens with every pie, with runs dripping down,
+  whipped dollops and crust crumbs. The first pie hits the middle; later ones land all over the
+  face. Built before the first throw so nothing is computed mid-throw.
 - **Posters:** `cover-<game>` are crops of the real sets with signs hidden; re-shoot them when a
   set changes.

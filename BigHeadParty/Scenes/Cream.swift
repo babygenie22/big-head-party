@@ -1,22 +1,8 @@
 import SceneKit
 import UIKit
 
-/// Realistic pie mess: a whipped-cream layer molded to the face's real surface, lumpy dollops
-/// with soft peaks, crust crumbs and slow drips. Geometry is built once and reused.
-extension SCNNode {
-    /// The frontmost point of this node's own mesh at head-model (x, y), with an outward normal.
-    /// Both sides are tested and the hit nearest the viewer wins, so the result never lands on
-    /// the inside of the back of the head.
-    func frontSurface(x: Float, y: Float) -> (point: SCNVector3, normal: SCNVector3)? {
-        let hits = hitTestWithSegment(from: SCNVector3(x, y, 3), to: SCNVector3(x, y, -0.5),
-                                      options: [SCNHitTestOption.backFaceCulling.rawValue: false])
-        guard let hit = hits.filter({ $0.node === self }).max(by: { $0.localCoordinates.z < $1.localCoordinates.z }) else { return nil }
-        var n = hit.localNormal
-        if n.z < 0 { n = SCNVector3(-n.x, -n.y, -n.z) }
-        return (hit.localCoordinates, n)
-    }
-}
-
+/// Realistic pie mess: whipped cream that builds up on the face (`CreamCoat`), lumpy dollops
+/// with soft peaks and crust crumbs. Geometry is built once and reused.
 enum Cream {
     // MARK: - Materials
 
@@ -37,14 +23,6 @@ enum Cream {
         m.normal.wrapT = .repeat
         m.normal.contentsTransform = SCNMatrix4MakeScale(3, 3, 1)
         m.isDoubleSided = true
-        return m
-    }()
-
-    /// Smooth, glossier cream for drips (the lump map smears along their length).
-    static let dripMaterial: SCNMaterial = {
-        let m = material.copy() as! SCNMaterial
-        m.normal.contents = nil
-        m.roughness.contents = 0.3
         return m
     }()
 
@@ -117,76 +95,7 @@ enum Cream {
         return top + (bottom - top) * fy
     }
 
-    // MARK: - Molded layer
-
-    /// A sheet of cream that follows the head mesh: a grid of rays around `center` (head-model
-    /// x/y) lands on the face, and each vertex sits a little off the surface. Thickness peaks in
-    /// the middle and the edge wanders with noise, so no two splats look alike.
-    static func layer(on head: SCNNode, center: SIMD2<Float>, radius: Float, seed: Float) -> SCNNode? {
-        let n = 40
-        var positions = [SCNVector3](repeating: SCNVector3Zero, count: n * n)
-        var normals = [SCNVector3](repeating: SCNVector3Zero, count: n * n)
-        var uvs = [CGPoint](repeating: .zero, count: n * n)
-        var valid = [Bool](repeating: false, count: n * n)
-        for j in 0..<n {
-            for i in 0..<n {
-                let u = Float(i) / Float(n - 1) * 2 - 1, v = Float(j) / Float(n - 1) * 2 - 1
-                let x = center.x + u * radius, y = center.y + v * radius
-                // Organic outline: radius wobbles with angle.
-                let angle = atan2(v, u)
-                let edge = 0.78 + noise(cos(angle) * 1.6 + seed, sin(angle) * 1.6 + seed) * 0.5
-                let r = sqrt(u * u + v * v)
-                guard r < 1.05 else { continue }
-                guard let hit = head.frontSurface(x: x, y: y) else { continue }
-                // Past the wobbly edge the sheet dips just under the skin, so the visible outline
-                // is the smooth curve where cream meets face, not the grid.
-                let fall = 1 - smooth(min(1, r / edge))
-                // Continuous through the edge (signed distance), so the crossing interpolates
-                // smoothly between grid points instead of stepping.
-                let rim = max(-0.03, min(0.02, (edge - r) * 0.12))
-                let thickness = rim + 0.08 * fall * (0.75 + noise(x * 5 + seed, y * 5) * 0.8)
-                let p = hit.point, nrm = hit.normal
-                positions[j * n + i] = SCNVector3(p.x + nrm.x * thickness, p.y + nrm.y * thickness, p.z + nrm.z * thickness)
-                normals[j * n + i] = nrm
-                uvs[j * n + i] = CGPoint(x: CGFloat(u * 0.5 + 0.5), y: CGFloat(v * 0.5 + 0.5))
-                valid[j * n + i] = true
-            }
-        }
-        var indices: [UInt16] = []
-        for j in 0..<(n - 1) {
-            for i in 0..<(n - 1) {
-                let a = j * n + i, b = a + 1, c = a + n, d = c + 1
-                if valid[a] && valid[b] && valid[c] { indices += [UInt16(a), UInt16(b), UInt16(c)] }
-                if valid[b] && valid[c] && valid[d] { indices += [UInt16(b), UInt16(d), UInt16(c)] }
-            }
-        }
-        guard indices.count > 60 else { return nil }
-        // Smooth normals from the sheet itself so the lumps catch light.
-        var smoothN = [SIMD3<Float>](repeating: .zero, count: n * n)
-        for t in stride(from: 0, to: indices.count, by: 3) {
-            let ia = Int(indices[t]), ib = Int(indices[t + 1]), ic = Int(indices[t + 2])
-            let pa = SIMD3(positions[ia].x, positions[ia].y, positions[ia].z)
-            let pb = SIMD3(positions[ib].x, positions[ib].y, positions[ib].z)
-            let pc = SIMD3(positions[ic].x, positions[ic].y, positions[ic].z)
-            let fn = simd_cross(pb - pa, pc - pa)
-            smoothN[ia] += fn; smoothN[ib] += fn; smoothN[ic] += fn
-        }
-        for k in 0..<(n * n) where valid[k] {
-            var v = smoothN[k]
-            if simd_dot(v, SIMD3(normals[k].x, normals[k].y, normals[k].z)) < 0 { v = -v }
-            v = simd_length(v) > 0 ? simd_normalize(v) : SIMD3(0, 0, 1)
-            normals[k] = SCNVector3(v.x, v.y, v.z)
-        }
-        let geometry = SCNGeometry(sources: [SCNGeometrySource(vertices: positions), SCNGeometrySource(normals: normals),
-                                             SCNGeometrySource(textureCoordinates: uvs)],
-                                   elements: [SCNGeometryElement(indices: indices, primitiveType: .triangles)])
-        geometry.materials = [material]
-        let node = SCNNode(geometry: geometry)
-        node.name = "creamLayer"
-        return node
-    }
-
-    // MARK: - Dollops, crumbs, drips
+    // MARK: - Dollops and crumbs
 
     /// Lumpy whipped dollops: a subdivided sphere pushed out by noise, with a pulled-up peak.
     static let dollops: [SCNGeometry] = (0..<5).map { k in lumpySphere(seed: Float(k) * 7.3, lump: 0.16, peak: 0.75, segments: 24, material: material) }
@@ -234,25 +143,157 @@ enum Cream {
         return g
     }
 
-    /// A drip: a thin run of cream ending in a heavier bead.
-    static func drip() -> SCNNode {
-        let node = SCNNode()
-        let run = SCNNode(geometry: SCNCone(topRadius: 0.07, bottomRadius: 0.04, height: 0.3))
-        run.geometry?.materials = [dripMaterial]
-        run.position = SCNVector3(0, -0.15, 0)
-        node.addChildNode(run)
-        let bead = SCNNode(geometry: SCNSphere(radius: 0.055))
-        bead.geometry?.materials = [dripMaterial]
-        bead.scale = SCNVector3(1, 1.25, 0.8)
-        bead.position = SCNVector3(0, -0.3, 0)
-        node.addChildNode(bead)
-        return node
-    }
-
     /// Soft cream flecks for the splash burst (a fuzzy blob, not a hard dot).
     static let fleckImage: UIImage = UIGraphicsImageRenderer(size: CGSize(width: 64, height: 64)).image { ctx in
         let colors = [UIColor(white: 1, alpha: 1).cgColor, UIColor(white: 1, alpha: 0.85).cgColor, UIColor(white: 1, alpha: 0).cgColor] as CFArray
         let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.55, 1])!
         ctx.cgContext.drawRadialGradient(g, startCenter: CGPoint(x: 32, y: 32), startRadius: 0, endCenter: CGPoint(x: 32, y: 32), endRadius: 32, options: [])
+    }
+}
+
+/// The cream on one head: a shell the shape of the head that sits just under the skin until
+/// pies land. Every splat adds cream where it hits, so the face fills up and the layer gets
+/// thicker throw after throw. It follows the face's expressions through its own morpher.
+final class CreamCoat {
+    let node = SCNNode()
+    private let base: [SIMD3<Float>]
+    private let baseNormals: [SIMD3<Float>]
+    private let lumps: [Float]
+    private let cols: Int, rows: Int
+    private let element: SCNGeometryElement
+    private let uvs: SCNGeometrySource
+    private var amount: [Float]
+    private(set) var positions: [SIMD3<Float>]
+    private(set) var normals: [SIMD3<Float>]
+    private(set) var splats = 0
+
+    /// Cream is visible where the amount passes this.
+    private static let threshold: Float = 0.3
+
+    static let material: SCNMaterial = {
+        let m = Cream.material.copy() as! SCNMaterial
+        m.normal.contentsTransform = SCNMatrix4MakeScale(7, 7, 1)
+        m.isDoubleSided = false
+        return m
+    }()
+
+    init?(head: SCNGeometry, targets: [SCNGeometry], cols: Int) {
+        guard let v = head.sources(for: .vertex).first, let n = head.sources(for: .normal).first,
+              let uv = head.sources(for: .texcoord).first, let e = head.elements.first else { return nil }
+        base = Self.read(v); baseNormals = Self.read(n)
+        guard base.count == baseNormals.count, base.count % cols == 0 else { return nil }
+        self.cols = cols; rows = base.count / cols
+        element = e; uvs = uv
+        amount = [Float](repeating: 0, count: base.count)
+        lumps = base.map { p in Cream.noise(p.x * 6, p.y * 6, p.z * 6) + Cream.noise(p.x * 15 + 9, p.y * 15, p.z * 15) * 0.45 }
+        positions = base; normals = baseNormals
+
+        // Expressions as deltas, so they still apply however thick the cream gets.
+        let morpher = SCNMorpher()
+        morpher.calculationMode = .additive
+        let base = base, baseNormals = baseNormals
+        morpher.targets = targets.compactMap { t in
+            guard let tv = t.sources(for: .vertex).first, let tn = t.sources(for: .normal).first else { return nil }
+            let tp = Self.read(tv), tnn = Self.read(tn)
+            guard tp.count == base.count else { return nil }
+            let dp = zip(tp, base).map { SCNVector3($0.x - $1.x, $0.y - $1.y, $0.z - $1.z) }
+            let dn = zip(tnn, baseNormals).map { SCNVector3($0.x - $1.x, $0.y - $1.y, $0.z - $1.z) }
+            let g = SCNGeometry(sources: [SCNGeometrySource(vertices: dp), SCNGeometrySource(normals: dn)], elements: [e])
+            g.name = t.name
+            return g
+        }
+        node.name = "creamCoat"
+        node.morpher = morpher
+        rebuild()
+    }
+
+    private static func read(_ s: SCNGeometrySource) -> [SIMD3<Float>] {
+        s.data.withUnsafeBytes { raw in
+            (0..<s.vectorCount).map { i in
+                let o = s.dataOffset + i * s.dataStride
+                return SIMD3(raw.load(fromByteOffset: o, as: Float.self),
+                             raw.load(fromByteOffset: o + 4, as: Float.self),
+                             raw.load(fromByteOffset: o + 8, as: Float.self))
+            }
+        }
+    }
+
+    /// Adds a splat of cream centered at head-model (x, y), with a few runs dripping down from
+    /// its lower edge. Returns spots on the new cream (with outward normals) where dollops and
+    /// crumbs can sit.
+    @discardableResult
+    func splat(center: SIMD2<Float>, radius: Float, seed: Float) -> [(SIMD3<Float>, SIMD3<Float>)] {
+        splats += 1
+        let runs: [(x: Float, top: Float, length: Float, width: Float)] = (0..<Int.random(in: 2...4)).map { _ in
+            (center.x + Float.random(in: -0.6...0.6) * radius, center.y - radius * Float.random(in: 0.45...0.6),
+             Float.random(in: 0.3...0.75), Float.random(in: 0.09...0.13))
+        }
+        var inside: [Int] = []
+        for k in base.indices {
+            let nrm = baseNormals[k]
+            guard nrm.z > -0.25 else { continue }   // the face, cheeks, forehead and sides — not the back
+            let p = base[k]
+            let dx = p.x - center.x, dy = p.y - center.y
+            let d = sqrt(dx * dx + dy * dy)
+            let angle = atan2(dy, dx)
+            let reach = radius * (0.85 + Cream.noise(cos(angle) * 1.7 + seed, sin(angle) * 1.7 + seed) * 0.5)
+            var add: Float = 0
+            if d < reach {
+                // Fades a touch toward the sides, where the pie hits at a glancing angle.
+                add = 1.6 * min(1, 1.6 * (1 - d / reach)) * (0.6 + 0.4 * max(0, nrm.z))
+                if d < reach * 0.55 && nrm.z > 0.35 { inside.append(k) }
+            }
+            // Runs: rounded streaks down the face (capsules), a little fatter at the bottom where
+            // the drop gathers.
+            for r in runs where p.y < r.top + 0.1 && p.y > r.top - r.length - 0.25 {
+                let along = max(0, min(1, (r.top - p.y) / r.length))
+                let w = r.width * (0.85 + 0.4 * along * along)
+                let ex = p.x - r.x, ey = p.y - (r.top - along * r.length)
+                let dist = sqrt(ex * ex + ey * ey)
+                guard dist < w else { continue }
+                add = max(add, 1.0 * min(1, 2 * (1 - dist / w)))
+            }
+            if add > 0 { amount[k] = min(3, amount[k] + add) }
+        }
+        rebuild()
+        return inside.map { (positions[$0], normals[$0]) }
+    }
+
+    /// Wipes the face clean (the shell drops back under the skin).
+    func reset() {
+        amount = [Float](repeating: 0, count: base.count)
+        splats = 0
+        rebuild()
+    }
+
+    private func rebuild() {
+        for k in base.indices {
+            let a = amount[k] - Self.threshold
+            // Continuous through the edge (signed), so the outline is the smooth curve where the
+            // sheet comes up out of the skin, not the mesh grid.
+            var t = max(-0.03, min(0.16, a * 0.22))
+            if a > 0 { t += lumps[k] * 0.035 * min(1, a * 3) }
+            positions[k] = base[k] + baseNormals[k] * t
+        }
+        // Normals from the shell itself, so lumps and edges catch the light.
+        for r in 0..<rows {
+            for c in 0..<cols {
+                let k = r * cols + c
+                let l = positions[r * cols + max(c - 1, 0)], rt = positions[r * cols + min(c + 1, cols - 1)]
+                let up = positions[max(r - 1, 0) * cols + c], dn = positions[min(r + 1, rows - 1) * cols + c]
+                var nn = simd_cross(rt - l, dn - up)
+                if simd_dot(nn, baseNormals[k]) < 0 { nn = -nn }
+                normals[k] = simd_length(nn) > 1e-6 ? simd_normalize(nn) : baseNormals[k]
+            }
+        }
+        let g = SCNGeometry(sources: [SCNGeometrySource(vertices: positions.map { SCNVector3($0.x, $0.y, $0.z) }),
+                                      SCNGeometrySource(normals: normals.map { SCNVector3($0.x, $0.y, $0.z) }), uvs],
+                            elements: [element])
+        g.materials = [Self.material]
+        // The morpher binds to the geometry it was attached with, so re-attach it to the new one.
+        let morpher = node.morpher
+        node.morpher = nil
+        node.geometry = g
+        node.morpher = morpher
     }
 }

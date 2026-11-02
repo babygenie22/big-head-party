@@ -32,6 +32,7 @@ final class ShowcaseStage {
         turntable.addChildNode(newRig.root)
         newRig.startIdle()
         frame(newRig)
+        newRig.prepareCream()
         if animated {
             newRig.root.scale = SCNVector3(0.01, 0.01, 0.01)
             newRig.root.runAction(.sequence([.scale(to: 1.12, duration: 0.25), .scale(to: 0.96, duration: 0.12), .scale(to: 1, duration: 0.1)]))

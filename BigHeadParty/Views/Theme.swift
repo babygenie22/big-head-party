@@ -1,24 +1,24 @@
 import SwiftUI
 import CoreText
 
-/// "Night studio": a dark, premium broadcast look that frames the realistic sets. Near-black
-/// canvas, warm white type, one on-air red accent, deep per-game tones, fine light edges.
+/// "Daylight studio": a bright, airy look that lets the realistic sets and faces be the color.
+/// Warm paper canvas, white cards, near-black type, one on-air red accent, soft muted game tones.
 enum Theme {
     // Canvas and text.
-    static let canvas = Color(red: 0.043, green: 0.043, blue: 0.051)  // #0B0B0D
-    static let surface = Color(red: 0.094, green: 0.094, blue: 0.106) // #18181B
-    static let ink = Color(red: 0.957, green: 0.945, blue: 0.925)     // #F4F1EC warm white
+    static let canvas = Color(red: 0.953, green: 0.937, blue: 0.91)   // #F3EFE8 warm paper
+    static let surface = Color.white
+    static let ink = Color(red: 0.102, green: 0.098, blue: 0.09)      // #1A1917
     static let inkSoft = ink.opacity(0.6)
-    static let hairline = ink.opacity(0.12)
+    static let hairline = ink.opacity(0.1)
     // The accent (kept under its old name): on-air red. Text on it is white.
-    static let coral = Color(red: 1.0, green: 0.357, blue: 0.227)     // #FF5B3A
-    // Deep game tones (text on them stays warm white).
-    static let sky = Color(red: 0.118, green: 0.227, blue: 0.373)     // #1E3A5F
-    static let lime = Color(red: 0.122, green: 0.29, blue: 0.2)       // #1F4A33
-    static let bubblegum = Color(red: 0.353, green: 0.122, blue: 0.22) // #5A1F38
-    static let lilac = Color(red: 0.208, green: 0.169, blue: 0.369)   // #352B5E
-    static let butter = Color(red: 0.353, green: 0.271, blue: 0.094)  // #5A4518
-    static let blush = Color(red: 0.102, green: 0.086, blue: 0.094)   // the star's stage
+    static let coral = Color(red: 0.925, green: 0.29, blue: 0.161)    // #EC4A29
+    // Soft game tones (text on them stays ink).
+    static let sky = Color(red: 0.851, green: 0.894, blue: 0.933)     // #D9E4EE
+    static let lime = Color(red: 0.863, green: 0.906, blue: 0.839)    // #DCE7D6
+    static let bubblegum = Color(red: 0.945, green: 0.863, blue: 0.863) // #F1DCDC
+    static let lilac = Color(red: 0.886, green: 0.871, blue: 0.933)   // #E2DEEE
+    static let butter = Color(red: 0.945, green: 0.902, blue: 0.784)  // #F1E6C8
+    static let blush = Color(red: 0.925, green: 0.898, blue: 0.863)   // the star's stage
 
     // Roles.
     static let highlight = coral
@@ -56,8 +56,8 @@ struct SoftShadow: ViewModifier {
     var lift: CGFloat = 1
     func body(content: Content) -> some View {
         content
-            .shadow(color: .black.opacity(0.45), radius: 2 * lift, y: 1 * lift)
-            .shadow(color: .black.opacity(0.35), radius: 14 * lift, y: 8 * lift)
+            .shadow(color: .black.opacity(0.08), radius: 2 * lift, y: 1 * lift)
+            .shadow(color: .black.opacity(0.08), radius: 14 * lift, y: 8 * lift)
     }
 }
 

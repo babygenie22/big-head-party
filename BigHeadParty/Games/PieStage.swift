@@ -24,6 +24,7 @@ final class PieStage {
             c.group.eulerAngles.y = i == 0 ? 0.22 : -0.22
             scene.rootNode.addChildNode(c.group)
             c.rig.startIdle(seed: Double(i) * 2.1)
+            c.rig.prepareCream()
             contestants.append(c)
         }
         focus(on: nil, animated: false)

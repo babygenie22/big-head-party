@@ -10,7 +10,7 @@ struct BigHeadPartyApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(store)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
                 .tint(Theme.ink)
         }
     }

@@ -134,8 +134,11 @@ struct HomeView: View {
             showStudio = true
         } else if let name = defaults.string(forKey: "modelPreview"), let preview = ModelPreview.scene(name) {
             debugPreview = preview
-        } else if defaults.bool(forKey: "autoPie") {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { hero.stage.throwPie() }
+        } else if defaults.object(forKey: "autoPie") != nil {
+            // `-autoPie N` throws N pies, 2.5 s apart (YES = 1).
+            for k in 0..<max(1, defaults.integer(forKey: "autoPie")) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2 + 2.5 * Double(k)) { hero.stage.throwPie() }
+            }
         }
         #endif
     }
