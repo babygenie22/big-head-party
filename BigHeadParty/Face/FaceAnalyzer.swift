@@ -20,6 +20,8 @@ struct FaceCapture {
     let overlayBox: CGRect
     /// Person/background mask (white = person), if segmentation succeeded.
     let personMask: CVPixelBuffer?
+    /// Measured depth lined up with `image`, when the photo had it (TrueDepth or Portrait mode).
+    var depth: FaceDepth? = nil
     let yaw: Double
     let roll: Double
     let faceCount: Int
@@ -42,15 +44,16 @@ enum FaceAnalyzerError: LocalizedError {
 enum FaceAnalyzer {
     /// Runs Apple's Vision face-landmark model (76 points) plus person segmentation.
     /// Everything stays on device.
-    static func analyze(_ uiImage: UIImage) throws -> FaceCapture {
+    static func analyze(_ uiImage: UIImage, depth: FaceDepth? = nil) throws -> FaceCapture {
         // Big enough that a face filling only part of a phone photo still has the pixels for a
         // 2048² texture; 1600 px left typical faces upscaled and soft.
         guard var cg = uiImage.normalizedCGImage(maxDimension: 3200) else { throw FaceAnalyzerError.unreadableImage }
         #if targetEnvironment(simulator)
-        if let canned = cannedCapture(cg) { return canned }
+        if var canned = cannedCapture(cg) { canned.depth = depth; return canned }
         #endif
 
         guard var found = try biggestFace(in: cg) else { throw FaceAnalyzerError.noFace }
+        var depth = depth
         // A sideways or upside-down photo: turn it upright and look again. Left as it was, the eyes
         // sort into the wrong order and the face gets "straightened" onto the head upside down.
         if let roll = found.0.roll?.doubleValue, abs(roll) > .pi / 4 {
@@ -60,6 +63,7 @@ enum FaceAnalyzer {
                       abs(upright.0.roll?.doubleValue ?? 0) < .pi / 4 else { continue }
                 cg = turned
                 found = upright
+                depth = nil   // the depth map no longer lines up with the turned photo
                 break
             }
         }
@@ -109,6 +113,7 @@ enum FaceAnalyzer {
                            overlayPoints: overlay,
                            overlayBox: overlayBox,
                            personMask: mask,
+                           depth: depth,
                            yaw: face.yaw?.doubleValue ?? 0,
                            roll: face.roll?.doubleValue ?? 0,
                            faceCount: faceCount)

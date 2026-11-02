@@ -11,7 +11,9 @@ struct BuiltFace {
 
 /// Warps a photo into the head's texture space.
 ///
-/// 0. `touchUp` gives every photo flattering, even light first (see there).
+/// 0. `touchUp` gives every photo flattering, even light first, and `evenLighting` takes the
+///    photo's own side or top light off the face (see there). With a depth photo, the measured
+///    face shape is kept too (`DepthRelief`).
 /// 1. A similarity transform (rotate + scale + move) puts the pupils exactly on the canonical
 ///    eye positions. No non-rigid warping, so the person's real proportions survive; the mesh
 ///    adapts to *them* instead (see `HeadMeshBuilder`).
@@ -56,7 +58,7 @@ enum FaceTextureBuilder {
         func mean(_ xs: [CGFloat]) -> CGFloat? { xs.isEmpty ? nil : xs.reduce(0, +) / CGFloat(xs.count) }
         let browVs = capture.eyebrows.flatMap { $0.map(uv) }.map(\.y)
         let eyesUV = capture.eyeOutlines.map { $0.map(uv) }
-        let shape = FaceLayout.sanitized(FaceShape(leftEye: FaceLayout.leftEye,
+        var shape = FaceLayout.sanitized(FaceShape(leftEye: FaceLayout.leftEye,
                                                    rightEye: FaceLayout.rightEye,
                                                    noseTip: noseTip,
                                                    mouthCenter: mouth,
@@ -69,8 +71,19 @@ enum FaceTextureBuilder {
                                                    noseHalfWidth: halfExtent(noseUV, \.x),
                                                    lipHeight: halfExtent(lipsUV, \.y).map { $0 * 2 }))
 
+        // Measured shape from a depth photo: the real nose, brows, lips and cheeks.
+        if let depth = capture.depth {
+            let toPhoto = align.inverted()
+            let w = CGFloat(capture.image.width), h = CGFloat(capture.image.height)
+            shape.depthRelief = DepthRelief.build(depth: depth, shape: shape) { uv in
+                let p = ciPoint(uv: uv).applying(toPhoto)
+                return CGPoint(x: p.x / w, y: 1 - p.y / h)
+            }
+        }
+
         // ---- Aligned photo, mask and sampled colors --------------------------------
-        let photo = touchUp(CIImage(cgImage: capture.image), pupils: [capture.eyes.0, capture.eyes.1]).transformed(by: align)
+        let photo = evenLighting(touchUp(CIImage(cgImage: capture.image), pupils: [capture.eyes.0, capture.eyes.1]).transformed(by: align),
+                                 shape: shape, canvas: canvas)
         let black = CIImage(color: .black).cropped(to: canvas)
 
         var personMask: CIImage?

@@ -34,7 +34,13 @@ final class FaceStudioModel: ObservableObject {
     private var built: BuiltFace?
     private let draftID = UUID()
 
-    func process(_ image: UIImage) {
+    /// `depth` is the face's measured shape, when the photo came with one (TrueDepth camera or a
+    /// Portrait-mode photo).
+    func process(_ image: UIImage, depth: FaceDepth? = nil) {
+        var depth = depth
+        #if DEBUG
+        if depth == nil, let path = UserDefaults.standard.string(forKey: "studioTestDepth") { depth = FaceDepth.debugLoad(path) }
+        #endif
         photo = image
         stage = .working
         steps = Self.stepTitles.enumerated().map { Step(id: $0.offset, title: $0.element) }
@@ -44,7 +50,7 @@ final class FaceStudioModel: ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             do {
-                let capture = try FaceAnalyzer.analyze(image)
+                let capture = try FaceAnalyzer.analyze(image, depth: depth)
                 DispatchQueue.main.async {
                     self.faceBox = capture.overlayBox
                     withAnimation(.easeOut(duration: 0.6)) { self.landmarks = capture.overlayPoints }
@@ -77,6 +83,7 @@ final class FaceStudioModel: ObservableObject {
                     }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35 * Double(Self.stepTitles.count) + 0.3) {
                         self.preview.show(character)
+                        self.debugTurn()
                         #if DEBUG
                         // `-studioSpin 90` shows the result from the side.
                         if let deg = UserDefaults.standard.string(forKey: "studioSpin"), let d = Float(deg) {
@@ -111,6 +118,16 @@ final class FaceStudioModel: ObservableObject {
     private func refreshPreview() {
         guard stage == .review, let built else { return }
         preview.show(makeCharacter(built), animated: false)
+        debugTurn()
+    }
+
+    /// Debug: `-studioTurn 1.2` shows the new head from the side (simulator checks).
+    private func debugTurn() {
+        #if DEBUG
+        if let turn = UserDefaults.standard.string(forKey: "studioTurn"), let angle = Float(turn) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { self.preview.turn(to: angle) }
+        }
+        #endif
     }
 
     func save(to store: CharacterStore) {
@@ -170,13 +187,14 @@ struct FaceStudioView: View {
             guard let item else { return }
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
-                    await MainActor.run { model.process(image) }
+                    let depth = FaceDepth.read(from: data)   // Portrait-mode photos carry their depth
+                    await MainActor.run { model.process(image, depth: depth) }
                 }
                 await MainActor.run { pickerItem = nil }
             }
         }
         .fullScreenCover(isPresented: $showCamera) {
-            GuidedCameraView { image in model.process(image) }
+            GuidedCameraView { image, depth in model.process(image, depth: depth) }
         }
     }
 

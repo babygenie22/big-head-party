@@ -30,6 +30,10 @@ struct FaceShape: Codable, Equatable {
     var noseHalfWidth: CGFloat? = nil
     /// Top-to-bottom height of the lips.
     var lipHeight: CGFloat? = nil
+    /// The measured face relief from a depth photo (TrueDepth or Portrait mode): a
+    /// `DepthRelief.size`² grid over texture space, rows top to bottom, in model units toward the
+    /// viewer. Replaces the sculpted nose, brows, lips and cheeks when present.
+    var depthRelief: [Float]? = nil
 
     var eyeLineV: CGFloat { (leftEye.y + rightEye.y) / 2 }
     var midlineU: CGFloat { (leftEye.x + rightEye.x) / 2 }

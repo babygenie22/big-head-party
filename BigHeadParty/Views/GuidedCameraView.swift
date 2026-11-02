@@ -23,7 +23,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     private var frame = 0
     private var usingFront = true   // queue-side copy of `front`
     private var rotation: AVCaptureDevice.RotationCoordinator?
-    private var onPhoto: ((UIImage) -> Void)?
+    private var onPhoto: ((UIImage, FaceDepth?) -> Void)?
 
     /// Where the oval sits in the 3:4 picture (normalized, top-left origin).
     static let oval = CGRect(x: 0.2, y: 0.17, width: 0.6, height: 0.62)
@@ -49,7 +49,8 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
         }
     }
 
-    func capture(_ done: @escaping (UIImage) -> Void) {
+    /// The photo, plus the face's measured depth when the TrueDepth camera took it.
+    func capture(_ done: @escaping (UIImage, FaceDepth?) -> Void) {
         onPhoto = done
         queue.async {
             // Upright for however the phone is held right now (set at capture time: an angle set
@@ -60,6 +61,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
             }
             let settings = AVCapturePhotoSettings()
             settings.photoQualityPrioritization = .quality
+            settings.isDepthDataDeliveryEnabled = self.photoOutput.isDepthDataDeliveryEnabled
             self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
     }
@@ -68,7 +70,9 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
         session.beginConfiguration()
         session.sessionPreset = .photo
         session.inputs.forEach(session.removeInput)
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: front ? .front : .back),
+        // The TrueDepth selfie camera (Face ID phones) also measures the face's shape.
+        let trueDepth = front ? AVCaptureDevice.default(.builtInTrueDepthCamera, for: .video, position: .front) : nil
+        guard let device = trueDepth ?? AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: front ? .front : .back),
               let input = try? AVCaptureDeviceInput(device: device), session.canAddInput(input) else {
             session.commitConfiguration()
             return
@@ -85,6 +89,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
             session.addOutput(photoOutput)
             photoOutput.maxPhotoQualityPrioritization = .quality
         }
+        photoOutput.isDepthDataDeliveryEnabled = photoOutput.isDepthDataDeliverySupported
         usingFront = front
         // Upright frames, mirrored like the preview for the selfie camera, so Vision's numbers
         // match what people see on screen.
@@ -164,8 +169,10 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         guard let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else { return }
+        // The depth map is stored in the file beside the picture, turned the same way.
+        let depth = FaceDepth.read(from: data)
         DispatchQueue.main.async {
-            self.onPhoto?(image)
+            self.onPhoto?(image, depth)
             self.onPhoto = nil
         }
     }
@@ -191,7 +198,7 @@ private struct CameraPreview: UIViewRepresentable {
 }
 
 struct GuidedCameraView: View {
-    let onPhoto: (UIImage) -> Void
+    let onPhoto: (UIImage, FaceDepth?) -> Void
     @Environment(\.dismiss) private var dismiss
     @StateObject private var camera = GuidedCamera()
 
@@ -232,8 +239,8 @@ struct GuidedCameraView: View {
 
                 Spacer(minLength: 0)
                 Button {
-                    camera.capture { image in
-                        onPhoto(image)
+                    camera.capture { image, depth in
+                        onPhoto(image, depth)
                         dismiss()
                     }
                 } label: {

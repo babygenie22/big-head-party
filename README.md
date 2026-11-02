@@ -31,8 +31,9 @@ Grandpa Gus · Aunt Linda · Coach Brick · Baby Benny · Disco Dolores · Sir R
 ## How the face becomes a 3D head (on device)
 
 ```
-photo ─► Vision: 76 landmarks + person segmentation
+photo ─► Vision: 76 landmarks + person segmentation (+ depth map, if the photo has one)
       ─► similarity align (pupils → fixed texture spots, proportions preserved)
+      ─► even lighting: sideways window/lamp light divided out of the face
       ─► 1024² face texture: photo × (person mask · feathered oval) over sampled skin/hair fill
       ─► HeadMeshBuilder: 13k-vertex head sculpted to THIS face's jawline, nose, mouth, chin
       ─► 5 blend shapes (squish, mouthOpen, puff, skewLeft, skewRight) + bobblehead wobble
@@ -40,14 +41,16 @@ photo ─► Vision: 76 landmarks + person segmentation
 
 **Realism details:** ears shaped and coloured from the person's skin tone, glossy corneas so the eyes catch light, a skin-pore normal map with a light clear-coat sheen, hair-strand texture on the crown and back (hair colour detected from the photo), proportioned bodies with arms and legs, soft shadows, and a **Big heads / Real heads** setting (home screen, top right) for cartoon or realistic proportions.
 
-**Web prototype extra:** the browser version also uses MediaPipe's 478 *3D* landmarks to give each face its real depth (nose, brow, eye sockets, cheeks). It fits the AI depth to the head template with least squares and spreads the difference over a smoothed grid. The iOS app doesn't have that yet: Apple's Vision only gives 2D landmarks, so iOS needs the MediaPipe iOS SDK or a server-side 3D fit (see the roadmap).
+**Web prototype extra:** the browser version also uses MediaPipe's 478 *3D* landmarks to give each face its real depth (nose, brow, eye sockets, cheeks). It fits the AI depth to the head template with least squares and spreads the difference over a smoothed grid. The iOS app gets real depth a different way: photos from the TrueDepth selfie camera (Face ID iPhones) and Portrait-mode photos carry a depth map, which becomes the face's relief (`Face/FaceDepth.swift`). Other photos keep the landmark sculpt.
 
-The key idea: the photo is never stretched to fit a generic head. The **head is bent to fit the photo**. Skull rings follow the measured face contour. A relief field places brow ridge, eye sockets, cheekbones, nose ridge and tip, lips and chin at the person's own landmark positions. UVs come from the same frontal projection the texture uses, so the photo's nose lands on the mesh's nose.
+The key idea: the photo is never stretched to fit a generic head. The **head is bent to fit the photo**. Skull rings follow the measured face contour. A relief field places brow ridge, eye sockets, cheekbones, nose ridge and tip, lips and chin at the person's own landmark positions, or, with a depth photo, is the person's measured face. UVs come from the same frontal projection the texture uses, so the photo's nose lands on the mesh's nose.
 
 | File | Role |
 |---|---|
 | `Face/FaceAnalyzer.swift` | Vision landmarks (rev 3), pupils, nose, lips, contour; person segmentation |
 | `Face/FaceTextureBuilder.swift` | CoreImage alignment, masking, skin/hair sampling, composite |
+| `Face/FaceDepth.swift` | Depth from TrueDepth / Portrait photos → measured face relief |
+| `Face/FaceLighting.swift` | Takes the photo's sideways light off the face (mirror-symmetry fit) |
 | `Face/FaceShape.swift` | Shared texture-space face model; standard shape; sanity clamps |
 | `Face/HeadMeshBuilder.swift` | The head sculptor and blend shapes |
 | `Scenes/HeadRig.swift` | Live head: morph animation, wobble physics, cream splats raycast onto the mesh |

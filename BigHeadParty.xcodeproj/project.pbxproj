@@ -32,6 +32,7 @@
 		42852D1CD15C7B0DFD2438B1 /* FaceStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE047C9371CF50774C540859 /* FaceStudioView.swift */; };
 		428FDE358DF3E319BEAC674D /* 00000000-0000-0000-0000-00000000B006.json in Resources */ = {isa = PBXBuildFile; fileRef = B26ACADA5CF6BC4A3F6348FB /* 00000000-0000-0000-0000-00000000B006.json */; };
 		43C3F59B2B2202B0E835BB2C /* DunkGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48302B1546B923A48F544643 /* DunkGame.swift */; };
+		43D6657C629B6FA236AE7804 /* FaceLighting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED87185569B00F86ADF78C1 /* FaceLighting.swift */; };
 		4C2EDCF7A1124C8B2CC27BDD /* FaceShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C1CCFE7F58F0EEC916FCC93 /* FaceShape.swift */; };
 		4CDB53FDE1E9EE4D61B92CCF /* 00000000-0000-0000-0000-00000000B001.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 267558A921DFC0E1A0F9ABFD /* 00000000-0000-0000-0000-00000000B001.jpg */; };
 		4E5E047155DF2ABE74AA1A41 /* CandySet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0297C11EB4D0324D338F37E3 /* CandySet.swift */; };
@@ -42,6 +43,7 @@
 		64C78E111300DBB42EDBD585 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 735BDB3487A24FB0AB023A55 /* PrivacyInfo.xcprivacy */; };
 		6672A0C7E73A8FAC556A970E /* pie.glb in Resources */ = {isa = PBXBuildFile; fileRef = A0AA3254FA2335F6747CAA44 /* pie.glb */; };
 		68A8FF205ED5F94B7871978C /* 00000000-0000-0000-0000-00000000B006.jpg in Resources */ = {isa = PBXBuildFile; fileRef = C090062D60A2E31F8DEC45A8 /* 00000000-0000-0000-0000-00000000B006.jpg */; };
+		69593E0006536D5B35027B39 /* FaceDepth.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB0457E26AD84EDEED5D28B9 /* FaceDepth.swift */; };
 		6B25591D6BCBBBE0CBF820AD /* MiniGameViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 893A8110901E2DB1EB977A82 /* MiniGameViews.swift */; };
 		6BF7B3893BDCB7DB2C209D92 /* GuidedCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48A87A404EA8828AD07FFC04 /* GuidedCameraView.swift */; };
 		716F71EA8567F82F00D62444 /* PieThrower.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3828ED82F9F682E25770DEF /* PieThrower.swift */; };
@@ -87,6 +89,7 @@
 		14C2F1BD0AC133A83C3E73DA /* BigHeadParty.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BigHeadParty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		150A00BDF6A09CDF092F1BE7 /* BoxingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxingView.swift; sourceTree = "<group>"; };
 		1E36F1F586757FDC268EB30F /* BigHeadPartyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigHeadPartyApp.swift; sourceTree = "<group>"; };
+		1ED87185569B00F86ADF78C1 /* FaceLighting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceLighting.swift; sourceTree = "<group>"; };
 		2038592F5D7C2EA6E94094CF /* IntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntroView.swift; sourceTree = "<group>"; };
 		204DF16D54A106C79FAD5DEB /* 00000000-0000-0000-0000-00000000B001.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "00000000-0000-0000-0000-00000000B001.json"; sourceTree = "<group>"; };
 		23044041690688DAA1DC9822 /* PieStage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieStage.swift; sourceTree = "<group>"; };
@@ -143,6 +146,7 @@
 		E707E62F00215F68778664BC /* FaceTextureBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceTextureBuilder.swift; sourceTree = "<group>"; };
 		E99C0E7333DF4841B3C7F5DC /* body-coach.glb */ = {isa = PBXFileReference; path = "body-coach.glb"; sourceTree = "<group>"; };
 		EAE0DE9E9585516886768E99 /* HeadMeshBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadMeshBuilder.swift; sourceTree = "<group>"; };
+		EB0457E26AD84EDEED5D28B9 /* FaceDepth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceDepth.swift; sourceTree = "<group>"; };
 		EC47E6208B60F4285D9773A6 /* body-baby.glb */ = {isa = PBXFileReference; path = "body-baby.glb"; sourceTree = "<group>"; };
 		FCB8D00797CFDFD84D4C51A8 /* HeadRig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadRig.swift; sourceTree = "<group>"; };
 		FE047C9371CF50774C540859 /* FaceStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceStudioView.swift; sourceTree = "<group>"; };
@@ -272,6 +276,8 @@
 			isa = PBXGroup;
 			children = (
 				5FEE156D4046982CB370DD69 /* FaceAnalyzer.swift */,
+				EB0457E26AD84EDEED5D28B9 /* FaceDepth.swift */,
+				1ED87185569B00F86ADF78C1 /* FaceLighting.swift */,
 				7C1CCFE7F58F0EEC916FCC93 /* FaceShape.swift */,
 				E707E62F00215F68778664BC /* FaceTextureBuilder.swift */,
 				0ACD7EF5D635E7B897DCE6D6 /* HairStrands.swift */,
@@ -451,6 +457,8 @@
 				43C3F59B2B2202B0E835BB2C /* DunkGame.swift in Sources */,
 				FC20093463D8D2A7816E432A /* Effects.swift in Sources */,
 				DEAE0C8D0FCA4A1ADE2FDA9B /* FaceAnalyzer.swift in Sources */,
+				69593E0006536D5B35027B39 /* FaceDepth.swift in Sources */,
+				43D6657C629B6FA236AE7804 /* FaceLighting.swift in Sources */,
 				4C2EDCF7A1124C8B2CC27BDD /* FaceShape.swift in Sources */,
 				42852D1CD15C7B0DFD2438B1 /* FaceStudioView.swift in Sources */,
 				2B8203B156493741AEB8ECB9 /* FaceTextureBuilder.swift in Sources */,

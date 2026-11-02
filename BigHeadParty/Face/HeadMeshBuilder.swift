@@ -245,8 +245,12 @@ enum HeadMeshBuilder {
         return exp(-0.5 * (du * du + dv * dv))
     }
 
-    /// Height field (model units, +Z = toward the viewer) for the front of the face.
+    /// Height field (model units, +Z = toward the viewer) for the front of the face: measured
+    /// from a depth photo when there is one, otherwise sculpted from the landmarks.
     static func relief(u: Float, v: Float, shape: FaceShape) -> Float {
+        if let grid = shape.depthRelief, grid.count == DepthRelief.size * DepthRelief.size {
+            return DepthRelief.value(grid, u: u, v: v)
+        }
         let lx = Float(shape.leftEye.x), ly = Float(shape.leftEye.y)
         let rx = Float(shape.rightEye.x), ry = Float(shape.rightEye.y)
         let eyeU = (lx + rx) / 2, eyeV = (ly + ry) / 2
