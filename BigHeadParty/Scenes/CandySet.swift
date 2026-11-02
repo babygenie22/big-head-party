@@ -86,7 +86,12 @@ enum CandySet {
         m.writesToDepthBuffer = false
         let plane = SCNPlane(width: width, height: width * size.height / size.width)
         plane.materials = [m]
-        return SCNNode(geometry: plane)
+        let node = SCNNode(geometry: plane)
+        #if DEBUG
+        // `-posterShot YES` hides signs so home-screen posters show just the players.
+        node.isHidden = UserDefaults.standard.bool(forKey: "posterShot")
+        #endif
+        return node
     }
 
     /// Wide soft stripes (a candy-shop awning) for back walls.

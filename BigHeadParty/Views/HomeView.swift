@@ -107,6 +107,7 @@ struct HomeView: View {
     private static var debugScrollAnchor: UnitPoint {
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "homeBottom") { return .bottom }
+        if UserDefaults.standard.bool(forKey: "homeGames") { return UnitPoint(x: 0.5, y: 0.62) }
         #endif
         return .top
     }
@@ -198,49 +199,75 @@ struct HomeView: View {
         Text(text).font(.display(24)).foregroundStyle(Theme.ink).padding(.top, 6)
     }
 
-    /// Game posters in a mosaic: one hero, two stacked, then wide strips.
+    /// One featured game, then an even two-column grid.
     private var gameMosaic: some View {
         VStack(spacing: 14) {
-            HStack(spacing: 14) {
-                gameTile(.pieShow, height: 304, big: true)
-                VStack(spacing: 14) {
-                    gameTile(.slap, height: 145)
-                    gameTile(.dunk, height: 145)
+            gameTile(.pieShow, imageHeight: 200, featured: true)
+            Grid(horizontalSpacing: 14, verticalSpacing: 14) {
+                GridRow {
+                    gameTile(.slap, imageHeight: 132)
+                    gameTile(.dunk, imageHeight: 132)
+                }
+                GridRow {
+                    gameTile(.boxing, imageHeight: 132)
+                    gameTile(.whack, imageHeight: 132)
                 }
             }
-            gameTile(.boxing, height: 196, big: true)
-            gameTile(.whack, height: 156)
         }
     }
 
-    private func gameTile(_ kind: GameKind, height: CGFloat, big: Bool = false) -> some View {
-        Button { setupGame = kind } label: {
-            // Clear base sets the size; the poster fills it without pushing the layout wider.
-            Color.clear
-                .frame(maxWidth: .infinity)
-                .frame(height: height)
-                .overlay { Image(kind.cover).resizable().scaledToFill() }
-                .clipped()
-                .overlay(alignment: .bottomLeading) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(kind.title).font(.display(big ? 22 : 17)).lineLimit(2).multilineTextAlignment(.leading)
-                        if big { Text(kind.blurb).font(.ui(13)).lineLimit(2).multilineTextAlignment(.leading) }
+    /// A candy card with an ink outline: the poster sits in a framed window up top, and the
+    /// name sits below it on the game's color, so it never fights the art.
+    private func gameTile(_ kind: GameKind, imageHeight: CGFloat, featured: Bool = false) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        return Button { setupGame = kind } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                // Clear base sets the size; the poster fills it without pushing the layout wider.
+                Color.clear
+                    .frame(maxWidth: .infinity)
+                    .frame(height: imageHeight)
+                    .overlay { Image(kind.cover).resizable().scaledToFill() }
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.ink, lineWidth: 2))
+                    .overlay(alignment: .topTrailing) {
+                        Text(kind.isSolo ? "Solo" : "2 players")
+                            .font(.ui(11, .heavy))
+                            .foregroundStyle(Theme.ink)
+                            .padding(.horizontal, 9).padding(.vertical, 5)
+                            .background(Capsule().fill(.white))
+                            .padding(8)
                     }
-                    .foregroundStyle(Theme.ink)
-                    .padding(.horizontal, 12).padding(.vertical, 9)
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(kind.color))
-                    .padding(10)
-                }
-                .overlay(alignment: .topTrailing) {
-                    Text(kind.isSolo ? "Solo" : "2 players")
-                        .font(.ui(11, .heavy))
+                HStack(spacing: 10) {
+                    Image(systemName: kind.symbol)
+                        .font(.system(size: featured ? 17 : 14, weight: .bold))
                         .foregroundStyle(Theme.ink)
-                        .padding(.horizontal, 9).padding(.vertical, 5)
-                        .background(Capsule().fill(.white.opacity(0.9)))
-                        .padding(10)
+                        .frame(width: featured ? 38 : 30, height: featured ? 38 : 30)
+                        .background(Circle().fill(.white))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(kind.title)
+                            .font(.display(featured ? 24 : 17))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                        if featured { Text(kind.blurb).font(.ui(13)).foregroundStyle(Theme.ink.opacity(0.75)).lineLimit(2).fixedSize(horizontal: false, vertical: true) }
+                    }
+                    Spacer(minLength: 0)
+                    if featured {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Circle().fill(Theme.ink))
+                    }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                .softShadow()
+                .foregroundStyle(Theme.ink)
+                .padding(.horizontal, 6)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
+            }
+            .padding(8)
+            .background(shape.fill(kind.color))
+            .overlay(shape.stroke(Theme.ink, lineWidth: 2.5))
+            .softShadow()
         }
         .buttonStyle(PressScaleButtonStyle())
         .accessibilityLabel("\(kind.title). \(kind.blurb)")
