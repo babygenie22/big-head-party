@@ -202,15 +202,15 @@ struct HomeView: View {
     /// One featured game, then an even two-column grid.
     private var gameMosaic: some View {
         VStack(spacing: 14) {
-            gameTile(.pieShow, imageHeight: 200, featured: true)
+            gameTile(.pieShow, imageHeight: 220, featured: true)
             Grid(horizontalSpacing: 14, verticalSpacing: 14) {
                 GridRow {
-                    gameTile(.slap, imageHeight: 132)
-                    gameTile(.dunk, imageHeight: 132)
+                    gameTile(.slap, imageHeight: 150)
+                    gameTile(.dunk, imageHeight: 150)
                 }
                 GridRow {
-                    gameTile(.boxing, imageHeight: 132)
-                    gameTile(.whack, imageHeight: 132)
+                    gameTile(.boxing, imageHeight: 150)
+                    gameTile(.whack, imageHeight: 150)
                 }
             }
         }
@@ -229,7 +229,7 @@ struct HomeView: View {
                     .overlay { Image(kind.cover).resizable().scaledToFill() }
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.ink, lineWidth: 2))
-                    .overlay(alignment: .topTrailing) {
+                    .overlay(alignment: .bottomTrailing) {
                         Text(kind.isSolo ? "Solo" : "2 players")
                             .font(.ui(11, .heavy))
                             .foregroundStyle(Theme.ink)

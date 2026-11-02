@@ -260,9 +260,8 @@ final class DunkGame: ObservableObject {
                 UIBezierPath(ovalIn: CGRect(x: 256 - r, y: 256 - r, width: 2 * r, height: 2 * r)).fill()
             }
         }
-        let face = SCNMaterial()
+        let face = Accessories.material(.white, roughness: 0.6)
         face.diffuse.contents = rings
-        face.roughness.contents = 0.6
         let disc = SCNCylinder(radius: 0.55, height: 0.08)
         disc.materials = [Accessories.material(UIColor(white: 0.93, alpha: 1), roughness: 0.5), face, face]
         let targetNode = SCNNode(geometry: disc)

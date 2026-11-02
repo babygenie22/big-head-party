@@ -37,19 +37,36 @@ final class Fighter {
         rig.root.position = SCNVector3(0, 2.4, 0)
         rig.root.scale = SCNVector3(headScale, headScale, headScale)
         let skin = UIColor(rgb: character.meta.skinRGB)
-        rig.root.addChildNode(Accessories.torso(color: UIColor(rgb: character.meta.shirtRGB), skin: skin))
+        rig.root.addChildNode(Accessories.torso(color: UIColor(rgb: character.meta.shirtRGB), skin: skin,
+                                                initial: character.name.first.map(String.init)))
         root.addChildNode(rig.root)
 
-        let shorts = Accessories.material(gloveColor.darker(0.7), roughness: 0.6)
-        let legs = Accessories.material(skin, roughness: 0.7)
+        // Satin shorts with a white waistband, and lace-up boots.
+        let shorts = Fabric.glossy(gloveColor.darker(0.7), roughness: 0.4)
+        let white = Fabric.cloth(.white, repeats: 8)
+        let legs = Fabric.skin(skin)
+        let boot = Fabric.glossy(UIColor(white: 0.97, alpha: 1), roughness: 0.4)
         for x: Float in [-0.22, 0.22] {
             root.addChildNode(Accessories.node(SCNCapsule(capRadius: 0.17, height: 1.0), legs, at: SCNVector3(x, 0.6, 0)))
             root.addChildNode(Accessories.node(SCNBox(width: 0.36, height: 0.35, length: 0.42, chamferRadius: 0.1), shorts, at: SCNVector3(x, 1.2, 0)))
+            root.addChildNode(Accessories.node(SCNCylinder(radius: 0.2, height: 0.34), boot, at: SCNVector3(x, 0.24, 0)))
+            let toe = Accessories.node(SCNSphere(radius: 0.2), boot, at: SCNVector3(x, 0.1, 0.1))
+            toe.scale = SCNVector3(1, 0.6, 1.3)
+            root.addChildNode(toe)
+            root.addChildNode(Accessories.node(SCNTorus(ringRadius: 0.2, pipeRadius: 0.03), shorts, at: SCNVector3(x, 0.4, 0)))
         }
-        let gloveMat = Accessories.material(gloveColor, roughness: 0.3)
+        let band = Accessories.node(SCNBox(width: 0.82, height: 0.1, length: 0.46, chamferRadius: 0.05), white, at: SCNVector3(0, 1.38, 0))
+        root.addChildNode(band)
+        let gloveMat = Fabric.glossy(gloveColor, roughness: 0.25)
         gloves = Fighter.guardPositions.map { p in
             let g = Accessories.node(SCNSphere(radius: 0.27), gloveMat, at: p)
             g.scale = SCNVector3(1, 0.95, 1.15)
+            // White wrist cuff and a padded thumb.
+            let cuff = Accessories.node(SCNCylinder(radius: 0.19, height: 0.16), white, at: SCNVector3(0, 0, -0.26))
+            cuff.eulerAngles.x = .pi / 2
+            g.addChildNode(cuff)
+            let thumb = Accessories.node(SCNSphere(radius: 0.11), gloveMat, at: SCNVector3(p.x < 0 ? 0.2 : -0.2, 0.08, 0.05))
+            g.addChildNode(thumb)
             return g
         }
         gloves.forEach(root.addChildNode)

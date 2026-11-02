@@ -27,6 +27,10 @@ Principles skills.
   bubblegum game show, Slap butter sunburst, Dunk sky carnival, Whack lilac arcade, Boxing
   daylight lilac ring. Cameras run at normal exposure with auto exposure and vignette off; the
   lights are dimmed instead, so skin looks the same as on the home screen.
+- **Characters:** vinyl-toy bodies in knit fabric (`Fabric` in `Scenes/Bodies.swift`): ribbed
+  collar, cuffs and hem, an initial badge on the chest, mitten hands with thumbs, glossy
+  sneakers with toe caps and laces. Boxers get satin shorts, boots and cuffed gloves. Sets add
+  soft ambient occlusion and tiled floors.
 - **Posters:** `cover-<game>` assets are crops of the real sets, centered on the players, with
   signs hidden (`-posterShot YES`). Pie-Q's is wide (featured tile); the rest are square.
   Re-shoot them when a set changes.

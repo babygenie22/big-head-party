@@ -226,14 +226,22 @@ enum Accessories {
         }
     }
 
-    /// Simple torso for games. Bodies are deliberately minimal — the face is the star.
-    static func torso(color: UIColor, skin: UIColor) -> SCNNode {
+    /// Boxer torso (head-model space): a knit tank top with a ribbed neckline and the
+    /// character's badge. Bodies stay simple — the face is the star.
+    static func torso(color: UIColor, skin: UIColor, initial: String? = nil) -> SCNNode {
         let body = SCNNode()
-        let shirt = material(color, roughness: 0.8)
+        let shirt = Fabric.cloth(color, repeats: 5)
         let chest = node(SCNCapsule(capRadius: 0.55, height: 1.7), shirt, at: SCNVector3(0, -0.75, 0))
         chest.scale = SCNVector3(1.15, 1, 0.8)
         body.addChildNode(chest)
-        body.addChildNode(node(SCNCylinder(radius: 0.22, height: 0.4), material(skin, roughness: 0.7), at: SCNVector3(0, 0.05, 0)))
+        body.addChildNode(node(SCNCylinder(radius: 0.22, height: 0.4), Fabric.skin(skin), at: SCNVector3(0, 0.05, 0)))
+        let collar = node(SCNTorus(ringRadius: 0.25, pipeRadius: 0.06), Fabric.cloth(color.darker(0.75), repeats: 8), at: SCNVector3(0, -0.12, 0.02))
+        body.addChildNode(collar)
+        if let initial, !initial.isEmpty {
+            let patch = node(SCNPlane(width: 0.42, height: 0.42), Fabric.badge(initial, fill: color.darker(0.75), ink: .white),
+                             at: SCNVector3(0, -0.72, 0.452))
+            body.addChildNode(patch)
+        }
         return body
     }
 }

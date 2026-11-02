@@ -39,6 +39,11 @@ enum CandySet {
         // Auto exposure darkened the bright sets; the vignette greyed their corners.
         camera.camera?.wantsExposureAdaptation = false
         camera.camera?.vignettingIntensity = 0
+        // Soft contact shading where arms meet bodies and feet meet floors, so pieces read as one toy.
+        camera.camera?.screenSpaceAmbientOcclusionIntensity = 0.6
+        camera.camera?.screenSpaceAmbientOcclusionRadius = 0.2
+        camera.camera?.screenSpaceAmbientOcclusionNormalThreshold = 0.3
+        camera.camera?.screenSpaceAmbientOcclusionDepthThreshold = 0.2
         scene.lightingEnvironment.intensity *= k
         scene.rootNode.enumerateChildNodes { node, _ in
             guard let light = node.light else { return }
@@ -48,20 +53,36 @@ enum CandySet {
             case .directional:
                 light.shadowRadius = 12
                 light.shadowSampleCount = 16
+                light.shadowMapSize = CGSize(width: 4096, height: 4096)
                 light.shadowColor = UIColor(red: 0.35, green: 0.15, blue: 0.3, alpha: 0.22)
             default: break
             }
         }
     }
 
-    /// Matte floor with the faintest sheen.
+    /// Matte floor with the faintest sheen and a soft tile pattern, so it reads as a surface.
     static func floor(_ color: UIColor) -> SCNNode {
         let f = SCNFloor()
         f.reflectivity = 0.04
         f.reflectionFalloffEnd = 2
         let m = Accessories.material(color, roughness: 0.85)
+        m.diffuse.contents = tiles(color)
+        m.diffuse.wrapS = .repeat
+        m.diffuse.wrapT = .repeat
+        m.diffuse.contentsTransform = SCNMatrix4MakeScale(0.5, 0.5, 1)   // tiles ≈ 2 units
         f.materials = [m]
         return SCNNode(geometry: f)
+    }
+
+    /// One tile: the color with a lighter rounded inset and a slightly darker grout line.
+    static func tiles(_ color: UIColor) -> UIImage {
+        UIGraphicsImageRenderer(size: CGSize(width: 256, height: 256)).image { ctx in
+            color.darker(0.9).setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 256, height: 256))
+            color.setFill(); UIBezierPath(roundedRect: CGRect(x: 5, y: 5, width: 246, height: 246), cornerRadius: 28).fill()
+            let c = color.rgba
+            UIColor(red: min(1, c.r + 0.04), green: min(1, c.g + 0.04), blue: min(1, c.b + 0.04), alpha: 1).setFill()
+            UIBezierPath(roundedRect: CGRect(x: 26, y: 26, width: 204, height: 204), cornerRadius: 22).fill()
+        }
     }
 
     /// Rounded sign: candy pill with the title in Bricolage, plus a soft drop shadow, on a
