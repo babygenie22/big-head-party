@@ -189,33 +189,20 @@ final class DunkGame: ObservableObject {
     // MARK: - Set
 
     private func buildSet() {
-        scene.background.contents = CandySet.backdrop(CandySet.sky, CandySet.cream)
-        CandySet.light(scene, rim: CandySet.sky, camera: camera)
-        scene.rootNode.addChildNode(CandySet.floor(CandySet.lime))
-
-        let back = SCNMaterial()
-        back.diffuse.contents = CandySet.stripes(CandySet.coral, CandySet.cream, count: 14)
-        back.lightingModel = .constant   // backdrop in true colors
-        let backNode = SCNNode(geometry: SCNPlane(width: 18, height: 7))
-        backNode.geometry?.materials = [back]
-        backNode.position = SCNVector3(0, 3.5, -3.6)
-        scene.rootNode.addChildNode(backNode)
-        let banner = CandySet.sign("Dunk Tank", fill: CandySet.butter, width: 6.6)
-        banner.position = SCNVector3(0, 6.1, -3.5)
-        scene.rootNode.addChildNode(banner)
+        Location.park.apply(to: scene, camera: camera)
+        // A blue tarp under the tank, so it sits on the lawn and splashes have somewhere to land.
+        scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 7, height: 0.05, length: 4, chamferRadius: 0.02),
+                                                     Surface.plastic(UIColor(red: 0.15, green: 0.35, blue: 0.75, alpha: 1)),
+                                                     at: SCNVector3(-0.6, 0.025, 0)))
 
         // Glass tank, steel frame, water with a gently moving surface.
-        let glass = SCNMaterial()
-        glass.diffuse.contents = UIColor(red: 0.85, green: 0.95, blue: 1, alpha: 1)
-        glass.transparency = 0.18
-        glass.writesToDepthBuffer = false
-        glass.isDoubleSided = true
+        let glass = Surface.glass
         let glassNode = SCNNode(geometry: SCNBox(width: 2.2, height: 1.9, length: 1.6, chamferRadius: 0))
         glassNode.geometry?.materials = [glass]
         glassNode.position = SCNVector3(tankX, 0.95, 0)
         glassNode.renderingOrder = 10
         scene.rootNode.addChildNode(glassNode)
-        let steel = Accessories.material(.white, roughness: 0.45)
+        let steel = Surface.steel
         for (dx, dz) in [(-1.1, -0.8), (1.1, -0.8), (-1.1, 0.8), (1.1, 0.8)] as [(Float, Float)] {
             scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 0.08, height: 1.95, length: 0.08, chamferRadius: 0), steel,
                                                          at: SCNVector3(tankX + dx, 0.97, dz)))
@@ -246,7 +233,7 @@ final class DunkGame: ObservableObject {
         // Seat plank on a hinge at its back edge, plus its post.
         hinge.position = SCNVector3(tankX, seat, -0.55)
         hinge.addChildNode(Accessories.node(SCNBox(width: 1.2, height: 0.08, length: 0.75, chamferRadius: 0.01),
-                                            Accessories.material(CandySet.butter, roughness: 0.7),
+                                            Surface.wood(),
                                             at: SCNVector3(0, -0.04, 0.37)))
         scene.rootNode.addChildNode(hinge)
         scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 0.08, height: CGFloat(seat + 0.6), length: 0.08, chamferRadius: 0), steel,
@@ -254,13 +241,13 @@ final class DunkGame: ObservableObject {
 
         // Target with rings, on a post linked to the plank.
         let rings = UIGraphicsImageRenderer(size: CGSize(width: 512, height: 512)).image { _ in
-            let red = CandySet.coral
+            let red = UIColor(red: 0.8, green: 0.08, blue: 0.08, alpha: 1)
             for (r, c) in [(256.0, red), (196.0, UIColor.white), (140.0, red), (80.0, UIColor.white), (45.0, red)] as [(CGFloat, UIColor)] {
                 c.setFill()
                 UIBezierPath(ovalIn: CGRect(x: 256 - r, y: 256 - r, width: 2 * r, height: 2 * r)).fill()
             }
         }
-        let face = Accessories.material(.white, roughness: 0.6)
+        let face = Surface.paintedMetal(.white)
         face.diffuse.contents = rings
         let disc = SCNCylinder(radius: 0.55, height: 0.08)
         disc.materials = [Accessories.material(UIColor(white: 0.93, alpha: 1), roughness: 0.5), face, face]

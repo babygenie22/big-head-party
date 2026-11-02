@@ -1,44 +1,43 @@
-# Big Head Party — "Candy studio" design
+# Big Head Party — "Night studio" design
 
-Light, bright and modern: a warm canvas, candy-colored stages, real renders of the games as
-posters, chunky display type and soft lifted depth. Tokens and components live in
-`BigHeadParty/Views/Theme.swift`. Built with the Impeccable, Taste and Design Motion
-Principles skills.
+Realistic people in real places, framed by a dark, premium broadcast UI. Replaces the earlier
+"Candy studio" look. Tokens and components live in `BigHeadParty/Views/Theme.swift`.
 
-- **Canvas:** `Theme.canvas` (#FFF4EC). Cards are white (`Theme.surface`) or candy fills.
-- **Text:** `Theme.ink` (#2B1B2E plum-black), `Theme.inkSoft` for supporting copy. Text on candy
-  fills stays ink; on coral it's white.
-- **Candy colors:** coral (primary actions, selection), blush (the star's stage), bubblegum,
-  butter, sky, lime, lilac. Each game owns one for its label: Pie-Q bubblegum, Slap butter,
-  Dunk sky, Whack lime, Boxing lilac.
-- **Type:** Bricolage Grotesque ExtraBold (bundled, OFL) via `Font.display()` / `.party()` for
-  titles, names, buttons and scores; SF Rounded (`Font.ui()`) for everything else. Both scale
-  with Dynamic Type. Sentence case.
-- **Depth:** `softShadow()`: a tight contact shadow plus a wide faint one. No hard block shadows.
-  Outlines only on game tiles (ink, 2.5 pt), so they stand off the canvas.
-- **Components:** `.card()`, `.pill()`, `CandyButtonStyle` (squishy pill), `IconButtonStyle`
-  (round white), `PressScaleButtonStyle` (cards and chips), `AvatarView`.
-- **Home:** the star is live on a blush stage (tap for a pie). Games: Pie-Q featured full width,
-  then an even 2×2 grid. Each tile is a game-colored card with the poster in an outlined window
-  and the name, icon and player count below it, never on top of the art. No eyebrow labels.
+## Screens
+- **Canvas:** `Theme.canvas` (#0B0B0D near-black); cards `Theme.surface` (#18181B) with a 1 pt
+  `Theme.hairline` edge and a soft black shadow.
+- **Text:** `Theme.ink` (#F4F1EC warm white), `Theme.inkSoft` for supporting copy.
+- **Accent:** one on-air red (`Theme.coral`, #FF5B3A) for primary actions and selection; white
+  text on it. Per-game tones are deep (Pie-Q wine, Slap ochre, Dunk navy, Whack forest, Boxing
+  indigo), with warm white text.
+- **Type:** SF Pro Heavy Condensed via `Font.display()` / `.party()` for titles, names, buttons and
+  scores (a broadcast lower-third voice); SF Pro (`Font.ui()`) for everything else. Scales with
+  Dynamic Type. Sentence case.
+- **Game tiles:** Pie-Q featured full width, then a 2×2 grid. Each tile is a deep-toned card with
+  the poster in a framed window and the name, icon and player count below it.
 - **Icons:** SF Symbols only, no emoji. Touch targets at least 44 pt.
-- **Game sets:** `Scenes/CandySet.swift`. Each game is a candy-colored set: soft gradient
-  backdrop, matte floor, unlit backdrop walls in true colors, rounded Bricolage signs. Pie-Q
-  bubblegum game show, Slap butter sunburst, Dunk sky carnival, Whack lilac arcade, Boxing
-  daylight lilac ring. Cameras run at normal exposure with auto exposure and vignette off; the
-  lights are dimmed instead, so skin looks the same as on the home screen.
-- **Characters:** vinyl-toy bodies in knit fabric (`Fabric` in `Scenes/Bodies.swift`): ribbed
-  collar, cuffs and hem, an initial badge on the chest, mitten hands with thumbs, glossy
-  sneakers with toe caps and laces. Boxers get satin shorts, boots and cuffed gloves. Sets add
-  soft ambient occlusion and tiled floors.
-- **Realism (characters and props):** bodies are realistic skinned glTF models
-  (`Models/body-*.glb`, generated, heads cut at the neck, loaded with GLTFKit2 in
-  `Scenes/RealBody.swift`); the toy bodies are the fallback. Arms move through proxy nodes
-  (slap) or two-bone IK to the gloves (boxing). The default cast wears baked photo faces
-  (`Cast/<id>.jpg` + `.json`, made with the player photo pipeline). Pie and mallet are real
-  models. Pie hits leave a cream layer molded to the face, dollops, crumbs and drips
-  (`Scenes/Cream.swift`). Lighting uses a real studio HDRI (Poly Haven, CC0).
-- **Posters:** `cover-<game>` assets are crops of the real sets, centered on the players, with
-  signs hidden (`-posterShot YES`). Pie-Q's is wide (featured tile); the rest are square.
-  Re-shoot them when a set changes.
-- **Exception:** the camera screen stays dark so a bright screen doesn't tint selfies.
+- **Camera screen:** stays dark so the screen doesn't tint selfies.
+
+## Game sets — real places (`Scenes/Location.swift`)
+Each game sits in a real 360° HDR photo (Poly Haven, CC0) that is both the background and the
+light, with a matching sun for shadows and an invisible shadow-catcher floor:
+Pie-Q in a neon photo studio (black gloss riser, painted-metal podiums, LED strips), Slap in a
+house's back garden (wooden deck, stump), Dunk in an open park (glass tank, steel frame, tarp),
+Whack in an auto shop (red arcade cabinet, rubber top, chrome rims, bulbs), Boxing in an empty
+warehouse (canvas ring, steel posts, cloth ropes). Props use `Surface` materials (painted metal,
+steel, chrome, plastic, wood, canvas, glass).
+
+HDRs are clamped (the sun in some photos is ~150,000× white and breaks the lighting) and
+pre-rotated when bundled, since the background ignores `contentsTransform`. Re-run the scratch
+`clamphdr.py in out 24 [roll]` when adding one.
+
+## Characters and props
+- Bodies are realistic skinned glTF models (`Models/body-*.glb`, generated, heads cut at the
+  neck, loaded with GLTFKit2 in `Scenes/RealBody.swift`); toy bodies are the fallback. Arms move
+  through proxy nodes (slap) or two-bone IK to the gloves (boxing).
+- The default cast wears baked photo faces (`Cast/<id>.jpg` + `.json`, made with the player
+  photo pipeline). Big heads are the default; real heads are in the menu.
+- Pie and mallet are real models. Pie hits leave a cream layer molded to the face, whipped
+  dollops, crust crumbs and drips (`Scenes/Cream.swift`).
+- **Posters:** `cover-<game>` are crops of the real sets with signs hidden; re-shoot them when a
+  set changes.

@@ -171,7 +171,7 @@ struct HomeView: View {
         VStack(spacing: 12) {
             ZStack(alignment: .bottomLeading) {
                 Theme.blush
-                Circle().fill(.white.opacity(0.7)).frame(width: 280, height: 280).blur(radius: 40).offset(y: -20)
+                Circle().fill(Theme.coral.opacity(0.18)).frame(width: 300, height: 300).blur(radius: 60).offset(y: -20)
                 SceneContainer(scene: hero.stage.scene, pointOfView: hero.stage.camera,
                                onTap: { _, _ in hero.stage.throwPie() })
                 if let star = store.star {
@@ -239,13 +239,13 @@ struct HomeView: View {
                     .frame(height: imageHeight)
                     .overlay { Image(kind.cover).resizable().scaledToFill() }
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.ink, lineWidth: 2))
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
                     .overlay(alignment: .bottomTrailing) {
                         Text(kind.isSolo ? "Solo" : "2 players")
                             .font(.ui(11, .heavy))
                             .foregroundStyle(Theme.ink)
                             .padding(.horizontal, 9).padding(.vertical, 5)
-                            .background(Capsule().fill(.white))
+                            .background(Capsule().fill(.black.opacity(0.55)))
                             .padding(8)
                     }
                 HStack(spacing: 10) {
@@ -253,7 +253,7 @@ struct HomeView: View {
                         .font(.system(size: featured ? 17 : 14, weight: .bold))
                         .foregroundStyle(Theme.ink)
                         .frame(width: featured ? 38 : 30, height: featured ? 38 : 30)
-                        .background(Circle().fill(.white))
+                        .background(Circle().fill(.black.opacity(0.3)))
                     VStack(alignment: .leading, spacing: 1) {
                         Text(kind.title)
                             .font(.display(featured ? 24 : 17))
@@ -267,7 +267,7 @@ struct HomeView: View {
                             .font(.system(size: 15, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(width: 40, height: 40)
-                            .background(Circle().fill(Theme.ink))
+                            .background(Circle().fill(Theme.coral))
                     }
                 }
                 .foregroundStyle(Theme.ink)
@@ -277,7 +277,7 @@ struct HomeView: View {
             }
             .padding(8)
             .background(shape.fill(kind.color))
-            .overlay(shape.stroke(Theme.ink, lineWidth: 2.5))
+            .overlay(shape.strokeBorder(Theme.ink.opacity(0.16), lineWidth: 1))
             .softShadow()
         }
         .buttonStyle(PressScaleButtonStyle())

@@ -228,35 +228,14 @@ final class SlapGame: ObservableObject {
     // MARK: - Set
 
     private func buildSet() {
-        scene.background.contents = CandySet.backdrop(CandySet.butter, CandySet.cream)
-        CandySet.light(scene, rim: CandySet.butter, camera: camera)
-        scene.rootNode.addChildNode(CandySet.floor(UIColor(red: 1, green: 0.93, blue: 0.78, alpha: 1)))
-        // Round stage in coral with a cream lip.
-        scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 2.55, height: 0.08),
-                                                     Accessories.material(CandySet.cream, roughness: 0.7),
-                                                     at: SCNVector3(0, 0.04, 0)))
-        scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 2.4, height: 0.12),
-                                                     Accessories.material(CandySet.coral, roughness: 0.7),
-                                                     at: SCNVector3(0, 0.07, 0)))
-        scene.rootNode.addChildNode(CandySet.wall(CandySet.sunburst(CandySet.butter, UIColor(red: 1, green: 0.9, blue: 0.6, alpha: 1)),
-                                                  width: 24, height: 12, at: SCNVector3(0, 5, -4.4)))
-        let bannerNode = CandySet.sign("Slap Champs", fill: .white, width: 7.4)
-        bannerNode.position = SCNVector3(0, 5.6, -4.3)
-        scene.rootNode.addChildNode(bannerNode)
-        scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 0.42, height: 1.25, length: 0.8, chamferRadius: 0.12),
-                                                     Accessories.material(.white, roughness: 0.5),
-                                                     at: SCNVector3(0, 0.72, -0.35)))
-        let beam = SCNMaterial()
-        beam.lightingModel = .constant
-        beam.diffuse.contents = UIColor(red: 1, green: 0.95, blue: 0.77, alpha: 1)
-        beam.transparency = 0.08
-        beam.isDoubleSided = true
-        beam.writesToDepthBuffer = false
-        for sx: Float in [-1, 1] {
-            let cone = SCNNode(geometry: SCNCone(topRadius: 0, bottomRadius: 1.5, height: 7))
-            cone.geometry?.materials = [beam]
-            cone.position = SCNVector3(sx * 0.9, 3.6, 0)
-            scene.rootNode.addChildNode(cone)
-        }
+        // A real back garden; the slappers face off on a low wooden deck.
+        Location.backyard.apply(to: scene, camera: camera)
+        let deck = Surface.wood(UIColor(red: 0.6, green: 0.42, blue: 0.27, alpha: 1), planks: 8)
+        deck.diffuse.contentsTransform = SCNMatrix4MakeScale(2, 2, 1)
+        scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 5.4, height: 0.16, length: 3.6, chamferRadius: 0.02), deck,
+                                                     at: SCNVector3(0, 0.08, 0)))
+        // A wooden stump marks the middle.
+        let stump = Surface.wood(UIColor(red: 0.45, green: 0.3, blue: 0.18, alpha: 1), planks: 3)
+        scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 0.25, height: 1.1), stump, at: SCNVector3(0, 0.71, -0.35)))
     }
 }

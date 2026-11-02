@@ -190,28 +190,26 @@ final class BoxingGame: ObservableObject {
     }
 
     private func buildRing() {
-        scene.background.contents = CandySet.backdrop(CandySet.lilac, CandySet.blush)
-        CandySet.light(scene, rim: CandySet.sky, camera: camera)
-        scene.rootNode.addChildNode(CandySet.floor(UIColor(red: 0.62, green: 0.52, blue: 0.92, alpha: 1)))
+        Location.warehouse.apply(to: scene, camera: camera)
 
         let canvas = Accessories.node(SCNBox(width: 7.5, height: 0.3, length: 5, chamferRadius: 0.05),
-                                      Accessories.material(.white, roughness: 0.9),
+                                      Surface.canvas(UIColor(white: 0.86, alpha: 1)),
                                       at: SCNVector3(0, 0.15, -0.5))
         scene.rootNode.addChildNode(canvas)
         let apron = Accessories.node(SCNBox(width: 7.6, height: 0.32, length: 5.1, chamferRadius: 0.02),
-                                     Accessories.material(CandySet.lilac, roughness: 0.7),
+                                     Surface.canvas(UIColor(red: 0.08, green: 0.1, blue: 0.2, alpha: 1)),
                                      at: SCNVector3(0, 0.14, -0.5))
         scene.rootNode.addChildNode(apron)
 
-        let postMat = Accessories.material(.white, roughness: 0.45)
+        let postMat = Surface.steel
         let corners: [(Float, Float)] = [(-3.6, -2.8), (3.6, -2.8), (-3.6, 1.8), (3.6, 1.8)]
         for (x, z) in corners {
             scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 0.08, height: 2.2), postMat, at: SCNVector3(x, 1.4, z)))
         }
-        let ropeColors: [UIColor] = [CandySet.coral, .white, CandySet.sky]
+        let ropeColors: [UIColor] = [UIColor(red: 0.75, green: 0.06, blue: 0.06, alpha: 1), .white, UIColor(red: 0.08, green: 0.2, blue: 0.6, alpha: 1)]
         for (k, color) in ropeColors.enumerated() {
             let y = Float(1.0 + 0.45 * Double(k))
-            let mat = Accessories.material(color, roughness: 0.6)
+            let mat = Fabric.cloth(color, roughness: 0.6, repeats: 40)
             for z: Float in [-2.8] {   // back ropes only, so the camera has a clear view
                 let rope = Accessories.node(SCNCylinder(radius: 0.035, height: 7.2), mat, at: SCNVector3(0, y, z))
                 rope.eulerAngles.z = .pi / 2

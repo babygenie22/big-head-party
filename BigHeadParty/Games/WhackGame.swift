@@ -394,16 +394,7 @@ final class WhackGame: ObservableObject {
     // MARK: - Set
 
     private func buildSet() {
-        scene.background.contents = CandySet.backdrop(CandySet.lilac, CandySet.cream)
-        CandySet.light(scene, rim: CandySet.lilac, camera: camera)
-        scene.rootNode.addChildNode(CandySet.floor(UIColor(red: 0.62, green: 0.52, blue: 0.92, alpha: 1)))
-        let back = SCNMaterial()
-        back.diffuse.contents = CandySet.stripes(CandySet.lilac, CandySet.cream, count: 16)
-        back.lightingModel = .constant   // backdrop in true colors
-        let backNode = SCNNode(geometry: SCNPlane(width: 18, height: 8))
-        backNode.geometry?.materials = [back]
-        backNode.position = SCNVector3(0, 3.5, -3.4)
-        scene.rootNode.addChildNode(backNode)
+        Location.garage.apply(to: scene, camera: camera)
 
         // Board with nine holes (even-odd fill punches them out).
         let path = UIBezierPath(rect: CGRect(x: -2.3, y: -1.95, width: 4.6, height: 3.9))
@@ -413,16 +404,16 @@ final class WhackGame: ObservableObject {
         let board = SCNShape(path: path, extrusionDepth: 0.12)
         board.chamferRadius = 0.02
         let boardNode = SCNNode(geometry: board)
-        boardNode.geometry?.materials = [Accessories.material(CandySet.lime, roughness: 0.6)]
+        boardNode.geometry?.materials = [Accessories.material(UIColor(white: 0.07, alpha: 1), roughness: 0.75)]   // rubber-matted top
         boardNode.eulerAngles.x = -.pi / 2
         boardNode.position = SCNVector3(0, 0.94, 0)
         scene.rootNode.addChildNode(boardNode)
         // Each hole: a deep dark tunnel, a candy ring plate with bolts, and a glossy rolled rim.
-        let rimM = Fabric.glossy(.white, roughness: 0.3)
+        let rimM = Surface.chrome
         let tunnel = Accessories.material(UIColor(red: 0.16, green: 0.09, blue: 0.2, alpha: 1), roughness: 1)
         tunnel.isDoubleSided = true
         let pit = Accessories.material(UIColor(red: 0.07, green: 0.04, blue: 0.09, alpha: 1), roughness: 1)
-        let plates = [CandySet.coral, CandySet.sky, CandySet.butter].map { Fabric.glossy($0, roughness: 0.4) }
+        let plates = [UIColor(red: 0.85, green: 0.1, blue: 0.08, alpha: 1), UIColor(red: 0.98, green: 0.72, blue: 0.05, alpha: 1), UIColor(red: 0.1, green: 0.35, blue: 0.85, alpha: 1)].map { Surface.paintedMetal($0) }
         let bolt = Accessories.material(UIColor(white: 0.92, alpha: 1), roughness: 0.25, metalness: 0.6)
         for (i, h) in holes.enumerated() {
             scene.rootNode.addChildNode(Accessories.node(SCNTube(innerRadius: 0.47, outerRadius: 0.5, height: 1.5), tunnel, at: SCNVector3(h.x, 0.25, h.z)))
@@ -444,8 +435,8 @@ final class WhackGame: ObservableObject {
         }
         // Marquee bulbs along the front that chase.
         for (k, x) in stride(from: -2.05, through: 2.05, by: 0.34).enumerated() {
-            let m = Accessories.material(CandySet.butter, roughness: 0.2)
-            m.emission.contents = CandySet.butter
+            let m = Accessories.material(UIColor(red: 1, green: 0.92, blue: 0.75, alpha: 1), roughness: 0.15)
+            m.emission.contents = UIColor(red: 1, green: 0.78, blue: 0.4, alpha: 1)
             let bulb = Accessories.node(SCNSphere(radius: 0.07), m, at: SCNVector3(Float(x), 0.62, 2.0))
             scene.rootNode.addChildNode(bulb)
             let on = SCNAction.customAction(duration: 0.01) { n, _ in n.geometry?.firstMaterial?.emission.intensity = 1 }
@@ -453,7 +444,7 @@ final class WhackGame: ObservableObject {
             bulb.runAction(.sequence([.wait(duration: Double(k % 3) * 0.2),
                                       .repeatForever(.sequence([on, .wait(duration: 0.2), off, .wait(duration: 0.4)]))]))
         }
-        let wall = Accessories.material(CandySet.bubblegum, roughness: 0.65)
+        let wall = Surface.paintedMetal(UIColor(red: 0.75, green: 0.07, blue: 0.06, alpha: 1))   // arcade cabinet
         for (x, z, w, d) in [(0, 1.95, 4.6, 0.1), (0, -1.95, 4.6, 0.1), (-2.3, 0, 0.1, 3.9), (2.3, 0, 0.1, 3.9)] as [(Float, Float, CGFloat, CGFloat)] {
             scene.rootNode.addChildNode(Accessories.node(SCNBox(width: w, height: 1.6, length: d, chamferRadius: 0), wall, at: SCNVector3(x, 0.1, z)))
         }

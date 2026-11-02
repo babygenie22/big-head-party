@@ -13,10 +13,9 @@ final class PieStage {
     let neckY: Float = 2.0
 
     init(characters: [GameCharacter], showSign: Bool = true) {
-        scene.background.contents = CandySet.backdrop(CandySet.blush, CandySet.cream)
         cameraRig.addChildNode(camera)
         scene.rootNode.addChildNode(cameraRig)
-        CandySet.light(scene, rim: CandySet.bubblegum, camera: camera, level: 0.34)   // pinkest, brightest set
+        Location.gameShow.apply(to: scene, camera: camera)
         buildSet(showSign: showSign)
 
         for (i, character) in characters.prefix(2).enumerated() {
@@ -31,33 +30,19 @@ final class PieStage {
     }
 
     private func buildSet(showSign: Bool) {
-        scene.rootNode.addChildNode(CandySet.floor(UIColor(red: 1, green: 0.88, blue: 0.82, alpha: 1)))
-
-        // Backdrop with a sunburst.
-        let burst = UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 512)).image { ctx in
-            CandySet.bubblegum.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 1024, height: 512))
-            UIColor(red: 1, green: 0.72, blue: 0.82, alpha: 1).setFill()
-            let c = CGPoint(x: 512, y: 300)
-            for i in 0..<24 where i % 2 == 0 {
-                let a0 = CGFloat(i) / 24 * 2 * .pi, a1 = CGFloat(i + 1) / 24 * 2 * .pi
-                let p = UIBezierPath()
-                p.move(to: c)
-                p.addLine(to: CGPoint(x: c.x + 1200 * cos(a0), y: c.y + 1200 * sin(a0)))
-                p.addLine(to: CGPoint(x: c.x + 1200 * cos(a1), y: c.y + 1200 * sin(a1)))
-                p.close(); p.fill()
-            }
-        }
-        let back = SCNPlane(width: 18, height: 9)
-        back.firstMaterial?.diffuse.contents = burst
-        back.firstMaterial?.lightingModel = .constant
-        let backNode = SCNNode(geometry: back)
-        backNode.position = SCNVector3(0, 4.2, -4)
-        scene.rootNode.addChildNode(backNode)
+        // A glossy black stage riser on the studio floor.
+        let riser = Accessories.material(UIColor(white: 0.04, alpha: 1), roughness: 0.12)
+        riser.clearCoat.contents = 1
+        riser.clearCoatRoughness.contents = 0.05
+        scene.rootNode.addChildNode(Accessories.node(SCNCylinder(radius: 5.5, height: 0.18), riser, at: SCNVector3(0, 0.09, -0.5)))
+        scene.rootNode.addChildNode(Accessories.node(SCNTorus(ringRadius: 5.5, pipeRadius: 0.03), Surface.chrome, at: SCNVector3(0, 0.18, -0.5)))
 
         // Marquee bulbs.
         let bulbOn = SCNMaterial()
-        bulbOn.lightingModel = .constant
-        bulbOn.diffuse.contents = UIColor(red: 1, green: 0.85, blue: 0.4, alpha: 1)
+        bulbOn.lightingModel = .physicallyBased
+        bulbOn.diffuse.contents = UIColor(red: 1, green: 0.9, blue: 0.7, alpha: 1)
+        bulbOn.emission.contents = UIColor(red: 1, green: 0.8, blue: 0.45, alpha: 1)
+        bulbOn.emission.intensity = 2.5
         for i in 0..<28 {
             let a = Float(i) / 27 * .pi
             let bulb = SCNNode(geometry: SCNSphere(radius: 0.08))
@@ -70,27 +55,25 @@ final class PieStage {
             scene.rootNode.addChildNode(bulb)
         }
 
-        if showSign {
-            let sign = CandySet.sign("The Pie-Q Test", fill: CandySet.coral, ink: .white, width: 5.6)
-            sign.position = SCNVector3(0, 5.0, -3.4)
-            scene.rootNode.addChildNode(sign)
-        }
-
         // Podiums.
-        let colors: [UIColor] = [CandySet.player1, CandySet.player2]
+        let colors: [UIColor] = [UIColor(red: 0.08, green: 0.2, blue: 0.55, alpha: 1), UIColor(red: 0.6, green: 0.06, blue: 0.1, alpha: 1)]
         for (i, x) in podiumX.enumerated() {
             let podium = SCNNode(geometry: SCNBox(width: 1.9, height: 1.55, length: 1.0, chamferRadius: 0.08))
-            podium.geometry?.materials = [Accessories.material(colors[i], roughness: 0.55)]
+            podium.geometry?.materials = [Surface.paintedMetal(colors[i])]
             podium.position = SCNVector3(x, 0.775, 0.55)
             let stripe = SCNNode(geometry: SCNBox(width: 1.95, height: 0.12, length: 1.04, chamferRadius: 0.02))
+            // LED strip.
             let glow = SCNMaterial()
-            glow.lightingModel = .constant
+            glow.lightingModel = .physicallyBased
             glow.diffuse.contents = UIColor.white
+            glow.emission.contents = UIColor(white: 1, alpha: 1)
+            glow.emission.intensity = 1.6
             stripe.geometry?.materials = [glow]
             stripe.position = SCNVector3(0, 0.55, 0)
             podium.addChildNode(stripe)
             let buzzer = SCNNode(geometry: SCNCylinder(radius: 0.22, height: 0.1))
-            buzzer.geometry?.materials = [Accessories.material(.systemRed, roughness: 0.2)]
+            buzzer.geometry?.materials = [Surface.plastic(UIColor(red: 0.85, green: 0.05, blue: 0.05, alpha: 1))]
+            podium.addChildNode(Accessories.node(SCNCylinder(radius: 0.27, height: 0.06), Surface.chrome, at: SCNVector3(0, 0.79, 0.1)))
             buzzer.position = SCNVector3(0, 0.82, 0.1)
             podium.addChildNode(buzzer)
             scene.rootNode.addChildNode(podium)

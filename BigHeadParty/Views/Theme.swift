@@ -1,22 +1,24 @@
 import SwiftUI
 import CoreText
 
-/// "Candy studio": a warm, light canvas; candy-colored stages and real game renders; chunky
-/// Bricolage Grotesque for display moments; soft, lifted depth instead of outlines.
+/// "Night studio": a dark, premium broadcast look that frames the realistic sets. Near-black
+/// canvas, warm white type, one on-air red accent, deep per-game tones, fine light edges.
 enum Theme {
     // Canvas and text.
-    static let canvas = Color(red: 1.0, green: 0.957, blue: 0.925)    // #FFF4EC
-    static let surface = Color.white
-    static let ink = Color(red: 0.169, green: 0.106, blue: 0.180)     // #2B1B2E plum-black
-    static let inkSoft = ink.opacity(0.62)
-    // Candy colors. Text on them stays ink, except on coral (white, bold).
-    static let coral = Color(red: 1.0, green: 0.42, blue: 0.29)       // #FF6B4A
-    static let sky = Color(red: 0.50, green: 0.78, blue: 1.0)         // #7FC8FF
-    static let lime = Color(red: 0.73, green: 0.91, blue: 0.42)       // #B9E86A
-    static let bubblegum = Color(red: 1.0, green: 0.62, blue: 0.75)   // #FF9EC0
-    static let lilac = Color(red: 0.79, green: 0.71, blue: 1.0)       // #C9B6FF
-    static let butter = Color(red: 1.0, green: 0.85, blue: 0.42)      // #FFD86B
-    static let blush = Color(red: 1.0, green: 0.84, blue: 0.89)       // #FFD6E4 the star's stage
+    static let canvas = Color(red: 0.043, green: 0.043, blue: 0.051)  // #0B0B0D
+    static let surface = Color(red: 0.094, green: 0.094, blue: 0.106) // #18181B
+    static let ink = Color(red: 0.957, green: 0.945, blue: 0.925)     // #F4F1EC warm white
+    static let inkSoft = ink.opacity(0.6)
+    static let hairline = ink.opacity(0.12)
+    // The accent (kept under its old name): on-air red. Text on it is white.
+    static let coral = Color(red: 1.0, green: 0.357, blue: 0.227)     // #FF5B3A
+    // Deep game tones (text on them stays warm white).
+    static let sky = Color(red: 0.118, green: 0.227, blue: 0.373)     // #1E3A5F
+    static let lime = Color(red: 0.122, green: 0.29, blue: 0.2)       // #1F4A33
+    static let bubblegum = Color(red: 0.353, green: 0.122, blue: 0.22) // #5A1F38
+    static let lilac = Color(red: 0.208, green: 0.169, blue: 0.369)   // #352B5E
+    static let butter = Color(red: 0.353, green: 0.271, blue: 0.094)  // #5A4518
+    static let blush = Color(red: 0.102, green: 0.086, blue: 0.094)   // the star's stage
 
     // Roles.
     static let highlight = coral
@@ -36,15 +38,16 @@ enum Theme {
 }
 
 extension Font {
-    /// Display voice: Bricolage Grotesque ExtraBold (its 96 pt optical size), scaling with Dynamic Type.
+    /// Display voice: SF Pro Heavy, tight like a broadcast lower third; scales with Dynamic Type.
     static func display(_ size: CGFloat, relativeTo style: Font.TextStyle = .title) -> Font {
-        .custom("BricolageGrotesque-96ptExtraBold", size: size, relativeTo: style)
+        .system(size: UIFontMetrics(forTextStyle: style == .largeTitle ? .largeTitle : .headline).scaledValue(for: size),
+                weight: .heavy).width(.condensed)
     }
     /// Buttons, scores and labels.
     static func party(_ size: CGFloat) -> Font { display(size, relativeTo: .headline) }
     /// Friendly UI text.
     static func ui(_ size: CGFloat, _ weight: Font.Weight = .semibold) -> Font {
-        .system(size: size, weight: weight, design: .rounded)
+        .system(size: size, weight: weight, design: .default)
     }
 }
 
@@ -53,8 +56,8 @@ struct SoftShadow: ViewModifier {
     var lift: CGFloat = 1
     func body(content: Content) -> some View {
         content
-            .shadow(color: Theme.ink.opacity(0.10), radius: 2 * lift, y: 1 * lift)
-            .shadow(color: Theme.ink.opacity(0.10), radius: 14 * lift, y: 8 * lift)
+            .shadow(color: .black.opacity(0.45), radius: 2 * lift, y: 1 * lift)
+            .shadow(color: .black.opacity(0.35), radius: 14 * lift, y: 8 * lift)
     }
 }
 
@@ -63,11 +66,13 @@ extension View {
 
     /// A rounded card in a candy (or white) fill, gently lifted off the canvas.
     func card(_ fill: Color = Theme.surface, cornerRadius: CGFloat = 24, lift: CGFloat = 1) -> some View {
-        background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(fill).softShadow(lift))
+        background(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).fill(fill)
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).strokeBorder(Theme.hairline, lineWidth: 1))
+            .softShadow(lift))
     }
 
     func pill(_ fill: Color = Theme.surface, lift: CGFloat = 0.6) -> some View {
-        background(Capsule().fill(fill).softShadow(lift))
+        background(Capsule().fill(fill).overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1)).softShadow(lift))
     }
 }
 
@@ -103,7 +108,7 @@ struct IconButtonStyle: ButtonStyle {
             .foregroundStyle(Theme.ink)
             .frame(minWidth: 24, minHeight: 24)
             .padding(10)
-            .background(Circle().fill(color).softShadow(0.6))
+            .background(Circle().fill(color).overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1)).softShadow(0.6))
             .scaleEffect(configuration.isPressed ? 0.9 : 1)
             .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
             .contentShape(Circle())
