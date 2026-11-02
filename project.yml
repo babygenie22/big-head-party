@@ -4,11 +4,17 @@ options:
   bundleIdPrefix: com.domq
   deploymentTarget:
     iOS: "17.0"
+packages:
+  GLTFKit2:
+    url: https://github.com/warrenm/GLTFKit2.git
+    exactVersion: 0.5.9
 targets:
   BigHeadParty:
     type: application
     platform: iOS
     sources: [BigHeadParty]
+    dependencies:
+      - package: GLTFKit2
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.domq.bigheadparty

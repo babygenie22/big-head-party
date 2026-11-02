@@ -34,8 +34,11 @@ enum PieThrower {
         rig.pulse(.squish, peak: 1.0, attack: 0.04, hold: 0.2, release: 0.8)
         rig.wobbleHit(sideways: Float.random(in: -0.4...0.4), back: 1, strength: 1)
         rig.splatCream()
-        Effects.burst(in: scene, at: point, color: UIColor(red: 1, green: 0.98, blue: 0.92, alpha: 1), count: 120,
-                      velocity: 5, size: 0.09, direction: SCNVector3(0, 0.4, 1), spread: 85)
+        // Cream splash and a few crust flakes flying off.
+        Effects.burst(in: scene, at: point, color: UIColor(red: 1, green: 0.98, blue: 0.92, alpha: 1), count: 90,
+                      velocity: 4.5, size: 0.11, image: Cream.fleckImage, direction: SCNVector3(0, 0.4, 1), spread: 85)
+        Effects.burst(in: scene, at: point, color: UIColor(red: 0.78, green: 0.55, blue: 0.3, alpha: 1), count: 25,
+                      velocity: 3.5, size: 0.05, direction: SCNVector3(0, 0.6, 1), spread: 70)
         if let camera { Effects.shake(camera, intensity: 0.1) }
         Effects.haptic(.heavy)
 

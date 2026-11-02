@@ -37,26 +37,36 @@ final class Fighter {
         rig.root.position = SCNVector3(0, 2.4, 0)
         rig.root.scale = SCNVector3(headScale, headScale, headScale)
         let skin = UIColor(rgb: character.meta.skinRGB)
-        rig.root.addChildNode(Accessories.torso(color: UIColor(rgb: character.meta.shirtRGB), skin: skin,
-                                                initial: character.name.first.map(String.init)))
-        root.addChildNode(rig.root)
-
-        // Satin shorts with a white waistband, and lace-up boots.
-        let shorts = Fabric.glossy(gloveColor.darker(0.7), roughness: 0.4)
+        // A realistic body under the head when its model is bundled; the toy kit otherwise.
         let white = Fabric.cloth(.white, repeats: 8)
-        let legs = Fabric.skin(skin)
-        let boot = Fabric.glossy(UIColor(white: 0.97, alpha: 1), roughness: 0.4)
-        for x: Float in [-0.22, 0.22] {
-            root.addChildNode(Accessories.node(SCNCapsule(capRadius: 0.17, height: 1.0), legs, at: SCNVector3(x, 0.6, 0)))
-            root.addChildNode(Accessories.node(SCNBox(width: 0.36, height: 0.35, length: 0.42, chamferRadius: 0.1), shorts, at: SCNVector3(x, 1.2, 0)))
-            root.addChildNode(Accessories.node(SCNCylinder(radius: 0.2, height: 0.34), boot, at: SCNVector3(x, 0.24, 0)))
-            let toe = Accessories.node(SCNSphere(radius: 0.2), boot, at: SCNVector3(x, 0.1, 0.1))
-            toe.scale = SCNVector3(1, 0.6, 1.3)
-            root.addChildNode(toe)
-            root.addChildNode(Accessories.node(SCNTorus(ringRadius: 0.2, pipeRadius: 0.03), shorts, at: SCNVector3(x, 0.4, 0)))
+        root.addChildNode(rig.root)
+        let real = RealBody.build(for: character, legs: .standing)
+        if let real {
+            // Neck under the head, feet on the canvas (the toy body is 2.5 neck-to-feet).
+            let s: Float = 2.4 / 2.5
+            real.node.scale = SCNVector3(s, s, s)
+            real.node.position = SCNVector3(0, 2.4 - 0.04, 0)
+            root.addChildNode(real.node)
+        } else {
+            rig.root.addChildNode(Accessories.torso(color: UIColor(rgb: character.meta.shirtRGB), skin: skin,
+                                                    initial: character.name.first.map(String.init)))
+
+            // Satin shorts with a white waistband, and lace-up boots.
+            let shorts = Fabric.glossy(gloveColor.darker(0.7), roughness: 0.4)
+            let legs = Fabric.skin(skin)
+            let boot = Fabric.glossy(UIColor(white: 0.97, alpha: 1), roughness: 0.4)
+            for x: Float in [-0.22, 0.22] {
+                root.addChildNode(Accessories.node(SCNCapsule(capRadius: 0.17, height: 1.0), legs, at: SCNVector3(x, 0.6, 0)))
+                root.addChildNode(Accessories.node(SCNBox(width: 0.36, height: 0.35, length: 0.42, chamferRadius: 0.1), shorts, at: SCNVector3(x, 1.2, 0)))
+                root.addChildNode(Accessories.node(SCNCylinder(radius: 0.2, height: 0.34), boot, at: SCNVector3(x, 0.24, 0)))
+                let toe = Accessories.node(SCNSphere(radius: 0.2), boot, at: SCNVector3(x, 0.1, 0.1))
+                toe.scale = SCNVector3(1, 0.6, 1.3)
+                root.addChildNode(toe)
+                root.addChildNode(Accessories.node(SCNTorus(ringRadius: 0.2, pipeRadius: 0.03), shorts, at: SCNVector3(x, 0.4, 0)))
+            }
+            let band = Accessories.node(SCNBox(width: 0.82, height: 0.1, length: 0.46, chamferRadius: 0.05), white, at: SCNVector3(0, 1.38, 0))
+            root.addChildNode(band)
         }
-        let band = Accessories.node(SCNBox(width: 0.82, height: 0.1, length: 0.46, chamferRadius: 0.05), white, at: SCNVector3(0, 1.38, 0))
-        root.addChildNode(band)
         let gloveMat = Fabric.glossy(gloveColor, roughness: 0.25)
         gloves = Fighter.guardPositions.map { p in
             let g = Accessories.node(SCNSphere(radius: 0.27), gloveMat, at: p)
@@ -70,6 +80,7 @@ final class Fighter {
             return g
         }
         gloves.forEach(root.addChildNode)
+        if let real { RealBody.reach(body: real.node, left: gloves[0], right: gloves[1]) }
         rig.startIdle(seed: Double.random(in: 0...6))
         // Boxer bounce.
         root.runAction(.repeatForever(.sequence([.moveBy(x: 0, y: 0.06, z: 0, duration: 0.28),

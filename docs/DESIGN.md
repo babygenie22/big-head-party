@@ -31,6 +31,13 @@ Principles skills.
   collar, cuffs and hem, an initial badge on the chest, mitten hands with thumbs, glossy
   sneakers with toe caps and laces. Boxers get satin shorts, boots and cuffed gloves. Sets add
   soft ambient occlusion and tiled floors.
+- **Realism (characters and props):** bodies are realistic skinned glTF models
+  (`Models/body-*.glb`, generated, heads cut at the neck, loaded with GLTFKit2 in
+  `Scenes/RealBody.swift`); the toy bodies are the fallback. Arms move through proxy nodes
+  (slap) or two-bone IK to the gloves (boxing). The default cast wears baked photo faces
+  (`Cast/<id>.jpg` + `.json`, made with the player photo pipeline). Pie and mallet are real
+  models. Pie hits leave a cream layer molded to the face, dollops, crumbs and drips
+  (`Scenes/Cream.swift`). Lighting uses a real studio HDRI (Poly Haven, CC0).
 - **Posters:** `cover-<game>` assets are crops of the real sets, centered on the players, with
   signs hidden (`-posterShot YES`). Pie-Q's is wide (featured tile); the rest are square.
   Re-shoot them when a set changes.

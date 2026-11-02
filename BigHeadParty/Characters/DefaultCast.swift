@@ -64,13 +64,32 @@ enum DefaultCast {
              shape: FaceLayout.standardShape(jawWidth: 0.9, chinDrop: 0.045, noseLength: 0.02, mouthWidth: 0.17), hat: .topHat, volume: .none),
     ]
 
+    /// A real photo face baked for a default character (`Cast/<id>.jpg` + `.json`), made with the
+    /// same pipeline as player photos. Painted faces are the fallback.
+    struct PhotoFace: Codable {
+        let shape: FaceShape
+        let skinRGB: [Float]
+        let hairRGB: [Float]
+    }
+
+    static func photoFace(_ spec: Spec) -> (PhotoFace, UIImage)? {
+        guard let json = Bundle.main.url(forResource: spec.id, withExtension: "json"),
+              let data = try? Data(contentsOf: json), let face = try? JSONDecoder().decode(PhotoFace.self, from: data),
+              let imageURL = Bundle.main.url(forResource: spec.id, withExtension: "jpg"),
+              let image = UIImage(contentsOfFile: imageURL.path) else { return nil }
+        return (face, image)
+    }
+
     static func make() -> [GameCharacter] {
         specs.map { spec in
+            let photo = photoFace(spec)
             let meta = CharacterMeta(id: UUID(uuidString: spec.id)!, name: spec.name, tagline: spec.tagline,
-                                     shape: spec.shape, hat: spec.hat, hairVolume: spec.volume, googlyEyes: false,
-                                     skinRGB: spec.skin.rgbArray, hairRGB: spec.hair.rgbArray, shirtRGB: spec.shirt.rgbArray,
-                                     isDefault: true, createdAt: .distantPast)
-            return GameCharacter(meta: meta, texture: paint(spec))
+                                     shape: photo?.0.shape ?? spec.shape, hat: spec.hat, hairVolume: spec.volume, googlyEyes: false,
+                                     // 3D hair (bun, afro) keeps the designed color; the photo's estimate runs dark.
+                                     skinRGB: photo?.0.skinRGB ?? spec.skin.rgbArray,
+                                     hairRGB: spec.volume == .none ? (photo?.0.hairRGB ?? spec.hair.rgbArray) : spec.hair.rgbArray,
+                                     shirtRGB: spec.shirt.rgbArray, isDefault: true, createdAt: .distantPast)
+            return GameCharacter(meta: meta, texture: photo?.1 ?? paint(spec))
         }
     }
 

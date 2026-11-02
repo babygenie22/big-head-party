@@ -1,4 +1,5 @@
 import SwiftUI
+import SceneKit
 
 final class ShowcaseHolder: ObservableObject {
     let stage = ShowcaseStage(character: nil)
@@ -65,6 +66,9 @@ struct HomeView: View {
     @State private var setupGame: GameKind?
     @State private var debugGame: GameConfig?
     @State private var debugStudio: IdentifiableImage?
+    #if DEBUG
+    @State private var debugPreview: (SCNScene, SCNNode)?
+    #endif
     @AppStorage(HeadSize.storageKey) private var headSize: HeadSize = .big
 
     var body: some View {
@@ -99,6 +103,9 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showStudio) { FaceStudioView() }
         .fullScreenCover(item: $debugStudio) { FaceStudioView(testImage: $0.image) }
         .fullScreenCover(item: $debugGame) { GameHost(config: $0) }
+        #if DEBUG
+        .overlay { if let p = debugPreview { SceneContainer(scene: p.0, pointOfView: p.1).ignoresSafeArea() } }
+        #endif
         .sheet(isPresented: $showCast) { CastView() }
         .sheet(item: $setupGame) { kind in MatchSetupView(kind: kind) }
     }
@@ -125,6 +132,10 @@ struct HomeView: View {
             debugGame = GameConfig(kind: kind, players: kind.isSolo ? [cast[0]] : [cast[0], cast[1]], vsCPU: true)
         } else if defaults.bool(forKey: "studioCamera") {
             showStudio = true
+        } else if let name = defaults.string(forKey: "modelPreview"), let preview = ModelPreview.scene(name) {
+            debugPreview = preview
+        } else if defaults.bool(forKey: "autoPie") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { hero.stage.throwPie() }
         }
         #endif
     }

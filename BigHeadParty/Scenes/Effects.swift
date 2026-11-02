@@ -127,25 +127,33 @@ enum Effects {
         }
     }
 
-    /// A cream pie with a cherry. The returned node's local +Z is the cream side.
+    /// A cream pie. The returned node's local +Z is the cream side. Uses the realistic banana
+    /// cream pie model when bundled, the drawn one otherwise.
     static func makePie() -> SCNNode {
         let container = SCNNode()
         container.name = "pie"
         let pie = SCNNode()
         pie.eulerAngles.x = .pi / 2   // cream (+Y) → +Z
         container.addChildNode(pie)
+        if let model = RealBody.prop("pie") {
+            let (lo, hi) = model.boundingBox
+            let s = 1.12 / max(hi.x - lo.x, 0.01)
+            model.scale = SCNVector3(s, s, s)
+            model.position = SCNVector3(-(lo.x + hi.x) / 2 * s, -lo.y * s - 0.07, -(lo.z + hi.z) / 2 * s)
+            model.enumerateHierarchy { n, _ in n.castsShadow = true }
+            pie.addChildNode(model)
+            return container
+        }
         let tinMat = Accessories.material(UIColor(white: 0.8, alpha: 1), roughness: 0.25, metalness: 1)
         pie.addChildNode(Accessories.node(SCNCylinder(radius: 0.55, height: 0.14), tinMat, at: SCNVector3(0, 0, 0)))
         pie.addChildNode(Accessories.node(SCNTorus(ringRadius: 0.5, pipeRadius: 0.08),
                                           Accessories.material(UIColor(red: 0.85, green: 0.6, blue: 0.3, alpha: 1), roughness: 0.8),
                                           at: SCNVector3(0, 0.08, 0)))
         let cream = SCNNode(geometry: SCNSphere(radius: 0.5))
-        cream.geometry?.materials = [creamMaterial]
+        cream.geometry?.materials = [Cream.material]
         cream.position = SCNVector3(0, 0.1, 0)
         cream.scale = SCNVector3(1, 0.45, 1)
         pie.addChildNode(cream)
-        pie.addChildNode(Accessories.node(SCNSphere(radius: 0.09), Accessories.material(.systemRed, roughness: 0.15),
-                                          at: SCNVector3(0, 0.34, 0)))
         return container
     }
 
@@ -176,8 +184,15 @@ enum Effects {
             let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.5, 1])!
             ctx.cgContext.drawLinearGradient(g, start: .zero, end: CGPoint(x: 0, y: 256), options: [])
         }
-        scene.lightingEnvironment.contents = env
-        scene.lightingEnvironment.intensity = 1.1
+        // A real photographed studio (CC0, Poly Haven) gives true reflections and soft light from
+        // every side; the drawn gradient is the fallback.
+        if let hdr = Bundle.main.url(forResource: "studio_small_09_2k", withExtension: "hdr") {
+            scene.lightingEnvironment.contents = hdr
+            scene.lightingEnvironment.intensity = 1.0
+        } else {
+            scene.lightingEnvironment.contents = env
+            scene.lightingEnvironment.intensity = 1.1
+        }
 
         let ambient = SCNNode()
         ambient.light = SCNLight()

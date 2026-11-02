@@ -157,41 +157,60 @@ final class HeadRig {
 
     // MARK: - Cream
 
-    /// Raycasts onto the real mesh so the cream hugs this person's actual face shape.
+    /// The pie lands: a cream layer molded to this person's actual face, whipped dollops and
+    /// crust crumbs stuck in it, and drips that run down the chin. `amount` scales the mess.
     func splatCream(amount: Int = 22) {
-        let creamMaterial = Effects.creamMaterial
-        var placed = 0
-        for _ in 0..<(amount * 3) where placed < amount {
-            let x = Float.random(in: -0.75...0.75)
-            let y = Float.random(in: (anchors.chinY + 0.15)...(anchors.foreheadY + 0.15))
-            let hits = head.hitTestWithSegment(from: SCNVector3(x, y, 3), to: SCNVector3(x, y, -0.5), options: nil)
-            guard let hit = hits.first(where: { $0.node === head }) else { continue }
-            let p = hit.localCoordinates, n = hit.localNormal
-            // Orient a holder along the surface normal, then flatten the blob along it.
-            let holder = SCNNode()
-            holder.position = p
-            holder.look(at: SCNVector3(p.x + n.x, p.y + n.y, p.z + n.z), up: SCNVector3(0, 1, 0), localFront: SCNVector3(0, 0, 1))
-            let blob = SCNNode(geometry: SCNSphere(radius: CGFloat.random(in: 0.1...0.2)))
-            blob.geometry?.materials = [creamMaterial]
-            blob.scale = SCNVector3(1, 1, 0.32)
-            holder.addChildNode(blob)
-            holder.scale = SCNVector3(0.01, 0.01, 0.01)
-            holder.runAction(.scale(to: 1, duration: 0.08))
-            splats.addChildNode(holder)
-            placed += 1
-
-            // A few drips slide down from the lower blobs.
-            if y < anchors.eyeY - 0.4 && Bool.random() {
-                let drip = SCNNode(geometry: SCNCapsule(capRadius: 0.05, height: 0.3))
-                drip.geometry?.materials = [creamMaterial]
-                drip.position = SCNVector3(p.x, p.y - 0.05, p.z + 0.02)
-                drip.scale = SCNVector3(1, 0.1, 1)
-                drip.runAction(.sequence([.wait(duration: 0.3),
-                                          .group([.scale(to: 1, duration: 1.4),
-                                                  .moveBy(x: 0, y: -0.25, z: 0, duration: 1.4)])]))
-                splats.addChildNode(drip)
-            }
+        let mess = SCNNode()
+        let cx = Float.random(in: -0.15...0.15)
+        let cy = (anchors.chinY + anchors.foreheadY) / 2 + Float.random(in: -0.1...0.1)
+        let radius = 0.55 + Float(min(amount, 30)) * 0.012
+        if let layer = Cream.layer(on: head, center: SIMD2(cx, cy), radius: radius, seed: Float.random(in: 0...50)) {
+            mess.addChildNode(layer)
         }
+        // Dollops and crumbs, raycast onto the face so they sit in the cream.
+        let dollopCount = max(3, amount / 5), crumbCount = max(4, amount / 4)
+        var placed = 0, tries = 0
+        while placed < dollopCount + crumbCount && tries < (dollopCount + crumbCount) * 4 {
+            tries += 1
+            let a = Float.random(in: 0...(2 * .pi)), r = radius * 0.6 * sqrt(Float.random(in: 0...1))
+            let x = cx + cos(a) * r, y = cy + sin(a) * r
+            guard let hit = head.frontSurface(x: x, y: y) else { continue }
+            let p = hit.point, n = hit.normal
+            let holder = SCNNode()
+            holder.position = SCNVector3(p.x + n.x * 0.05, p.y + n.y * 0.05, p.z + n.z * 0.05)
+            holder.look(at: SCNVector3(holder.position.x + n.x, holder.position.y + n.y, holder.position.z + n.z),
+                        up: SCNVector3(0, 1, 0), localFront: SCNVector3(0, 1, 0))
+            let isCrumb = placed >= dollopCount
+            let piece = SCNNode(geometry: isCrumb ? Cream.crumbs.randomElement()! : Cream.dollops.randomElement()!)
+            let size = isCrumb ? Float.random(in: 0.025...0.05) : Float.random(in: 0.1...0.17)
+            piece.scale = SCNVector3(size, size * (isCrumb ? 0.6 : Float.random(in: 0.5...0.7)), size)
+            piece.eulerAngles.y = Float.random(in: 0...(2 * .pi))
+            holder.addChildNode(piece)
+            mess.addChildNode(holder)
+            placed += 1
+        }
+        // Drips run down from the bottom edge.
+        for _ in 0..<Int.random(in: 2...4) {
+            let x = cx + Float.random(in: -radius * 0.5...radius * 0.5), y = cy - radius * Float.random(in: 0.3...0.5)
+            guard let hit = head.frontSurface(x: x, y: y) else { continue }
+            let drip = Cream.drip()
+            drip.position = SCNVector3(hit.point.x, hit.point.y, hit.point.z + 0.03)
+            drip.scale = SCNVector3(1, 0.05, 1)
+            let length = CGFloat.random(in: 0.35...0.8)
+            drip.runAction(.sequence([.wait(duration: .random(in: 0.2...0.6)),
+                                      .group([.customAction(duration: 1.8) { node, t in
+                                                  node.scale.y = 0.05 + Float(length - 0.05) * Float(t / 1.8)
+                                              },
+                                              .moveBy(x: 0, y: -0.12, z: 0, duration: 1.8)])]))
+            mess.addChildNode(drip)
+        }
+        // It lands with a splat: squashed flat, then settles.
+        mess.scale = SCNVector3(1.15, 1.15, 0.3)
+        mess.runAction(.customAction(duration: 0.14) { node, t in
+            let p = Float(t / 0.14)
+            node.scale = SCNVector3(1.15 - 0.15 * p, 1.15 - 0.15 * p, 0.3 + 0.7 * p)
+        })
+        splats.addChildNode(mess)
     }
 
     func clearCream() {

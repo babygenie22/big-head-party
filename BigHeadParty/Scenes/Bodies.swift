@@ -181,8 +181,10 @@ final class Contestant {
         let group = SCNNode()
         var parts: BodyParts?
         if withBody {
-            let b = BodyBuilder.build(shirt: UIColor(rgb: character.meta.shirtRGB), skin: UIColor(rgb: character.meta.skinRGB), legs: legs,
-                                      initial: character.name.first.map(String.init))
+            // Realistic skinned body when its model is bundled; the toy body otherwise.
+            let b = RealBody.build(for: character, legs: legs)
+                ?? BodyBuilder.build(shirt: UIColor(rgb: character.meta.shirtRGB), skin: UIColor(rgb: character.meta.skinRGB), legs: legs,
+                                     initial: character.name.first.map(String.init))
             group.addChildNode(b.node)
             parts = b
         }

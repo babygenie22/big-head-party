@@ -54,6 +54,9 @@ final class FaceStudioModel: ObservableObject {
                 #if targetEnvironment(simulator)
                 if let out = UserDefaults.standard.string(forKey: "studioDumpTexture") {
                     try? face.texture.pngData()?.write(to: URL(fileURLWithPath: out))
+                    // Shape and colors beside it, for baking photo faces into the default cast.
+                    let info = DefaultCast.PhotoFace(shape: face.shape, skinRGB: face.skin.rgbArray, hairRGB: face.hair.rgbArray)
+                    try? JSONEncoder().encode(info).write(to: URL(fileURLWithPath: out + ".json"))
                 }
                 #endif
                 let character = self.makeCharacter(face)

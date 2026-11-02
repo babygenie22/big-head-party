@@ -1,4 +1,5 @@
 import SceneKit
+import simd
 import SwiftUI
 
 /// "Whack-a-Head": faces pop out of a 3×3 board. Tap to bonk. Golden heads are worth 3,
@@ -242,28 +243,42 @@ final class WhackGame: ObservableObject {
 
     /// A squeaky toy mallet that comes down from the front right, flat face onto the crown.
     private func swingHammer(onto crown: SCNVector3, golden: Bool) {
-        let yaw: Float = 0.35, reach: Float = 1.5
+        let model = RealBody.prop("mallet")
+        let yaw: Float = 0.35, reach: Float = model == nil ? 1.5 : 0.85
         let hammer = SCNNode(), pivot = SCNNode()
-        hammer.position = SCNVector3(crown.x + reach * sin(yaw), crown.y + 0.2, crown.z + reach * cos(yaw))
+        hammer.position = SCNVector3(crown.x + reach * sin(yaw), crown.y + (model == nil ? 0.2 : 0.3), crown.z + reach * cos(yaw))
         hammer.eulerAngles.y = yaw
-        // Handle runs from the pivot (the hand) towards −z; the head sits across its end.
-        let wood = Accessories.material(UIColor(red: 0.86, green: 0.66, blue: 0.44, alpha: 1), roughness: 0.55)
-        let handle = Accessories.node(SCNCylinder(radius: 0.055, height: CGFloat(reach)), wood, at: SCNVector3(0, 0, -reach / 2))
-        handle.eulerAngles.x = .pi / 2
-        pivot.addChildNode(handle)
-        let grip = Accessories.node(SCNCylinder(radius: 0.075, height: 0.4), Fabric.cloth(CandySet.ink, repeats: 6), at: SCNVector3(0, 0, -0.2))
-        grip.eulerAngles.x = .pi / 2
-        pivot.addChildNode(grip)
-        let headColor = golden ? CandySet.butter : CandySet.coral
         let mallet = SCNNode()
         mallet.position = SCNVector3(0, 0, -reach)
-        mallet.addChildNode(Accessories.node(SCNCylinder(radius: 0.28, height: 0.5), Fabric.glossy(headColor, roughness: 0.3), at: SCNVector3(0, 0, 0)))
-        for y: Float in [-0.25, 0.25] {
-            let cap = SCNCylinder(radius: 0.3, height: 0.08)
-            cap.radialSegmentCount = 48
-            mallet.addChildNode(Accessories.node(cap, Fabric.glossy(.white, roughness: 0.3), at: SCNVector3(0, y, 0)))
+        if let model {
+            // The realistic mallet: its handle (model +X, tilted) turned to run back to the hand
+            // along +Z, barrel centred at the strike point.
+            let s: Float = 1.2
+            let handle = simd_normalize(simd_float3(0.945, -0.285, -0.159)), barrel = simd_float3(-0.208, -0.026, 0.028)
+            let q = simd_quatf(from: handle, to: simd_float3(0, 0, 1))
+            model.scale = SCNVector3(s, s, s)
+            model.simdOrientation = q
+            model.simdPosition = -q.act(barrel * s)
+            if golden { model.enumerateHierarchy { n, _ in n.geometry?.firstMaterial?.multiply.contents = CandySet.butter } }
+            mallet.addChildNode(model)
+        } else {
+            // Handle runs from the pivot (the hand) towards −z; the head sits across its end.
+            let wood = Accessories.material(UIColor(red: 0.86, green: 0.66, blue: 0.44, alpha: 1), roughness: 0.55)
+            let handle = Accessories.node(SCNCylinder(radius: 0.055, height: CGFloat(reach)), wood, at: SCNVector3(0, 0, -reach / 2))
+            handle.eulerAngles.x = .pi / 2
+            pivot.addChildNode(handle)
+            let grip = Accessories.node(SCNCylinder(radius: 0.075, height: 0.4), Fabric.cloth(CandySet.ink, repeats: 6), at: SCNVector3(0, 0, -0.2))
+            grip.eulerAngles.x = .pi / 2
+            pivot.addChildNode(grip)
+            let headColor = golden ? CandySet.butter : CandySet.coral
+            mallet.addChildNode(Accessories.node(SCNCylinder(radius: 0.28, height: 0.5), Fabric.glossy(headColor, roughness: 0.3), at: SCNVector3(0, 0, 0)))
+            for y: Float in [-0.25, 0.25] {
+                let cap = SCNCylinder(radius: 0.3, height: 0.08)
+                cap.radialSegmentCount = 48
+                mallet.addChildNode(Accessories.node(cap, Fabric.glossy(.white, roughness: 0.3), at: SCNVector3(0, y, 0)))
+            }
+            mallet.addChildNode(Accessories.node(SCNTorus(ringRadius: 0.285, pipeRadius: 0.025), Fabric.glossy(.white), at: SCNVector3(0, 0, 0)))
         }
-        mallet.addChildNode(Accessories.node(SCNTorus(ringRadius: 0.285, pipeRadius: 0.025), Fabric.glossy(.white), at: SCNVector3(0, 0, 0)))
         pivot.addChildNode(mallet)
         hammer.addChildNode(pivot)
         hammer.enumerateHierarchy { n, _ in n.castsShadow = true }
