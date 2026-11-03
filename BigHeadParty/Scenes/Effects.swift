@@ -177,7 +177,10 @@ enum Effects {
     // MARK: - Lighting
 
     /// Soft studio lighting + a gradient environment so PBR skin doesn't look like plastic.
-    static func addStudioLights(to scene: SCNScene, rim: UIColor = .systemPink, fill: UIColor = UIColor(red: 0.6, green: 0.75, blue: 1, alpha: 1)) {
+    /// Lit like a portrait: one soft warm key a little above and to the side, a neutral fill and a
+    /// faint rim. Coloured fill and rim (pink, blue) tinted the skin and read as stage lights.
+    static func addStudioLights(to scene: SCNScene, rim: UIColor = UIColor(red: 1, green: 0.95, blue: 0.9, alpha: 1),
+                                fill: UIColor = UIColor(red: 1, green: 0.97, blue: 0.94, alpha: 1)) {
         let env = UIGraphicsImageRenderer(size: CGSize(width: 512, height: 256)).image { ctx in
             let colors = [UIColor(white: 0.95, alpha: 1).cgColor, UIColor(red: 0.55, green: 0.5, blue: 0.6, alpha: 1).cgColor,
                           UIColor(white: 0.12, alpha: 1).cgColor] as CFArray
@@ -197,33 +200,33 @@ enum Effects {
         let ambient = SCNNode()
         ambient.light = SCNLight()
         ambient.light?.type = .ambient
-        ambient.light?.intensity = 250
+        ambient.light?.intensity = 140   // flat ambient greys skin; the studio photo does the soft fill
         scene.rootNode.addChildNode(ambient)
 
         let key = SCNNode()
         key.light = SCNLight()
         key.light?.type = .directional
-        key.light?.intensity = 1100
-        key.light?.color = UIColor(red: 1, green: 0.96, blue: 0.9, alpha: 1)
+        key.light?.intensity = 1000
+        key.light?.color = UIColor(red: 1, green: 0.95, blue: 0.88, alpha: 1)
         key.light?.castsShadow = true
-        key.light?.shadowRadius = 6
-        key.light?.shadowSampleCount = 8
-        key.light?.shadowColor = UIColor(white: 0, alpha: 0.35)
-        key.eulerAngles = SCNVector3(-0.65, 0.45, 0)
+        key.light?.shadowRadius = 14
+        key.light?.shadowSampleCount = 16
+        key.light?.shadowColor = UIColor(white: 0, alpha: 0.22)
+        key.eulerAngles = SCNVector3(-0.5, 0.32, 0)
         scene.rootNode.addChildNode(key)
 
         let fillLight = SCNNode()
         fillLight.light = SCNLight()
         fillLight.light?.type = .omni
-        fillLight.light?.intensity = 450
+        fillLight.light?.intensity = 420
         fillLight.light?.color = fill
-        fillLight.position = SCNVector3(-5, 3, 6)
+        fillLight.position = SCNVector3(-5, 1, 6)   // low enough to reach under the brows and nose
         scene.rootNode.addChildNode(fillLight)
 
         let rimLight = SCNNode()
         rimLight.light = SCNLight()
         rimLight.light?.type = .omni
-        rimLight.light?.intensity = 900
+        rimLight.light?.intensity = 550
         rimLight.light?.color = rim
         rimLight.position = SCNVector3(3, 5, -5)
         scene.rootNode.addChildNode(rimLight)

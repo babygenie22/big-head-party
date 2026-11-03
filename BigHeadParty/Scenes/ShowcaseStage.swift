@@ -12,6 +12,9 @@ final class ShowcaseStage {
     init(character: GameCharacter?, sway: Bool = true) {
         scene.background.contents = UIColor.clear
         Effects.addStudioLights(to: scene)
+        // Skin shouldn't glow or sit in a dark vignette: a portrait, not a stage.
+        camera.camera?.bloomIntensity = 0
+        camera.camera?.vignettingIntensity = 0.15
         cameraRig.addChildNode(camera)
         cameraRig.position = SCNVector3(0, 0.15, 5.6)
         cameraRig.look(at: SCNVector3(0, -0.05, 0))
@@ -44,6 +47,8 @@ final class ShowcaseStage {
     static let bottomOverlay: Float = 0.22
     static let topMargin: Float = 0.05
     static let designFOV: Float = 34
+    /// Room around the head, so it reads as a portrait rather than a close-up of the face.
+    static let breathingRoom: Float = 1.25
 
     /// Frames this head (hat and hair included) from crown to chin above the card's overlays.
     /// A fixed camera suited an average face; longer faces lost their chin behind the buttons.
@@ -52,8 +57,9 @@ final class ShowcaseStage {
         let top = hi.y - HeadRig.neckOffset, bottom = lo.y - HeadRig.neckOffset
         let tanHalf = tan(Self.designFOV * .pi / 360)
         let usable = 1 - Self.bottomOverlay - Self.topMargin
-        let span = max((top - bottom) / usable, 2 * 5.6 * tanHalf)   // never closer than the original shot
-        let center = top + Self.topMargin * span - span / 2
+        let span = max((top - bottom) / usable, 2 * 5.6 * tanHalf) * Self.breathingRoom   // never closer than the original shot
+        // Head centered in the space the overlays leave free.
+        let center = (top + bottom) / 2 - (Self.bottomOverlay + usable / 2 - 0.5) * span
         cameraRig.position = SCNVector3(0, center + 0.2, span / 2 / tanHalf)
         cameraRig.look(at: SCNVector3(0, center, 0))
     }
