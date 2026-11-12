@@ -5,12 +5,24 @@ import UIKit
 /// (crown at y ≈ 1.28, eyes at y ≈ 0.1, face toward +Z).
 enum Accessories {
     static func attach(to rig: HeadRig) {
-        let meta = rig.character.meta
+        var meta = rig.character.meta
+        #if DEBUG
+        // Simulator check of a hair style on the whole cast: `-hairStyle long`.
+        if let raw = UserDefaults.standard.string(forKey: "hairStyle"), let style = HairVolume(rawValue: raw) { meta.hairVolume = style }
+        #endif
         addEars(to: rig)
         if !meta.googlyEyes { addCorneas(to: rig) }
-        let hairColor = UIColor(rgb: meta.hairRGB)
+        let hairColor = Hair.color(for: rig.character)
+        // A shell of real hair over the scalp: for anyone whose photo has hair, and under buns
+        // and long hair. Afros and pompadours are their own shapes.
+        let shelled = meta.hairVolume == .bun || meta.hairVolume == .long || (meta.hairVolume == .none && Hair.hasHair(rig.character))
+        if shelled, let shell = Hair.shell(head: rig.anchors.geometry, targets: rig.anchors.morphTargets, cols: HeadMeshBuilder.segments + 1,
+                                           eyeY: rig.anchors.eyeY, chinY: rig.anchors.chinY, long: meta.hairVolume == .long, color: hairColor) {
+            rig.head.addChildNode(shell)
+            rig.hairShell = shell
+        }
         if let hair = hairNode(meta.hairVolume, color: hairColor) { rig.head.addChildNode(hair) }
-        let lift: Float = meta.hairVolume == .afro ? 0.8 : (meta.hairVolume == .pompadour ? 0.2 : 0)
+        let lift: Float = meta.hairVolume == .afro ? 0.8 : (meta.hairVolume == .pompadour ? 0.2 : (shelled ? 0.1 : 0))
         if let hat = hatNode(meta.hat) {
             hat.position.y += lift
             rig.head.addChildNode(hat)
@@ -96,11 +108,11 @@ enum Accessories {
     }
 
     static func hairNode(_ volume: HairVolume, color: UIColor) -> SCNNode? {
-        let m = material(color, roughness: 0.95)
+        let m = Hair.material(color)
         let hair = SCNNode()
         hair.name = "hair"
         switch volume {
-        case .none:
+        case .none, .long:
             return nil
         case .afro:
             hair.addChildNode(node(SCNSphere(radius: 1.2), m, at: SCNVector3(0, 0.95, -0.35)))
@@ -115,8 +127,10 @@ enum Accessories {
                                        at: SCNVector3(dir.x * 1.12, 0.95 + dir.y * 1.12, -0.35 + dir.z * 1.12)))
             }
         case .bun:
-            hair.addChildNode(node(SCNSphere(radius: 0.42), m, at: SCNVector3(0, 1.38, -0.5)))
-            hair.addChildNode(node(SCNTorus(ringRadius: 0.3, pipeRadius: 0.08), m, at: SCNVector3(0, 1.1, -0.42)))
+            let bun = Hair.bun(color: color)
+            bun.position = SCNVector3(0, 1.42, -0.45)
+            bun.eulerAngles.x = -0.3
+            hair.addChildNode(bun)
         case .pompadour:
             let swoop = node(SCNCapsule(capRadius: 0.42, height: 1.3), m, at: SCNVector3(0, 1.12, 0.3))
             swoop.eulerAngles.z = .pi / 2
@@ -224,6 +238,21 @@ enum Accessories {
             c.scale = SCNVector3(1.15, 0.62, 0.32)
             rig.head.addChildNode(c)
         }
+    }
+
+    /// Shoulders for a head-and-shoulders portrait (head-rig space, under the rig's own neck):
+    /// a sloping yoke in the character's shirt, with a ribbed collar.
+    static func bust(color: UIColor) -> SCNNode {
+        let bust = SCNNode()
+        let shirt = Fabric.cloth(color, repeats: 22)
+        shirt.normal.intensity = 0.15
+        let yoke = node(SCNSphere(radius: 1), shirt, at: SCNVector3(0, -1.42, -0.12))
+        yoke.scale = SCNVector3(1.75, 0.82, 0.8)
+        bust.addChildNode(yoke)
+        let collar = node(SCNTorus(ringRadius: 0.42, pipeRadius: 0.08), Fabric.cloth(color.darker(0.75), repeats: 8), at: SCNVector3(0, -0.62, -0.14))
+        collar.eulerAngles.x = 0.12
+        bust.addChildNode(collar)
+        return bust
     }
 
     /// Boxer torso (head-model space): a knit tank top with a ribbed neckline and the

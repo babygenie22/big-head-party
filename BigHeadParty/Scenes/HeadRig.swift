@@ -50,6 +50,8 @@ final class HeadRig {
     let head = SCNNode()
     let splats = SCNNode()
     let anchors: HeadMeshBuilder.Output
+    /// The 3D hair on the scalp, if any (see `Hair`); it follows the face's expressions.
+    var hairShell: SCNNode?
 
     init(character: GameCharacter) {
         self.character = character
@@ -88,6 +90,15 @@ final class HeadRig {
         idle.addChildNode(wobble)
         wobble.addChildNode(head)
         head.addChildNode(splats)
+        // A neck under the skull, so from the side and back the head sits on something instead
+        // of floating over the collar. It stays put while the head wobbles on it.
+        let neck = SCNCylinder(radius: 0.36, height: 1.4)
+        neck.materials = [Fabric.skin(UIColor(rgb: character.meta.skinRGB).darker(0.9))]
+        let neckNode = SCNNode(geometry: neck)
+        neckNode.name = "neck"
+        neckNode.position = SCNVector3(0, 0.02, -0.16)
+        neckNode.eulerAngles.x = 0.12
+        root.addChildNode(neckNode)
         Accessories.attach(to: self)
     }
 
@@ -106,6 +117,7 @@ final class HeadRig {
     private func setWeight(_ weight: CGFloat, _ name: String) {
         head.morpher?.setWeight(weight, forTargetNamed: name)
         coat?.node.morpher?.setWeight(weight, forTargetNamed: name)
+        hairShell?.morpher?.setWeight(weight, forTargetNamed: name)
     }
 
     /// Snap into an expression, hold, then jiggle back with an elastic overshoot.
@@ -148,10 +160,64 @@ final class HeadRig {
     }
 
     func startIdle(seed: Double = 0) {
-        idle.runAction(.repeatForever(.customAction(duration: 6.283) { node, t in
+        idle.runAction(.repeatForever(.customAction(duration: 6.283) { [weak self] node, t in
             let time = Double(t) + seed
-            node.eulerAngles = SCNVector3(Float(sin(time * 1.3)) * 0.03, Float(sin(time * 0.7)) * 0.10, Float(sin(time)) * 0.04)
+            // Ease toward wherever the head is glancing, on top of the slow sway.
+            if let self { self.glance += (self.glanceTarget - self.glance) * 0.08 }
+            let g = self?.glance ?? .zero
+            node.eulerAngles = SCNVector3(Float(sin(time * 1.3)) * 0.03 + g.x, Float(sin(time * 0.7)) * 0.10 + g.y, Float(sin(time)) * 0.04)
         }), forKey: "idle")
+        scheduleLife()
+    }
+
+    // MARK: - Signs of life
+
+    /// Where the head is glancing (pitch, yaw) and where it's heading. Only touched from the
+    /// idle node's actions.
+    private var glance = SIMD2<Float>.zero
+    private var glanceTarget = SIMD2<Float>.zero
+
+    /// Between hits, people blink, look around and fidget: one beat every few seconds, at random.
+    private func scheduleLife() {
+        idle.runAction(.sequence([.wait(duration: .random(in: 1.6...4.8)), .run { [weak self] _ in
+            guard let self else { return }
+            self.blink()
+            let roll = Float.random(in: 0...1)
+            if roll < 0.35 {
+                self.glanceTarget = SIMD2(.random(in: -0.05...0.07), .random(in: -0.24...0.24))
+            } else if roll < 0.6 {
+                self.glanceTarget = .zero
+            } else if roll < 0.78 {
+                self.fidget()
+            }
+            self.scheduleLife()
+        }]), forKey: "life")
+    }
+
+    private func blink() {
+        let name = Morph.blink.rawValue
+        let once = SCNAction.customAction(duration: 0.22) { [weak self] _, t in
+            // Shut fast, a beat closed, open a little slower.
+            let w = t < 0.07 ? t / 0.07 : (t < 0.11 ? 1 : max(0, 1 - (t - 0.11) / 0.11))
+            self?.setWeight(w, name)
+        }
+        let done = SCNAction.run { [weak self] _ in self?.setWeight(0, name) }
+        let twice = Float.random(in: 0...1) < 0.2
+        head.runAction(.sequence(twice ? [once, .wait(duration: 0.08), once, done] : [once, done]), forKey: "morph-\(name)")
+    }
+
+    /// A small, slow twitch of the face. Never over an expression a game is driving or holding.
+    private func fidget() {
+        let busy = Morph.allCases.contains { m in
+            m != .blink && (head.action(forKey: "morph-\(m.rawValue)") != nil || abs(head.morpher?.weight(forTargetNamed: m.rawValue) ?? 0) > 0.01)
+        }
+        guard !busy else { return }
+        let (morph, peak): (Morph, CGFloat) = [(.puff, 0.2), (.mouthOpen, 0.1), (.skewLeft, 0.1), (.skewRight, 0.1)].randomElement()!
+        let name = morph.rawValue
+        head.runAction(.sequence([
+            .customAction(duration: 1.1) { [weak self] _, t in self?.setWeight(peak * sin(.pi * t / 1.1), name) },
+            .run { [weak self] _ in self?.setWeight(0, name) },
+        ]), forKey: "morph-\(name)")
     }
 
     func spinOut() {
@@ -243,6 +309,8 @@ final class HeadRig {
         m.clearCoat.contents = wet ? 0.9 : HeadRig.dryClearCoat
         m.clearCoatRoughness.contents = wet ? 0.08 : 0.5
         m.multiply.contents = wet ? UIColor(white: 0.84, alpha: 1) : UIColor.white
+        // Wet hair: darker and slick, like the skin.
+        hairShell?.geometry?.firstMaterial?.roughness.contents = wet ? 0.25 : Hair.roughness
         guard wet, let scene else { return }
         let chin = SCNVector3(0, anchors.chinY + 0.05, 0.6)
         head.runAction(.repeat(.sequence([
@@ -260,6 +328,8 @@ final class HeadRig {
 
     /// Golden glow for bonus targets.
     func setGolden(_ golden: Bool) {
-        head.geometry?.firstMaterial?.emission.contents = golden ? UIColor(red: 0.48, green: 0.33, blue: 0, alpha: 1) : UIColor.black
+        let glow = golden ? UIColor(red: 0.48, green: 0.33, blue: 0, alpha: 1) : UIColor.black
+        head.geometry?.firstMaterial?.emission.contents = glow
+        hairShell?.geometry?.firstMaterial?.emission.contents = glow
     }
 }

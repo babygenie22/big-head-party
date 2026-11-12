@@ -190,10 +190,7 @@ final class DunkGame: ObservableObject {
 
     private func buildSet() {
         Location.park.apply(to: scene, camera: camera)
-        // A blue tarp under the tank, so it sits on the lawn and splashes have somewhere to land.
-        scene.rootNode.addChildNode(Accessories.node(SCNBox(width: 7, height: 0.05, length: 4, chamferRadius: 0.02),
-                                                     Surface.plastic(UIColor(red: 0.15, green: 0.35, blue: 0.75, alpha: 1)),
-                                                     at: SCNVector3(-0.6, 0.025, 0)))
+        DunkBooth.build(in: scene, tankX: tankX, seat: seat, target: target)
 
         // Glass tank, steel frame, water with a gently moving surface.
         let glass = Surface.glass

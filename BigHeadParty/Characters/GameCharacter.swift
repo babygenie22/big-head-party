@@ -28,7 +28,7 @@ enum HatStyle: String, Codable, CaseIterable, Identifiable {
 
 /// Optional 3D hair volume on top of the painted/photo hair.
 enum HairVolume: String, Codable, CaseIterable, Identifiable {
-    case none, afro, bun, pompadour
+    case none, afro, bun, pompadour, long
     var id: String { rawValue }
     var label: String { rawValue == "none" ? "Natural" : rawValue.capitalized }
 }

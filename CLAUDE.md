@@ -23,7 +23,7 @@ iOS party game. A photo of a friend becomes a 3D "big head" character that gets 
 - `Face/`: the photo → 3D head pipeline.
   - `FaceAnalyzer`: Vision landmarks (rev 3 → rev 2 → estimate from the face box if landmarks collapse) plus person segmentation.
   - `FaceTextureBuilder`: aligns the photo into a 1024² texture (pupils at fixed UVs), applies the mask, samples skin and hair colour, paints hair strands.
-  - `HeadMeshBuilder`: sculpts a ~13k-vertex head to the person's jawline, nose, mouth and chin. Builds 5 morph targets: squish, mouthOpen, puff, skewLeft, skewRight.
+  - `HeadMeshBuilder`: sculpts a ~13k-vertex head to the person's jawline, nose, mouth and chin. Builds 6 morph targets: squish, mouthOpen, puff, skewLeft, skewRight, blink.
   - `FaceShape`: texture-space face model.
 - `Scenes/`:
   - `HeadRig`: the live head. Morph pulses, wobble, cream splats raycast onto the mesh, wet and golden looks.

@@ -29,16 +29,20 @@ final class ShowcaseStage {
     }
 
     func show(_ character: GameCharacter, animated: Bool = true) {
-        rig?.root.removeFromParentNode()
+        rig?.root.parent?.removeFromParentNode()
         let newRig = HeadRig(character: character)
-        newRig.root.position = SCNVector3(0, -HeadRig.neckOffset, 0)
-        turntable.addChildNode(newRig.root)
+        // Head and shoulders: a bust, so the head isn't floating in the card.
+        let bust = SCNNode()
+        bust.position = SCNVector3(0, -HeadRig.neckOffset, 0)
+        bust.addChildNode(newRig.root)
+        bust.addChildNode(Accessories.bust(color: UIColor(rgb: character.meta.shirtRGB)))
+        turntable.addChildNode(bust)
         newRig.startIdle()
         frame(newRig)
         newRig.prepareCream()
         if animated {
-            newRig.root.scale = SCNVector3(0.01, 0.01, 0.01)
-            newRig.root.runAction(.sequence([.scale(to: 1.12, duration: 0.25), .scale(to: 0.96, duration: 0.12), .scale(to: 1, duration: 0.1)]))
+            bust.scale = SCNVector3(0.01, 0.01, 0.01)
+            bust.runAction(.sequence([.scale(to: 1.12, duration: 0.25), .scale(to: 0.96, duration: 0.12), .scale(to: 1, duration: 0.1)]))
         }
         rig = newRig
     }

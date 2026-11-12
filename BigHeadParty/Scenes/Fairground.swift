@@ -108,6 +108,18 @@ enum Fairground {
     private static func sign(_ root: SCNNode) {
         let w: CGFloat = 3.2, h: CGFloat = 0.66
         let signY: Float = 3.5, signZ: Float = -0.55
+        root.addChildNode(marquee("WHACK-A-HEAD", width: w, height: h, at: SCNVector3(0, signY, signZ)))
+        // Chains up to the awning.
+        let chain = Surface.steel
+        for side: Float in [-1, 1] {
+            root.addChildNode(Accessories.node(SCNCylinder(radius: 0.012, height: 0.5), chain, at: SCNVector3(side * Float(w) * 0.4, signY + Float(h / 2) + 0.25, signZ)))
+        }
+    }
+
+    /// A red board with gold lettering, ringed by chasing bulbs, centered on `center`.
+    static func marquee(_ title: String, width w: CGFloat, height h: CGFloat, at center: SCNVector3) -> SCNNode {
+        let root = SCNNode()
+        let signY = center.y, signZ = center.z
         let image = UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 208)).image { ctx in
             let r = CGRect(x: 0, y: 0, width: 1024, height: 208)
             UIColor(red: 0.55, green: 0.04, blue: 0.06, alpha: 1).setFill(); ctx.fill(r)
@@ -119,7 +131,7 @@ enum Fairground {
             let shadow = NSShadow(); shadow.shadowColor = UIColor(white: 0, alpha: 0.5); shadow.shadowOffset = CGSize(width: 0, height: 6)
             let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: UIColor(red: 1, green: 0.88, blue: 0.3, alpha: 1),
                                                         .strokeColor: UIColor(red: 0.35, green: 0.02, blue: 0.03, alpha: 1), .strokeWidth: -4, .shadow: shadow]
-            let text = NSAttributedString(string: "WHACK-A-HEAD", attributes: attrs)
+            let text = NSAttributedString(string: title, attributes: attrs)
             let size = text.size()
             text.draw(at: CGPoint(x: (1024 - size.width) / 2, y: (208 - size.height) / 2))
         }
@@ -127,23 +139,19 @@ enum Fairground {
         m.diffuse.contents = image
         m.emission.contents = image
         m.emission.intensity = 0.35
-        let board = Accessories.node(SCNBox(width: w, height: h, length: 0.08, chamferRadius: 0.03), m, at: SCNVector3(0, signY, signZ))
+        let board = Accessories.node(SCNBox(width: w, height: h, length: 0.08, chamferRadius: 0.03), m, at: SCNVector3(center.x, signY, signZ))
         let back = Surface.paintedMetal(UIColor(red: 0.55, green: 0.04, blue: 0.06, alpha: 1))
         board.geometry?.materials = [m, back, back, back, back, back]
         root.addChildNode(board)
         // Bulbs all the way round, chasing.
         var points: [SCNVector3] = []
         let nx = 12, ny = 3
-        for i in 0...nx { let x = Float(-w / 2) + Float(w) * Float(i) / Float(nx); points += [SCNVector3(x, signY + Float(h / 2) + 0.05, signZ + 0.06), SCNVector3(x, signY - Float(h / 2) - 0.05, signZ + 0.06)] }
-        for j in 1..<ny { let y = signY - Float(h / 2) + Float(h) * Float(j) / Float(ny); points += [SCNVector3(Float(-w / 2) - 0.06, y, signZ + 0.06), SCNVector3(Float(w / 2) + 0.06, y, signZ + 0.06)] }
-        // Chains up to the awning.
-        let chain = Surface.steel
-        for side: Float in [-1, 1] {
-            root.addChildNode(Accessories.node(SCNCylinder(radius: 0.012, height: 0.5), chain, at: SCNVector3(side * Float(w) * 0.4, signY + Float(h / 2) + 0.25, signZ)))
-        }
+        for i in 0...nx { let x = center.x + Float(-w / 2) + Float(w) * Float(i) / Float(nx); points += [SCNVector3(x, signY + Float(h / 2) + 0.05, signZ + 0.06), SCNVector3(x, signY - Float(h / 2) - 0.05, signZ + 0.06)] }
+        for j in 1..<ny { let y = signY - Float(h / 2) + Float(h) * Float(j) / Float(ny); points += [SCNVector3(center.x + Float(-w / 2) - 0.06, y, signZ + 0.06), SCNVector3(center.x + Float(w / 2) + 0.06, y, signZ + 0.06)] }
         for (k, p) in points.enumerated() {
             root.addChildNode(bulb(color: bulbColors[0], radius: 0.04, at: p, phase: k % 3))
         }
+        return root
     }
 
     /// The scalloped, striped valance hanging across the top of the view, with a string of
@@ -236,7 +244,7 @@ enum Fairground {
     }
 
     /// A glowing bulb that blinks in one of three phases, so rows of them chase.
-    private static func bulb(color: UIColor, radius: CGFloat, at p: SCNVector3, phase: Int) -> SCNNode {
+    static func bulb(color: UIColor, radius: CGFloat, at p: SCNVector3, phase: Int) -> SCNNode {
         let m = Accessories.material(color.blended(with: .white, 0.5), roughness: 0.1)
         m.emission.contents = color
         let n = Accessories.node(SCNSphere(radius: radius), m, at: p)
@@ -249,7 +257,7 @@ enum Fairground {
     }
 
     /// Triangle flags along a sagging cord.
-    private static func bunting(from a: SCNVector3, to b: SCNVector3, sag: Float, flags: Int) -> SCNNode {
+    static func bunting(from a: SCNVector3, to b: SCNVector3, sag: Float, flags: Int) -> SCNNode {
         let node = SCNNode()
         let colors = [red, gold, UIColor(red: 0.15, green: 0.45, blue: 0.9, alpha: 1), cream, UIColor(red: 0.2, green: 0.7, blue: 0.4, alpha: 1)]
         func point(_ t: Float) -> SCNVector3 {
@@ -280,7 +288,7 @@ enum Fairground {
     }
 
     /// A bunch of glossy balloons on strings, bobbing in the breeze.
-    private static func balloons(_ root: SCNNode, at anchor: SCNVector3) {
+    static func balloons(_ root: SCNNode, at anchor: SCNVector3) {
         let colors = [red, gold, UIColor(red: 0.2, green: 0.55, blue: 1, alpha: 1), UIColor(red: 0.95, green: 0.45, blue: 0.75, alpha: 1), UIColor(red: 0.3, green: 0.8, blue: 0.45, alpha: 1)]
         let string = Accessories.material(.white, roughness: 0.8)
         var rng = SeededRandom(seed: 4)
@@ -308,7 +316,7 @@ enum Fairground {
     // MARK: - Textures
 
     /// Vertical (or diagonal, for barber poles) stripes, tiling horizontally.
-    private static func stripes(_ a: UIColor, _ b: UIColor, count: Int, diagonal: Bool = false) -> UIImage {
+    static func stripes(_ a: UIColor, _ b: UIColor, count: Int, diagonal: Bool = false) -> UIImage {
         UIGraphicsImageRenderer(size: CGSize(width: 512, height: 512)).image { ctx in
             a.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 512, height: 512))
             b.setFill()

@@ -39,6 +39,17 @@ pre-rotated when bundled, since the background ignores `contentsTransform`. Re-r
   through proxy nodes (slap) or two-bone IK to the gloves (boxing).
 - The default cast wears baked photo faces (`Cast/<id>.jpg` + `.json`, made with the player
   photo pipeline). Big heads are the default; real heads are in the menu.
+- Hair is a 3D shell grown from the scalp on the head's own vertex grid (`Scenes/Hair.swift`):
+  thick over the crown, thinning to a ragged hairline, combed into clumps, tinted halfway toward
+  the photo's own hair. Bald heads (crown filled with skin) get none. Styles: natural, bun (coiled),
+  long (hangs free below the ears), afro, pompadour. It follows the face's blend shapes, and gets
+  wet and golden with the head.
+- Every head has a neck; the home screen and Face Studio show a head-and-shoulders bust.
+- Heads are alive between hits (`HeadRig` "Signs of life"): they blink (a `blink` blend shape that
+  closes the photo's own eyelids), glance around and fidget. Fidgets never run over an expression
+  a game is driving. Eyes are part of the photo, so they can't turn on their own: the head turns.
+- Dunk Tank sits in a carnival booth (`Scenes/DunkBooth.swift`): wooden stage, striped backdrop,
+  marquee, bunting, balloons, ladder, bulbs round the target. It shares the fair's helpers.
 - Pie and mallet are real models. Pie hits add cream to a head-shaped coat (`CreamCoat` in
   `Scenes/Cream.swift`) that spreads and thickens with every pie, with runs dripping down,
   whipped dollops and crust crumbs. The first pie hits the middle; later ones land all over the

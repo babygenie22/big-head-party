@@ -4,7 +4,7 @@ import simd
 /// Blend-shape targets every head supports. They are what make a hit *read* on a face:
 /// a pie flattens it, a hook shoves the cheeks sideways, a scream drops the jaw.
 enum Morph: String, CaseIterable {
-    case squish, mouthOpen, puff, skewLeft, skewRight
+    case squish, mouthOpen, puff, skewLeft, skewRight, blink
 }
 
 /// Sculpts a 3D head mesh for a `FaceShape`.
@@ -187,6 +187,11 @@ enum HeadMeshBuilder {
         let mouthY = modelY(v: shape.mouthCenter.y)
         let cheekY = modelY(v: shape.mouthCenter.y - 0.05)
         let faceMidY = (yEye + yChin) / 2
+        // Eye openings in model space, for the blink: (center x, upper lid y, lower lid y, half-width).
+        let lidH = Float(shape.eyeHalfHeight ?? 0.022) * 2 * S, lidW = Float(shape.eyeHalfWidth ?? 0.065) * 2 * S
+        let eyes = [shape.leftEye, shape.rightEye].map { e in
+            (x: modelX(u: e.x), top: modelY(v: e.y) + lidH * 1.15, bottom: modelY(v: e.y) - lidH * 0.85, w: lidW)
+        }
         var targets: [SCNGeometry] = []
         for morph in Morph.allCases {
             var pts = positions
@@ -220,6 +225,17 @@ enum HeadMeshBuilder {
                     // The cheek that got hit flattens.
                     let hitSide = max(0, -dir * p.x)
                     q.z = p.z - 0.18 * fw * hitSide * band
+                case .blink:
+                    // The upper lid comes down: everything in the eye opening gathers on the lower
+                    // lash line (the eye's own pixels shrink to that line), and the skin above
+                    // stretches down after it, less and less toward the brow.
+                    for eye in eyes where fw > 0.2 {
+                        let across = 1 - smoothStep(eye.w * 0.9, eye.w * 1.35, abs(p.x - eye.x))
+                        guard across > 0, p.y > eye.bottom else { continue }
+                        let open = eye.top - eye.bottom
+                        let down = p.y <= eye.top ? p.y - eye.bottom : open * (1 - smoothStep(eye.top, eye.top + open * 1.6, p.y))
+                        q.y = p.y - down * across
+                    }
                 }
                 pts[idx] = q
             }
