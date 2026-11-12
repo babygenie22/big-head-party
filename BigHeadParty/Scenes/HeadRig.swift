@@ -54,6 +54,8 @@ final class HeadRig {
     var hairShell: SCNNode?
     /// Handprints, flushes and bruises on the skin.
     private var marks: SkinMarks?
+    /// Side photos worn over the sides of the head (see `SideOverlay`).
+    private var sideOverlays: [SCNNode] = []
 
     init(character: GameCharacter) {
         self.character = character
@@ -108,6 +110,11 @@ final class HeadRig {
         idle.addChildNode(wobble)
         wobble.addChildNode(head)
         head.addChildNode(splats)
+        for (view, texture) in zip(character.meta.sides ?? [], character.sideTextures) {
+            guard let overlay = SideOverlay.node(head: anchors.geometry, targets: anchors.morphTargets, view: view, texture: texture) else { continue }
+            head.addChildNode(overlay)
+            sideOverlays.append(overlay)
+        }
         // A neck under the skull, so from the side and back the head sits on something instead
         // of floating over the collar. It stays put while the head wobbles on it.
         let neck = SCNCylinder(radius: 0.36, height: 1.1)
@@ -136,6 +143,7 @@ final class HeadRig {
         head.morpher?.setWeight(weight, forTargetNamed: name)
         coat?.node.morpher?.setWeight(weight, forTargetNamed: name)
         hairShell?.morpher?.setWeight(weight, forTargetNamed: name)
+        sideOverlays.forEach { $0.morpher?.setWeight(weight, forTargetNamed: name) }
     }
 
     /// Snap into an expression, hold, then jiggle back with an elastic overshoot.
@@ -377,6 +385,11 @@ final class HeadRig {
         m.clearCoatNormal.intensity = wet ? 1 : 0
         // Wet hair: darker and slick, like the skin.
         hairShell?.geometry?.firstMaterial?.roughness.contents = wet ? 0.25 : Hair.roughness
+        for side in sideOverlays.compactMap({ $0.geometry?.firstMaterial }) {
+            side.roughness.contents = wet ? 0.18 : HeadRig.dryRoughness
+            side.clearCoat.contents = wet ? 0.9 : HeadRig.dryClearCoat
+            side.diffuse.intensity = wet ? 0.84 : 1
+        }
         guard wet, let scene else { return }
         let chin = SCNVector3(0, anchors.chinY + 0.05, 0.6)
         head.runAction(.repeat(.sequence([
@@ -397,5 +410,6 @@ final class HeadRig {
         let glow = golden ? UIColor(red: 0.48, green: 0.33, blue: 0, alpha: 1) : UIColor.black
         head.geometry?.firstMaterial?.emission.contents = glow
         hairShell?.geometry?.firstMaterial?.emission.contents = glow
+        sideOverlays.forEach { $0.geometry?.firstMaterial?.emission.contents = glow }
     }
 }

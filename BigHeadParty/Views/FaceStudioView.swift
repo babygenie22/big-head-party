@@ -30,6 +30,13 @@ final class FaceStudioModel: ObservableObject {
     @Published var hair: HairVolume = .none { didSet { refreshPreview() } }
     @Published var googly = false { didSet { refreshPreview() } }
 
+    /// Side photos added so far (at most one per side), lined up with the head.
+    @Published private(set) var sides: [(view: SideView, texture: UIImage)] = []
+    /// Side photos still being lined up. Saving waits for them.
+    @Published private(set) var sidesInFlight = 0
+    var sideBusy: Bool { sidesInFlight > 0 }
+    @Published var sideMessage: String?
+
     let preview = ShowcaseStage(character: nil, sway: false)
     private var built: BuiltFace?
     private let draftID = UUID()
@@ -47,6 +54,8 @@ final class FaceStudioModel: ObservableObject {
         landmarks = []
         warnings = []
         built = nil
+        sides = []
+        sideMessage = nil
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             do {
@@ -95,6 +104,12 @@ final class FaceStudioModel: ObservableObject {
                         }
                         #endif
                         withAnimation(.spring) { self.stage = .review }
+                        #if DEBUG
+                        // `-studioTestSides a.jpg,b.jpg` adds side photos straight away (simulator checks).
+                        for path in (UserDefaults.standard.string(forKey: "studioTestSides") ?? "").split(separator: ",").map(String.init) {
+                            if let image = UIImage(contentsOfFile: path) { self.addSide(image, testPath: path) }
+                        }
+                        #endif
                     }
                 }
             } catch {
@@ -148,7 +163,43 @@ final class FaceStudioModel: ObservableObject {
                                  shape: face.shape, hat: hat, hairVolume: hair, googlyEyes: googly,
                                  skinRGB: face.skin.rgbArray, hairRGB: face.hair.rgbArray,
                                  shirtRGB: shirts.randomElement()!, isDefault: false, createdAt: Date())
-        return GameCharacter(meta: meta, texture: face.texture)
+        var withSides = meta
+        withSides.sides = sides.isEmpty ? nil : sides.map(\.view)
+        return GameCharacter(meta: withSides, texture: face.texture, sideTextures: sides.map(\.texture))
+    }
+
+    /// Adds a photo of the head turned halfway to one side. It is lined up with the head built
+    /// from the front photo and worn on that side; a second photo of the same side replaces it.
+    func addSide(_ image: UIImage, testPath: String? = nil) {
+        guard let built, stage == .review else { return }
+        sidesInFlight += 1
+        sideMessage = nil
+        let character = makeCharacter(built)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let result = Result { () -> (view: SideView, texture: UIImage) in
+                let capture = try FaceAnalyzer.analyze(image, testPath: testPath)
+                return try SideFit.build(capture: capture, shape: built.shape, head: HeadGeometryCache.output(for: character),
+                                         frontTexture: built.texture.cgImage)
+            }
+            DispatchQueue.main.async {
+                guard let self, self.built?.texture === built.texture else { return }   // retaken meanwhile
+                self.sidesInFlight = max(0, self.sidesInFlight - 1)
+                #if DEBUG
+                switch result {
+                case .success(let side): print("side photo: yaw \(side.view.yaw * 180 / .pi)°, side \(side.view.side), texture \(side.view.size)")
+                case .failure(let error): print("side photo failed: \(error)")
+                }
+                #endif
+                switch result {
+                case .success(let side):
+                    self.sides.removeAll { $0.view.side == side.view.side }
+                    self.sides.append(side)
+                    self.refreshPreview()
+                case .failure(let error):
+                    self.sideMessage = (error as? LocalizedError)?.errorDescription ?? "We couldn't use that photo. Try another."
+                }
+            }
+        }
     }
 
     private func refreshPreview() {
@@ -171,13 +222,17 @@ final class FaceStudioModel: ObservableObject {
         var meta = makeCharacter(built).meta
         meta.name = name.trimmingCharacters(in: .whitespaces).isEmpty ? "Mystery Guest" : name.trimmingCharacters(in: .whitespaces)
         meta.id = UUID()
-        store.add(meta: meta, texture: built.texture)
+        store.add(meta: meta, texture: built.texture, sideTextures: sides.map(\.texture))
     }
 
     func reset() {
         stage = .pick
         photo = nil
         landmarks = []
+        built = nil
+        sides = []
+        sidesInFlight = 0
+        sideMessage = nil
     }
 }
 
@@ -189,6 +244,8 @@ struct FaceStudioView: View {
     @StateObject private var model = FaceStudioModel()
     @State private var pickerItem: PhotosPickerItem?
     @State private var showCamera = false
+    @State private var showSideCamera = false
+    @State private var sidePickerItem: PhotosPickerItem?
 
     var body: some View {
         ZStack {
@@ -231,6 +288,18 @@ struct FaceStudioView: View {
         }
         .fullScreenCover(isPresented: $showCamera) {
             GuidedCameraView { image, depth in model.process(image, depth: depth) }
+        }
+        .fullScreenCover(isPresented: $showSideCamera) {
+            GuidedCameraView(sideMode: true) { image, _ in model.addSide(image) }
+        }
+        .onChange(of: sidePickerItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
+                    await MainActor.run { model.addSide(image) }
+                }
+                await MainActor.run { sidePickerItem = nil }
+            }
         }
     }
 
@@ -356,6 +425,7 @@ struct FaceStudioView: View {
                         .foregroundStyle(Theme.ink)
                         .padding(14)
                         .card(Theme.surface, cornerRadius: 14)
+                    sidePhotos
                     Text("Hat").font(.party(18)).foregroundStyle(Theme.ink)
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack {
@@ -365,9 +435,11 @@ struct FaceStudioView: View {
                         }
                     }
                     Text("Hair").font(.party(18)).foregroundStyle(Theme.ink)
-                    HStack {
-                        ForEach(HairVolume.allCases) { h in
-                            chip(h.label, symbol: nil, selected: model.hair == h) { model.hair = h }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack {
+                            ForEach(HairVolume.allCases) { h in
+                                chip(h.label, symbol: nil, selected: model.hair == h) { model.hair = h }
+                            }
                         }
                     }
                     Toggle(isOn: $model.googly) {
@@ -386,9 +458,41 @@ struct FaceStudioView: View {
                     dismiss()
                 }
                 .buttonStyle(CandyButtonStyle())
+                .disabled(model.sideBusy)   // a side photo still lining up would be left out
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
+        }
+    }
+
+    /// Optional photos of each side of the head, so the cheeks, jaw and temples are real too.
+    private var sidePhotos: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Side photos").font(.party(18)).foregroundStyle(Theme.ink)
+            Text(model.sides.isEmpty ? "Optional. Add a photo with the head turned halfway to each side, and the sides of the head come from real photos too."
+                 : (model.sides.count == 1 ? "One side added. Add the other side to finish." : "Both sides added."))
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.ink.opacity(0.7))
+            HStack {
+                chip("Take side photo", symbol: "camera.fill", selected: false) { showSideCamera = true }
+                PhotosPicker(selection: $sidePickerItem, matching: .images) {
+                    Label("Choose", systemImage: "photo")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 12)
+                        .frame(minHeight: 44)
+                        .pill(Theme.surface)
+                }
+                if model.sideBusy { ProgressView() }
+            }
+            .disabled(model.sideBusy)
+            if let message = model.sideMessage {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.ink)
+                    .padding(10)
+                    .card(Theme.bubblegum, cornerRadius: 12)
+            }
         }
     }
 

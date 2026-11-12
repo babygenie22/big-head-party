@@ -77,7 +77,9 @@
 		E03C86E8615042E8D0C832FE /* studio_garden_2k.hdr in Resources */ = {isa = PBXBuildFile; fileRef = 2464A4BBA9E239377C476F93 /* studio_garden_2k.hdr */; };
 		E2B06FCA69DC221B6F2CE04F /* MatchSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A5F520C320E41E1778DB92D /* MatchSetupView.swift */; };
 		E3F0DA7B33D6DF58B06BB904 /* ShowcaseStage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B66A2E5AC0AE30133A4426 /* ShowcaseStage.swift */; };
+		E640057C817A27C2D736994C /* SideFit.swift in Sources */ = {isa = PBXBuildFile; fileRef = C73E143171920684789962C1 /* SideFit.swift */; };
 		F4C72A3EDDE5A7C9FB6BBF8C /* OFL-BricolageGrotesque.txt in Resources */ = {isa = PBXBuildFile; fileRef = 72E3F8DE709C07005AEC1C63 /* OFL-BricolageGrotesque.txt */; };
+		FBC9A2BE5FC4C950196614A7 /* SideOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D2A890885B8D78B363C0C6C /* SideOverlay.swift */; };
 		FC20093463D8D2A7816E432A /* Effects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E16DF1B3B27002AD18CC30B /* Effects.swift */; };
 		FE39F1C076B581FBC3CBFD9F /* DunkBooth.swift in Sources */ = {isa = PBXBuildFile; fileRef = B563391114805A874A65E845 /* DunkBooth.swift */; };
 		FE80765B1287E3892D756495 /* body-gus.glb in Resources */ = {isa = PBXBuildFile; fileRef = 3357447E043CC56BFAAF88A0 /* body-gus.glb */; };
@@ -90,6 +92,7 @@
 		088A305C7C755E1AC72DC2E7 /* 00000000-0000-0000-0000-00000000B004.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "00000000-0000-0000-0000-00000000B004.jpg"; sourceTree = "<group>"; };
 		0ACD7EF5D635E7B897DCE6D6 /* HairStrands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HairStrands.swift; sourceTree = "<group>"; };
 		0D1D3C33A2EE15F6DDCEF618 /* Bodies.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bodies.swift; sourceTree = "<group>"; };
+		0D2A890885B8D78B363C0C6C /* SideOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideOverlay.swift; sourceTree = "<group>"; };
 		0E393FF1D6ADFF6BF21B6028 /* Hair.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Hair.swift; sourceTree = "<group>"; };
 		14C2F1BD0AC133A83C3E73DA /* BigHeadParty.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BigHeadParty.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		150A00BDF6A09CDF092F1BE7 /* BoxingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoxingView.swift; sourceTree = "<group>"; };
@@ -145,6 +148,7 @@
 		C090062D60A2E31F8DEC45A8 /* 00000000-0000-0000-0000-00000000B006.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "00000000-0000-0000-0000-00000000B006.jpg"; sourceTree = "<group>"; };
 		C0B1520425C03CCCC0828A0E /* 00000000-0000-0000-0000-00000000B005.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "00000000-0000-0000-0000-00000000B005.json"; sourceTree = "<group>"; };
 		C4F82260E59A2479A19311A2 /* 00000000-0000-0000-0000-00000000B002.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "00000000-0000-0000-0000-00000000B002.jpg"; sourceTree = "<group>"; };
+		C73E143171920684789962C1 /* SideFit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideFit.swift; sourceTree = "<group>"; };
 		C979CBC09B7B73117D5D51A2 /* GameCharacter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCharacter.swift; sourceTree = "<group>"; };
 		DBE1A63701B22C81DD7BDF50 /* Accessories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accessories.swift; sourceTree = "<group>"; };
 		DC1C771F7D17D587054C58C4 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -271,6 +275,7 @@
 				7435F1967D0B2B40EBB22021 /* RealBody.swift */,
 				A7506F1E68F29115F77195E3 /* SceneContainer.swift */,
 				47B66A2E5AC0AE30133A4426 /* ShowcaseStage.swift */,
+				0D2A890885B8D78B363C0C6C /* SideOverlay.swift */,
 				E47E7E547B816E06332470E5 /* SkinDetail.swift */,
 			);
 			path = Scenes;
@@ -294,6 +299,7 @@
 				E707E62F00215F68778664BC /* FaceTextureBuilder.swift */,
 				0ACD7EF5D635E7B897DCE6D6 /* HairStrands.swift */,
 				EAE0DE9E9585516886768E99 /* HeadMeshBuilder.swift */,
+				C73E143171920684789962C1 /* SideFit.swift */,
 			);
 			path = Face;
 			sourceTree = "<group>";
@@ -495,6 +501,8 @@
 				3C514F073D95892E42A7AC41 /* RealBody.swift in Sources */,
 				9D8780280B8A0B969CB1E384 /* SceneContainer.swift in Sources */,
 				E3F0DA7B33D6DF58B06BB904 /* ShowcaseStage.swift in Sources */,
+				E640057C817A27C2D736994C /* SideFit.swift in Sources */,
+				FBC9A2BE5FC4C950196614A7 /* SideOverlay.swift in Sources */,
 				002BF50EAA72B3020E547E33 /* SkinDetail.swift in Sources */,
 				048CED60C72F51C22DFFEF45 /* SlapGame.swift in Sources */,
 				22FF52941FD81A0F16D0F6B6 /* Theme.swift in Sources */,
@@ -630,7 +638,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Big Head Party";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -656,7 +664,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 18;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Big Head Party";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;

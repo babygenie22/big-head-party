@@ -59,6 +59,13 @@ pre-rotated when bundled, since the background ignores `contentsTransform`. Re-r
   droplet normal map on the clear coat). `-demoLook slap|bruise|wet` previews them at home.
 - Pie cream sags after it lands: for a few seconds the thick parts run down the face
   (`CreamCoat.settle`).
+- Side photos (optional, Face Studio): a photo with the head turned about halfway to each side
+  fills in the cheeks, jaw and temples, which one front photo can only smear. `Face/SideFit.swift`
+  lines the photo up with the head (the turn from how much the eyes are squeezed together, then
+  scale, tilt and shift from the landmarks), matches its colour to the front texture and cuts it
+  out; `Scenes/SideOverlay.swift` wears it as a skin-tight layer over that side, blended in by
+  vertex alpha wherever the side camera saw the skin more squarely than the front one. Stored as
+  `<id>-side<n>.png` beside the face, with the line-up in `CharacterMeta.sides`.
 - Pie and mallet are real models. Pie hits add cream to a head-shaped coat (`CreamCoat` in
   `Scenes/Cream.swift`) that spreads and thickens with every pie, with runs dripping down,
   whipped dollops and crust crumbs. The first pie hits the middle; later ones land all over the

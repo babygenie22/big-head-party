@@ -46,18 +46,23 @@ struct CharacterMeta: Codable, Identifiable, Equatable {
     var shirtRGB: [Float]
     var isDefault: Bool
     var createdAt: Date
+    /// Photos of the sides of the head, if any were taken (their textures live beside the face's).
+    var sides: [SideView]? = nil
 }
 
 /// A playable big-head character: metadata + its face texture.
 final class GameCharacter: Identifiable, ObservableObject, Equatable {
     @Published var meta: CharacterMeta
     let texture: UIImage
+    /// Textures for `meta.sides`, in the same order.
+    let sideTextures: [UIImage]
     var id: UUID { meta.id }
     var name: String { meta.name }
 
-    init(meta: CharacterMeta, texture: UIImage) {
+    init(meta: CharacterMeta, texture: UIImage, sideTextures: [UIImage] = []) {
         self.meta = meta
         self.texture = texture
+        self.sideTextures = sideTextures
     }
 
     static func == (lhs: GameCharacter, rhs: GameCharacter) -> Bool { lhs.id == rhs.id }

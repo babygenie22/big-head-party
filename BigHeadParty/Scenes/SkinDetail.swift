@@ -6,15 +6,17 @@ import SceneKit
 /// Turned into a normal map over the whole head texture, the game's lights catch that detail and
 /// it moves with the light as the head turns, instead of staying flat like a printed photo.
 enum SkinDetail {
-    private static var cache: [UUID: UIImage] = [:]
+    /// Keyed by character, and remembered with the texture it was made from: Face Studio reuses
+    /// one draft id across retakes, and a new photo must not wear the old photo's wrinkles.
+    private static var cache: [UUID: (texture: UIImage, map: UIImage)] = [:]
     private static let lock = NSLock()
 
     /// The normal map for a character's texture (same UVs as the texture), built once.
     static func normalMap(for character: GameCharacter) -> UIImage? {
         lock.lock(); defer { lock.unlock() }
-        if let hit = cache[character.id] { return hit }
+        if let hit = cache[character.id], hit.texture === character.texture { return hit.map }
         guard let cg = character.texture.cgImage, let map = build(from: cg) else { return nil }
-        cache[character.id] = map
+        cache[character.id] = (character.texture, map)
         return map
     }
 

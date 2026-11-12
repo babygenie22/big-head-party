@@ -57,12 +57,13 @@ enum FaceAnalyzer {
     /// Runs Apple's Vision face-landmark model (76 points) plus person segmentation, on device.
     /// If the landmarks come back unusable, tries the previous model revision, then falls back to
     /// typical human proportions inside the detected face box (`estimated` is then true).
-    static func analyze(_ uiImage: UIImage, depth: FaceDepth? = nil) throws -> FaceCapture {
+    /// `testPath` (simulator only) names the photo file whose canned landmarks to use.
+    static func analyze(_ uiImage: UIImage, depth: FaceDepth? = nil, testPath: String? = nil) throws -> FaceCapture {
         // Big enough that a face filling only part of a phone photo still has the pixels for a
         // 2048² texture; 1600 px left typical faces upscaled and soft.
         guard var cg = uiImage.normalizedCGImage(maxDimension: 4032) else { throw FaceAnalyzerError.unreadableImage }
         #if targetEnvironment(simulator)
-        if var canned = cannedCapture(cg) { canned.depth = depth; return canned }
+        if var canned = cannedCapture(cg, path: testPath) { canned.depth = depth; return canned }
         #endif
 
         guard var found = biggestFace(in: cg) else { throw FaceAnalyzerError.noFace }
@@ -198,8 +199,8 @@ extension CGImage {
 /// Vision's landmark model gives garbage on the simulator's CPU, so debug runs of
 /// `-studioTestImage photo.jpg` read landmarks computed on a Mac from `photo.jpg.lm.json`
 /// (and `photo.jpg.mask.png`), written by a small macOS Vision script.
-private func cannedCapture(_ cg: CGImage) -> FaceCapture? {
-    guard let path = UserDefaults.standard.string(forKey: "studioTestImage"),
+private func cannedCapture(_ cg: CGImage, path: String?) -> FaceCapture? {
+    guard let path = path ?? UserDefaults.standard.string(forKey: "studioTestImage"),
           let data = FileManager.default.contents(atPath: path + ".lm.json"),
           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
     func pts(_ key: String) -> [CGPoint] { ((json[key] as? [[Double]]) ?? []).map { CGPoint(x: $0[0], y: $0[1]) } }

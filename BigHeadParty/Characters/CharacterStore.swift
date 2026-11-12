@@ -25,9 +25,12 @@ final class CharacterStore: ObservableObject {
 
     func character(id: UUID) -> GameCharacter? { characters.first { $0.id == id } }
 
-    func add(meta: CharacterMeta, texture: UIImage) {
-        let c = GameCharacter(meta: meta, texture: texture)
+    func add(meta: CharacterMeta, texture: UIImage, sideTextures: [UIImage] = []) {
+        let c = GameCharacter(meta: meta, texture: texture, sideTextures: sideTextures)
         if let png = texture.pngData() { try? png.write(to: folder.appendingPathComponent("\(meta.id).png"), options: .atomic) }
+        for (k, side) in sideTextures.enumerated() {
+            if let png = side.pngData() { try? png.write(to: sideURL(meta.id, k), options: .atomic) }
+        }
         persist(meta)
         characters.insert(c, at: 0)
     }
@@ -41,8 +44,11 @@ final class CharacterStore: ObservableObject {
         guard !character.meta.isDefault else { return }
         try? FileManager.default.removeItem(at: folder.appendingPathComponent("\(character.id).png"))
         try? FileManager.default.removeItem(at: folder.appendingPathComponent("\(character.id).json"))
+        for k in character.sideTextures.indices { try? FileManager.default.removeItem(at: sideURL(character.id, k)) }
         characters.removeAll { $0.id == character.id }
     }
+
+    private func sideURL(_ id: UUID, _ index: Int) -> URL { folder.appendingPathComponent("\(id)-side\(index).png") }
 
     private func persist(_ meta: CharacterMeta) {
         let encoder = JSONEncoder()
@@ -60,10 +66,13 @@ final class CharacterStore: ObservableObject {
             .filter { $0.pathExtension == "json" }
             .compactMap { url -> GameCharacter? in
                 guard let data = try? Data(contentsOf: url),
-                      let meta = try? decoder.decode(CharacterMeta.self, from: data),
+                      var meta = try? decoder.decode(CharacterMeta.self, from: data),
                       let image = UIImage(contentsOfFile: url.deletingPathExtension().appendingPathExtension("png").path)
                 else { return nil }
-                return GameCharacter(meta: meta, texture: image)
+                // Side photos: all or none, so textures and their line-ups can't get out of step.
+                let sides = (meta.sides ?? []).indices.compactMap { UIImage(contentsOfFile: self.sideURL(meta.id, $0).path) }
+                if sides.count != (meta.sides ?? []).count { meta.sides = nil }
+                return GameCharacter(meta: meta, texture: image, sideTextures: meta.sides == nil ? [] : sides)
             }
             .sorted { $0.meta.createdAt > $1.meta.createdAt }
     }

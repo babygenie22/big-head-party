@@ -15,6 +15,8 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     @Published private(set) var hint = Hint(text: "Put your face in the oval", symbol: "face.dashed")
     @Published private(set) var front = true
     @Published private(set) var denied = false
+    /// Coaching for a side photo (head turned halfway) instead of a front one.
+    var sideMode = false
 
     let session = AVCaptureSession()
     private let videoOutput = AVCaptureVideoDataOutput()
@@ -115,7 +117,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
         let box = face.map { CGRect(x: $0.boundingBox.minX, y: 1 - $0.boundingBox.maxY, width: $0.boundingBox.width, height: $0.boundingBox.height) }
         let light = box.map { brightness(pixels, in: $0) }
         let next = Self.coach(box: box, yaw: face?.yaw?.doubleValue ?? 0, roll: face?.roll?.doubleValue ?? 0,
-                              pitch: face?.pitch?.doubleValue ?? 0, brightness: light ?? 0.5, faces: faces.count, selfie: usingFront)
+                              pitch: face?.pitch?.doubleValue ?? 0, brightness: light ?? 0.5, faces: faces.count, selfie: usingFront, side: sideMode)
         DispatchQueue.main.async {
             guard next != self.hint else { return }
             if next.ready && !self.hint.ready { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
@@ -124,7 +126,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     }
 
     /// The single most useful thing to fix next. `box` is normalized, top-left origin, as shown.
-    static func coach(box: CGRect?, yaw: Double, roll: Double, pitch: Double, brightness: Double, faces: Int, selfie: Bool) -> Hint {
+    static func coach(box: CGRect?, yaw: Double, roll: Double, pitch: Double, brightness: Double, faces: Int, selfie: Bool, side: Bool = false) -> Hint {
         guard let box else { return Hint(text: selfie ? "Put your face in the oval" : "Point the camera at their face", symbol: "face.dashed") }
         // Vision's face box covers brows to chin; in the oval that's about half its width.
         if box.width < 0.36 { return Hint(text: selfie ? "Move closer" : "Get closer", symbol: "plus.magnifyingglass") }
@@ -133,8 +135,13 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
         if abs(dx) > 0.09 || abs(dy) > 0.09 {
             return Hint(text: selfie ? "Center your face in the oval" : "Center their face in the oval", symbol: "viewfinder")
         }
-        // Positive yaw: the nose points to the right of the picture.
-        if abs(yaw) > 0.3 {
+        if side {
+            // A side photo wants the head turned about halfway: far enough to show the cheek and
+            // jaw side-on, not so far that the far eye disappears and the face can't be lined up.
+            if abs(yaw) < 0.45 { return Hint(text: selfie ? "Turn your head halfway to one side" : "Ask them to turn halfway to one side", symbol: "arrow.left.and.right") }
+            if abs(yaw) > 1.1 { return Hint(text: "Not so far — keep both eyes in view", symbol: "eye") }
+        } else if abs(yaw) > 0.3 {
+            // Positive yaw: the nose points to the right of the picture.
             let left = yaw > 0
             if selfie { return Hint(text: "Turn a little to your \(left ? "left" : "right")", symbol: left ? "arrow.left" : "arrow.right") }
             return Hint(text: "Ask them to face the camera", symbol: "arrow.left.and.right")
@@ -198,6 +205,7 @@ private struct CameraPreview: UIViewRepresentable {
 }
 
 struct GuidedCameraView: View {
+    var sideMode = false
     let onPhoto: (UIImage, FaceDepth?) -> Void
     @Environment(\.dismiss) private var dismiss
     @StateObject private var camera = GuidedCamera()
@@ -274,7 +282,10 @@ struct GuidedCameraView: View {
                 .padding()
             }
         }
-        .onAppear { camera.start() }
+        .onAppear {
+            camera.sideMode = sideMode
+            camera.start()
+        }
         .onDisappear { camera.stop() }
     }
 
