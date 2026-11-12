@@ -50,6 +50,15 @@ pre-rotated when bundled, since the background ignores `contentsTransform`. Re-r
   a game is driving. Eyes are part of the photo, so they can't turn on their own: the head turns.
 - Dunk Tank sits in a carnival booth (`Scenes/DunkBooth.swift`): wooden stage, striped backdrop,
   marquee, bunting, balloons, ladder, bulbs round the target. It shares the fair's helpers.
+- Skin detail comes from each person's own photo (`Scenes/SkinDetail.swift`): brightness is read
+  as height and turned into a normal map over the whole head texture, so their wrinkles, pores
+  and stubble catch the light. Built once per character at first use, not stored.
+- What happens to a face stays on it (`SkinMarks`, same file): a slap leaves a red handprint
+  that fades in seconds, punches flush and then bruise for the rest of the fight, in a small
+  texture that multiplies the photo. Wet skin is darker and glossy with beads of water (a
+  droplet normal map on the clear coat). `-demoLook slap|bruise|wet` previews them at home.
+- Pie cream sags after it lands: for a few seconds the thick parts run down the face
+  (`CreamCoat.settle`).
 - Pie and mallet are real models. Pie hits add cream to a head-shaped coat (`CreamCoat` in
   `Scenes/Cream.swift`) that spreads and thickens with every pie, with runs dripping down,
   whipped dollops and crust crumbs. The first pie hits the middle; later ones land all over the

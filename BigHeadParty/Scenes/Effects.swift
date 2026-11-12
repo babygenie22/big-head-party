@@ -15,6 +15,41 @@ enum Effects {
     /// Tileable skin-pore normal map (generated once).
     static let skinNormalMap: UIImage = makeSkinNormalMap()
 
+    /// Beads of water for wet skin: scattered round drops of different sizes. Tiles.
+    static let dropletNormalMap: UIImage = {
+        let n = 256
+        var h = [Float](repeating: 0, count: n * n)
+        var rng = SeededRandom(seed: 314)
+        for _ in 0..<70 {
+            let cx = Float(rng.next()) * Float(n), cy = Float(rng.next()) * Float(n), r = 4 + Float(rng.next()) * 9
+            let stretch = 1 + Float(rng.next()) * 0.5   // drops hang a little longer than wide
+            for y in Int(cy - r * stretch - 1)...Int(cy + r * stretch + 1) {
+                for x in Int(cx - r - 1)...Int(cx + r + 1) {
+                    let dx = (Float(x) - cx) / r, dy = (Float(y) - cy) / (r * stretch)
+                    let d2 = dx * dx + dy * dy
+                    guard d2 < 1 else { continue }
+                    let k = ((y % n) + n) % n * n + ((x % n) + n) % n
+                    h[k] = max(h[k], (1 - d2).squareRoot() * r * 0.12)
+                }
+            }
+        }
+        var px = [UInt8](repeating: 255, count: n * n * 4)
+        for y in 0..<n {
+            for x in 0..<n {
+                let dx = h[y * n + (x + 1) % n] - h[y * n + (x + n - 1) % n]
+                let dy = h[((y + 1) % n) * n + x] - h[((y + n - 1) % n) * n + x]
+                let l = (dx * dx + dy * dy + 1).squareRoot()
+                let i = (y * n + x) * 4
+                px[i] = toByte(-dx / l); px[i + 1] = toByte(-dy / l); px[i + 2] = toByte(1 / l)
+            }
+        }
+        let provider = CGDataProvider(data: Data(px) as CFData)!
+        let cg = CGImage(width: n, height: n, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: n * 4,
+                         space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                         provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)!
+        return UIImage(cgImage: cg)
+    }()
+
     private static func toByte(_ v: Float) -> UInt8 {
         let scaled: Float = (v * 0.5 + 0.5) * 255
         return UInt8(max(0, min(255, scaled)))

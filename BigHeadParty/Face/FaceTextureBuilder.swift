@@ -149,7 +149,7 @@ enum FaceTextureBuilder {
     /// lifts only as much as the under-eyes are darker than the cheeks (none on a well-lit face).
     /// `pupils` are in image pixels, bottom-left origin (Vision and Core Image agree).
     static func touchUp(_ image: CIImage, pupils: [CGPoint]) -> CIImage {
-        let clean = image.applyingFilter("CINoiseReduction", parameters: ["inputNoiseLevel": 0.015, "inputSharpness": 0.5])
+        let clean = image.applyingFilter("CINoiseReduction", parameters: ["inputNoiseLevel": 0.008, "inputSharpness": 0.6])
         var auto = clean
         for filter in clean.autoAdjustmentFilters(options: [.redEye: false]) {
             filter.setValue(auto, forKey: kCIInputImageKey)

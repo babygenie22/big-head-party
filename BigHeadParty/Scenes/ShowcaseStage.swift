@@ -14,6 +14,9 @@ final class ShowcaseStage {
         Effects.addStudioLights(to: scene)
         // Skin shouldn't glow or sit in a dark vignette: a portrait, not a stage.
         camera.camera?.bloomIntensity = 0
+        // Photo skin is already lit; at the shared exposure the forehead and nose burned out to
+        // white and took the skin's detail with them.
+        camera.camera?.exposureOffset = -1.15
         camera.camera?.vignettingIntensity = 0.15
         cameraRig.addChildNode(camera)
         cameraRig.position = SCNVector3(0, 0.15, 5.6)
@@ -45,6 +48,15 @@ final class ShowcaseStage {
             bust.runAction(.sequence([.scale(to: 1.12, duration: 0.25), .scale(to: 0.96, duration: 0.12), .scale(to: 1, duration: 0.1)]))
         }
         rig = newRig
+        #if DEBUG
+        // Simulator check of the skin effects: `-demoLook slap|bruise|wet`.
+        switch UserDefaults.standard.string(forKey: "demoLook") {
+        case "slap": newRig.slapMark(side: -1, power: 1)
+        case "bruise": for _ in 0..<6 { newRig.punchMark(at: SIMD2(0.5, newRig.anchors.eyeY - 0.15), power: 1) }
+        case "wet": newRig.setWet(true)
+        default: break
+        }
+        #endif
     }
 
     /// Bottom share of every showcase card covered by overlays (reaction buttons, name labels).
@@ -73,6 +85,7 @@ final class ShowcaseStage {
         switch morph {
         case .skewLeft, .skewRight:
             rig.wobbleHit(sideways: morph == .skewLeft ? -1 : 1, back: 0.2)
+            rig.slapMark(side: morph == .skewLeft ? 1 : -1, power: 0.8)
         case .squish:
             rig.wobbleHit(sideways: 0, back: 1)
         default:
@@ -86,7 +99,10 @@ final class ShowcaseStage {
         PieThrower.throwPie(at: rig, in: scene, camera: camera, from: SCNVector3(0.8, -1.5, 7.5), scale: 1.0, flight: 0.5)
     }
 
-    func clean() { rig?.clearCream() }
+    func clean() {
+        rig?.clearCream()
+        rig?.clearMarks()
+    }
 
     /// Turns the turntable (radians) — used to check a head from the side and back.
     func turn(to angle: Float) {

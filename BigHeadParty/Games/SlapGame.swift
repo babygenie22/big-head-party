@@ -185,6 +185,7 @@ final class SlapGame: ObservableObject {
         D.rig.pulse(.puff, peak: CGFloat(0.3 + 0.5 * power), attack: 0.03, hold: 0.1, release: 0.9)
         D.rig.pulse(.mouthOpen, peak: CGFloat(0.5 * power), attack: 0.05, hold: 0.1, release: 0.8)
         D.rig.wobbleHit(sideways: dir * (0.6 + pw), back: 0.25, strength: 0.8 + pw)
+        D.rig.slapMark(side: -dir, power: pw)   // the cheek facing the hand
         if slowFactor < 1 { setSlowMotion(slowFactor) }   // the reactions just started play in slow motion too
         Effects.burst(in: scene, at: point, color: UIColor(red: 0.75, green: 0.9, blue: 1, alpha: 1), count: CGFloat(30 + power * 70),
                       velocity: CGFloat(2.5 + power * 3), size: CGFloat(0.03 + 0.06 * D.headScale),

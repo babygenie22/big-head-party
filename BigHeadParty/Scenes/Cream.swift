@@ -259,6 +259,24 @@ final class CreamCoat {
         return inside.map { (positions[$0], normals[$0]) }
     }
 
+    /// One step of gravity: where the cream is thick it sags a row down the face, faster in some
+    /// places than others, so a fresh splat slumps and its lower edge grows runs.
+    func settle() {
+        var moved = false
+        for r in stride(from: rows - 2, through: 0, by: -1) {
+            for c in 0..<cols {
+                let k = r * cols + c
+                let thick = amount[k] - Self.threshold - 0.3
+                guard thick > 0 else { continue }
+                let flow = thick * 0.09 * max(0.15, 0.5 + lumps[k])
+                amount[k] -= flow
+                amount[k + cols] = min(3, amount[k + cols] + flow)
+                moved = true
+            }
+        }
+        if moved { rebuild() }
+    }
+
     /// Wipes the face clean (the shell drops back under the skin).
     func reset() {
         amount = [Float](repeating: 0, count: base.count)

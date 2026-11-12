@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		002BF50EAA72B3020E547E33 /* SkinDetail.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47E7E547B816E06332470E5 /* SkinDetail.swift */; };
 		048CED60C72F51C22DFFEF45 /* SlapGame.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CBA8C01676D6420BF96120C /* SlapGame.swift */; };
 		05DCF8AB5C38F024B57C7A3D /* Bodies.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D1D3C33A2EE15F6DDCEF618 /* Bodies.swift */; };
 		099FD3EBB6C6195ED02F65C1 /* 00000000-0000-0000-0000-00000000B005.json in Resources */ = {isa = PBXBuildFile; fileRef = C0B1520425C03CCCC0828A0E /* 00000000-0000-0000-0000-00000000B005.json */; };
@@ -148,6 +149,7 @@
 		DBE1A63701B22C81DD7BDF50 /* Accessories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Accessories.swift; sourceTree = "<group>"; };
 		DC1C771F7D17D587054C58C4 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		E3828ED82F9F682E25770DEF /* PieThrower.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PieThrower.swift; sourceTree = "<group>"; };
+		E47E7E547B816E06332470E5 /* SkinDetail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinDetail.swift; sourceTree = "<group>"; };
 		E68ED5FC833AB61DA8CE521F /* 00000000-0000-0000-0000-00000000B003.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = "00000000-0000-0000-0000-00000000B003.jpg"; sourceTree = "<group>"; };
 		E707E62F00215F68778664BC /* FaceTextureBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FaceTextureBuilder.swift; sourceTree = "<group>"; };
 		E99C0E7333DF4841B3C7F5DC /* body-coach.glb */ = {isa = PBXFileReference; path = "body-coach.glb"; sourceTree = "<group>"; };
@@ -269,6 +271,7 @@
 				7435F1967D0B2B40EBB22021 /* RealBody.swift */,
 				A7506F1E68F29115F77195E3 /* SceneContainer.swift */,
 				47B66A2E5AC0AE30133A4426 /* ShowcaseStage.swift */,
+				E47E7E547B816E06332470E5 /* SkinDetail.swift */,
 			);
 			path = Scenes;
 			sourceTree = "<group>";
@@ -492,6 +495,7 @@
 				3C514F073D95892E42A7AC41 /* RealBody.swift in Sources */,
 				9D8780280B8A0B969CB1E384 /* SceneContainer.swift in Sources */,
 				E3F0DA7B33D6DF58B06BB904 /* ShowcaseStage.swift in Sources */,
+				002BF50EAA72B3020E547E33 /* SkinDetail.swift in Sources */,
 				048CED60C72F51C22DFFEF45 /* SlapGame.swift in Sources */,
 				22FF52941FD81A0F16D0F6B6 /* Theme.swift in Sources */,
 				29F68D8F0585C1763E974052 /* Trivia.swift in Sources */,
@@ -626,7 +630,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Big Head Party";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
@@ -652,7 +656,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Big Head Party";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;

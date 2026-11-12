@@ -60,7 +60,7 @@ enum FaceAnalyzer {
     static func analyze(_ uiImage: UIImage, depth: FaceDepth? = nil) throws -> FaceCapture {
         // Big enough that a face filling only part of a phone photo still has the pixels for a
         // 2048² texture; 1600 px left typical faces upscaled and soft.
-        guard var cg = uiImage.normalizedCGImage(maxDimension: 3200) else { throw FaceAnalyzerError.unreadableImage }
+        guard var cg = uiImage.normalizedCGImage(maxDimension: 4032) else { throw FaceAnalyzerError.unreadableImage }
         #if targetEnvironment(simulator)
         if var canned = cannedCapture(cg) { canned.depth = depth; return canned }
         #endif

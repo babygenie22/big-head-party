@@ -52,6 +52,8 @@ final class HeadRig {
     let anchors: HeadMeshBuilder.Output
     /// The 3D hair on the scalp, if any (see `Hair`); it follows the face's expressions.
     var hairShell: SCNNode?
+    /// Handprints, flushes and bruises on the skin.
+    private var marks: SkinMarks?
 
     init(character: GameCharacter) {
         self.character = character
@@ -67,12 +69,28 @@ final class HeadRig {
         material.diffuse.maxAnisotropy = 16   // keeps the photo sharp where the face curves away
         material.roughness.contents = HeadRig.dryRoughnessMap
         material.metalness.contents = 0.0
-        // Fine pore detail and a faint skin sheen.
-        material.normal.contents = Effects.skinNormalMap
-        material.normal.intensity = 0.3
-        material.normal.wrapS = .repeat
-        material.normal.wrapT = .repeat
-        material.normal.contentsTransform = SCNMatrix4MakeScale(9, 9, 1)
+        // The person's own wrinkles, pores and stubble, lifted from the photo so they catch the
+        // light (see `SkinDetail`); a generic pore pattern if that can't be built.
+        if let detail = SkinDetail.normalMap(for: character) {
+            material.normal.contents = detail
+            material.normal.intensity = 0.85
+            material.normal.wrapS = .clamp
+            material.normal.wrapT = .clamp
+            material.normal.maxAnisotropy = 16
+        } else {
+            material.normal.contents = Effects.skinNormalMap
+            material.normal.intensity = 0.3
+            material.normal.wrapS = .repeat
+            material.normal.wrapT = .repeat
+            material.normal.contentsTransform = SCNMatrix4MakeScale(9, 9, 1)
+        }
+        // Beads of water, on the wet layer only (see `setWet`).
+        material.clearCoatNormal.contents = Effects.dropletNormalMap
+        material.clearCoatNormal.wrapS = .repeat
+        material.clearCoatNormal.wrapT = .repeat
+        material.clearCoatNormal.contentsTransform = SCNMatrix4MakeScale(5, 5, 1)
+        material.clearCoatNormal.intensity = 0
+        marks = SkinMarks(material: material)
         material.clearCoat.contents = HeadRig.dryClearCoat
         material.clearCoatRoughness.contents = 0.5
         geometry.materials = [material]
@@ -92,11 +110,11 @@ final class HeadRig {
         head.addChildNode(splats)
         // A neck under the skull, so from the side and back the head sits on something instead
         // of floating over the collar. It stays put while the head wobbles on it.
-        let neck = SCNCylinder(radius: 0.36, height: 1.4)
+        let neck = SCNCylinder(radius: 0.36, height: 1.1)
         neck.materials = [Fabric.skin(UIColor(rgb: character.meta.skinRGB).darker(0.9))]
         let neckNode = SCNNode(geometry: neck)
         neckNode.name = "neck"
-        neckNode.position = SCNVector3(0, 0.02, -0.16)
+        neckNode.position = SCNVector3(0, 0.14, -0.16)
         neckNode.eulerAngles.x = 0.12
         root.addChildNode(neckNode)
         Accessories.attach(to: self)
@@ -270,14 +288,61 @@ final class HeadRig {
         })
         splats.addChildNode(mess)
         creamBits.append(mess)
+        // Then gravity: for a few seconds the thick cream sags and runs down the face.
+        splats.runAction(.repeat(.sequence([.wait(duration: 0.2), .run { [weak self] _ in
+            DispatchQueue.main.async { self?.coat?.settle() }
+        }]), count: 22), forKey: "settle")
         // Keep the pile from growing forever: the oldest bits are buried under new cream anyway.
         while creamBits.count > 8 { creamBits.removeFirst().removeFromParentNode() }
     }
 
     func clearCream() {
+        splats.removeAction(forKey: "settle")
         creamBits.forEach { $0.removeFromParentNode() }
         creamBits = []
         coat?.reset()
+    }
+
+    // MARK: - Marks
+
+    /// A slap lands on a cheek (`side`: −1 the cheek at model −x, +1 the other): a red handprint
+    /// comes up and fades over the next seconds. `power` 0...1.
+    func slapMark(side: Float, power: Float) {
+        let shape = character.meta.shape
+        let u = shape.midlineU + CGFloat(side) * 0.125, v = shape.eyeLineV + 0.17
+        marks?.add(.hand, at: CGPoint(x: u, y: v), radius: 0.135, strength: CGFloat(0.45 + 0.55 * power), mirrored: side > 0)
+        marks?.add(.flush, at: CGPoint(x: u, y: v), radius: 0.17, strength: CGFloat(0.3 + 0.4 * power))
+        healMarks()
+    }
+
+    /// A punch lands: the spot flushes, and with enough of them it bruises and stays bruised.
+    /// `at` is in model space on the face (x across, y up), e.g. a cheek, the nose, the jaw.
+    func punchMark(at point: SIMD2<Float>, power: Float) {
+        let uv = CGPoint(x: 0.5 + CGFloat(point.x) / CGFloat(2 * HeadMeshBuilder.S) + .random(in: -0.02...0.02),
+                         y: 0.5 - CGFloat(point.y - HeadMeshBuilder.yCenter) / CGFloat(2 * HeadMeshBuilder.S) + .random(in: -0.02...0.02))
+        marks?.add(.flush, at: uv, radius: 0.13, strength: CGFloat(0.5 + 0.5 * power))
+        punches += 1
+        if punches % 3 == 0 { marks?.add(.bruise, at: uv, radius: 0.1, strength: CGFloat(0.45 + 0.4 * power)) }
+        healMarks()
+    }
+    private var punches = 0
+
+    func clearMarks() {
+        head.removeAction(forKey: "marks")
+        marks?.clear()
+        punches = 0
+    }
+
+    /// Fades what fades, a few times a second, for as long as something still is.
+    private func healMarks() {
+        guard head.action(forKey: "marks") == nil else { return }
+        head.runAction(.repeatForever(.sequence([.wait(duration: 0.3), .run { [weak self] node in
+            DispatchQueue.main.async {
+                guard let self, let marks = self.marks else { return }
+                marks.fade(0.3)
+                if !marks.isFading { node.removeAction(forKey: "marks") }
+            }
+        }])), forKey: "marks")
     }
 
     /// Builds the (still hidden) cream before the first pie, so nothing is built or compiled
@@ -308,7 +373,8 @@ final class HeadRig {
         m.roughness.contents = wet ? 0.18 : HeadRig.dryRoughnessMap
         m.clearCoat.contents = wet ? 0.9 : HeadRig.dryClearCoat
         m.clearCoatRoughness.contents = wet ? 0.08 : 0.5
-        m.multiply.contents = wet ? UIColor(white: 0.84, alpha: 1) : UIColor.white
+        m.diffuse.intensity = wet ? 0.84 : 1   // wet skin is a shade darker
+        m.clearCoatNormal.intensity = wet ? 1 : 0
         // Wet hair: darker and slick, like the skin.
         hairShell?.geometry?.firstMaterial?.roughness.contents = wet ? 0.25 : Hair.roughness
         guard wet, let scene else { return }

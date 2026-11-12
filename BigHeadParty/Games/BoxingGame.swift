@@ -296,14 +296,17 @@ final class BoxingGame: ObservableObject {
         case .jab:
             them.rig.wobbleHit(sideways: away * 0.2, back: 0.8, strength: 0.8)
             them.rig.pulse(.squish, peak: 0.55, hold: 0.06, release: 0.5)
+            them.rig.punchMark(at: SIMD2(Float.random(in: -0.3...0.3), them.rig.anchors.eyeY - 0.3), power: 0.5)   // nose and cheeks
         case .hook:
             them.rig.wobbleHit(sideways: away, back: 0.2, strength: 1.1)
             them.rig.pulse(attacker == 0 ? .skewRight : .skewLeft, peak: 1, hold: 0.1, release: 0.7)
             them.rig.pulse(.puff, peak: 0.5, hold: 0.05, release: 0.5)
+            them.rig.punchMark(at: SIMD2(-away * 0.5, them.rig.anchors.eyeY - 0.15), power: 0.8)   // cheekbone and eye
         case .uppercut:
             them.rig.wobbleHit(sideways: away * 0.3, back: 1.5, strength: 1.4)
             them.rig.pulse(.mouthOpen, peak: 1, hold: 0.15, release: 0.8)
             them.rig.pulse(.squish, peak: 0.6, hold: 0.1, release: 0.6)
+            them.rig.punchMark(at: SIMD2(Float.random(in: -0.2...0.2), them.rig.anchors.chinY + 0.3), power: 1)   // jaw
         }
         Effects.burst(in: scene, at: face, color: .systemYellow, count: punch == .jab ? 8 : 16, velocity: 2.5, size: 0.16,
                       image: Effects.starImage, spread: 180, gravity: false, lifespan: 0.7)

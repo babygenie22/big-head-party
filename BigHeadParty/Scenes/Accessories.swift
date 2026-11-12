@@ -246,10 +246,10 @@ enum Accessories {
         let bust = SCNNode()
         let shirt = Fabric.cloth(color, repeats: 22)
         shirt.normal.intensity = 0.15
-        let yoke = node(SCNSphere(radius: 1), shirt, at: SCNVector3(0, -1.42, -0.12))
+        let yoke = node(SCNSphere(radius: 1), shirt, at: SCNVector3(0, -1.28, -0.12))
         yoke.scale = SCNVector3(1.75, 0.82, 0.8)
         bust.addChildNode(yoke)
-        let collar = node(SCNTorus(ringRadius: 0.42, pipeRadius: 0.08), Fabric.cloth(color.darker(0.75), repeats: 8), at: SCNVector3(0, -0.62, -0.14))
+        let collar = node(SCNTorus(ringRadius: 0.42, pipeRadius: 0.08), Fabric.cloth(color.darker(0.75), repeats: 8), at: SCNVector3(0, -0.48, -0.14))
         collar.eulerAngles.x = 0.12
         bust.addChildNode(collar)
         return bust
