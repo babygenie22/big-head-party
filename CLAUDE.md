@@ -18,6 +18,7 @@ iOS party game. A photo of a friend becomes a 3D "big head" character that gets 
   - `-studioTestImage /path/photo.jpg` runs Face Studio on that photo and writes `debug-texture.png`, `debug-landmarks.png` and `debug-shape.json` next to it.
   - `-headSize real|big` sets the head size.
   - `-studioTestSides a.jpg,b.jpg` adds side photos after the front one; `-studioTurn 0.75` (radians, positive only) shows the result turned. Each test photo needs `photo.jpg.lm.json` (+ `.mask.png`) beside it: Vision landmarks computed on a Mac, since the simulator's are garbage.
+  - `-studioScan N` opens the face scan screen as if N photos were taken, with no camera (layout check). The scan's pose logic is `Face/FaceScan.swift`, pure and camera-free: test it by compiling that file with a small stub of `GuidedCamera.Hint` and `GuidedCamera.oval`.
 - Swift 5 language mode. No strict concurrency and no default MainActor. Games are `ObservableObject` classes driven by `DispatchQueue.main` and `GameClock`.
 
 ## Architecture

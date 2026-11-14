@@ -36,14 +36,17 @@ final class FaceStudioModel: ObservableObject {
     @Published private(set) var sidesInFlight = 0
     var sideBusy: Bool { sidesInFlight > 0 }
     @Published var sideMessage: String?
+    /// Side photos from the face scan, waiting for the head to be built from the front photo.
+    private var pendingSides: [UIImage] = []
 
     let preview = ShowcaseStage(character: nil, sway: false)
     private var built: BuiltFace?
     private let draftID = UUID()
 
     /// `depth` is the face's measured shape, when the photo came with one (TrueDepth camera or a
-    /// Portrait-mode photo).
-    func process(_ image: UIImage, depth: FaceDepth? = nil) {
+    /// Portrait-mode photo). `sides` are side photos taken along with it (the face scan); they
+    /// are added once the head is built.
+    func process(_ image: UIImage, depth: FaceDepth? = nil, sides scanned: [UIImage] = []) {
         var depth = depth
         #if DEBUG
         if depth == nil, let path = UserDefaults.standard.string(forKey: "studioTestDepth") { depth = FaceDepth.debugLoad(path) }
@@ -56,6 +59,7 @@ final class FaceStudioModel: ObservableObject {
         built = nil
         sides = []
         sideMessage = nil
+        pendingSides = scanned
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
             do {
@@ -104,6 +108,9 @@ final class FaceStudioModel: ObservableObject {
                         }
                         #endif
                         withAnimation(.spring) { self.stage = .review }
+                        let scanned = self.pendingSides
+                        self.pendingSides = []
+                        scanned.forEach { self.addSide($0) }
                         #if DEBUG
                         // `-studioTestSides a.jpg,b.jpg` adds side photos straight away (simulator checks).
                         for path in (UserDefaults.standard.string(forKey: "studioTestSides") ?? "").split(separator: ",").map(String.init) {
@@ -233,6 +240,7 @@ final class FaceStudioModel: ObservableObject {
         sides = []
         sidesInFlight = 0
         sideMessage = nil
+        pendingSides = []
     }
 }
 
@@ -245,6 +253,7 @@ struct FaceStudioView: View {
     @State private var pickerItem: PhotosPickerItem?
     @State private var showCamera = false
     @State private var showSideCamera = false
+    @State private var showScan = false
     @State private var sidePickerItem: PhotosPickerItem?
 
     var body: some View {
@@ -274,6 +283,7 @@ struct FaceStudioView: View {
             if let testImage, model.stage == .pick { model.process(testImage) }
             #if DEBUG
             if UserDefaults.standard.bool(forKey: "studioCamera") { showCamera = true }   // layout check
+            if UserDefaults.standard.object(forKey: "studioScan") != nil { showScan = true }
             #endif
         }
         .onChange(of: pickerItem) { _, item in
@@ -288,6 +298,9 @@ struct FaceStudioView: View {
         }
         .fullScreenCover(isPresented: $showCamera) {
             GuidedCameraView { image, depth in model.process(image, depth: depth) }
+        }
+        .fullScreenCover(isPresented: $showScan) {
+            FaceScanView { image, depth, sides in model.process(image, depth: depth, sides: sides) }
         }
         .fullScreenCover(isPresented: $showSideCamera) {
             GuidedCameraView(sideMode: true) { image, _ in model.addSide(image) }
@@ -326,14 +339,17 @@ struct FaceStudioView: View {
             .padding(16)
             .card(Theme.surface, cornerRadius: 18)
             Spacer()
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                // Front, left and right in one go: the scan takes the photos itself.
+                Button { showScan = true } label: { Label("Scan My Face", systemImage: "faceid") }
+                    .buttonStyle(CandyButtonStyle(color: Theme.coral))
+                Button { showCamera = true } label: { Label("Take a Photo", systemImage: "camera.fill") }
+                    .buttonStyle(CandyButtonStyle())
+            }
             PhotosPicker(selection: $pickerItem, matching: .images) {
                 Label("Choose a Photo", systemImage: "photo.on.rectangle")
             }
             .buttonStyle(CandyButtonStyle())
-            if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                Button { showCamera = true } label: { Label("Take a Photo", systemImage: "camera.fill") }
-                    .buttonStyle(CandyButtonStyle(color: Theme.coral))
-            }
         }
         .padding(.horizontal, 28)
         .padding(.bottom, 30)

@@ -66,6 +66,11 @@ pre-rotated when bundled, since the background ignores `contentsTransform`. Re-r
   out; `Scenes/SideOverlay.swift` wears it as a skin-tight layer over that side, blended in by
   vertex alpha wherever the side camera saw the skin more squarely than the front one. Stored as
   `<id>-side<n>.png` beside the face, with the line-up in `CharacterMeta.sides`.
+- Face scan (Face Studio, "Scan My Face"): one selfie-camera session takes the front photo and both side
+  photos with no button, Face ID style. `FaceScan` counts 3-2-1 once the face is centered and takes the
+  front photo, then takes each side on the move as the head turns through the right angle (not if it
+  turns too fast); the ring round the face fills in as the head turns. `GuidedCamera` takes the photos.
+  The side photos go through the same `SideFit` as hand-picked ones once the head is built.
 - Pie and mallet are real models. Pie hits add cream to a head-shaped coat (`CreamCoat` in
   `Scenes/Cream.swift`) that spreads and thickens with every pie, with runs dripping down,
   whipped dollops and crust crumbs. The first pie hits the middle; later ones land all over the

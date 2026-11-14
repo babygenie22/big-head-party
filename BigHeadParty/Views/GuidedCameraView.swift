@@ -25,7 +25,60 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     private var frame = 0
     private var usingFront = true   // queue-side copy of `front`
     private var rotation: AVCaptureDevice.RotationCoordinator?
-    private var onPhoto: ((UIImage, FaceDepth?) -> Void)?
+    private var onPhoto: ((UIImage?, FaceDepth?) -> Void)?
+
+    // Face scan (main thread only): the front photo and both sides in one go, taken by the
+    // camera itself as each pose is reached.
+    private var tracker: FaceScan?
+    @Published private(set) var scanStep: FaceScan.Step = .front
+    /// Which way the first side photo was turned (+1: toward the right of the picture).
+    @Published private(set) var scanTurn = 0.0
+    /// 3, 2, 1 before the front photo; and how far the head is turned toward a side (−1…1).
+    @Published private(set) var scanCountdown: Int?
+    @Published private(set) var scanTurnNow = 0.0
+    private var scanning = false   // set before the camera starts, read on the camera queue
+    private(set) var scanFront: (image: UIImage, depth: FaceDepth?)?
+    private(set) var scanSides: [UIImage] = []
+
+    /// Call before `start()`: this camera runs the three-photo scan instead of one guided photo.
+    func beginScan() {
+        tracker = FaceScan()
+        scanning = true
+    }
+
+    /// The scan's shutter button: take the current step's photo now.
+    func scanShutter() {
+        guard tracker?.force(now: CACurrentMediaTime()) == true else { return }
+        takeScanPhoto()
+    }
+
+    #if DEBUG
+    /// Simulator layout check (no camera there): show the scan as if `step` photos were taken.
+    func debugScan(step: Int) {
+        guard step > 0 else { return }
+        scanTurn = 1
+        scanStep = FaceScan.Step(rawValue: min(step, 2)) ?? .front
+        scanCountdown = step == 0 ? 2 : nil
+        scanTurnNow = step == 1 ? -0.6 : 0
+    }
+    #endif
+
+    private func takeScanPhoto() {
+        // Side photos are taken while the head is moving: less processing, less shutter lag.
+        shoot(fast: tracker?.step != .front) { [weak self] image, depth in
+            guard let self, var scan = self.tracker else { return }
+            if let image {
+                if self.scanFront == nil { self.scanFront = (image, depth) } else { self.scanSides.append(image) }
+                scan.shot()
+            } else {
+                scan.missed()
+            }
+            self.tracker = scan
+            self.scanTurn = scan.firstTurn
+            self.scanCountdown = scan.countdown
+            self.scanStep = scan.step
+        }
+    }
 
     /// Where the oval sits in the 3:4 picture (normalized, top-left origin).
     static let oval = CGRect(x: 0.2, y: 0.17, width: 0.6, height: 0.62)
@@ -53,8 +106,24 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
 
     /// The photo, plus the face's measured depth when the TrueDepth camera took it.
     func capture(_ done: @escaping (UIImage, FaceDepth?) -> Void) {
+        shoot { image, depth in
+            if let image { done(image, depth) }
+        }
+    }
+
+    /// Takes a photo; `done` gets nil when the camera couldn't deliver one.
+    private func shoot(fast: Bool = false, _ done: @escaping (UIImage?, FaceDepth?) -> Void) {
         onPhoto = done
         queue.async {
+            // No camera (access denied, or still starting): asking for a photo would crash.
+            guard self.session.isRunning, self.photoOutput.connection(with: .video)?.isActive == true else {
+                DispatchQueue.main.async {
+                    let done = self.onPhoto
+                    self.onPhoto = nil
+                    done?(nil, nil)
+                }
+                return
+            }
             // Upright for however the phone is held right now (set at capture time: an angle set
             // once at setup didn't stick, and photos came out sideways).
             if let c = self.photoOutput.connection(with: .video) {
@@ -62,7 +131,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
                 if c.isVideoRotationAngleSupported(angle) { c.videoRotationAngle = angle }
             }
             let settings = AVCapturePhotoSettings()
-            settings.photoQualityPrioritization = .quality
+            settings.photoQualityPrioritization = fast ? .balanced : .quality
             settings.isDepthDataDeliveryEnabled = self.photoOutput.isDepthDataDeliveryEnabled
             self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
@@ -108,7 +177,8 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
 
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         frame += 1
-        guard frame % 4 == 0, let pixels = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
+        // The scan follows the head as it turns, so it looks twice as often.
+        guard frame % (scanning ? 2 : 4) == 0, let pixels = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let request = VNDetectFaceRectanglesRequest()
         request.revision = VNDetectFaceRectanglesRequestRevision3
         try? VNImageRequestHandler(cvPixelBuffer: pixels, orientation: .up).perform([request])
@@ -118,7 +188,18 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
         let light = box.map { brightness(pixels, in: $0) }
         let next = Self.coach(box: box, yaw: face?.yaw?.doubleValue ?? 0, roll: face?.roll?.doubleValue ?? 0,
                               pitch: face?.pitch?.doubleValue ?? 0, brightness: light ?? 0.5, faces: faces.count, selfie: usingFront, side: sideMode)
+        let reading = FaceScan.Reading(box: box, yaw: face?.yaw?.doubleValue ?? 0, roll: face?.roll?.doubleValue ?? 0, brightness: light ?? 0.5)
         DispatchQueue.main.async {
+            var next = next
+            if var scan = self.tracker {
+                let (hint, shoot) = scan.look(reading, now: CACurrentMediaTime())
+                self.tracker = scan
+                if scan.countdown != self.scanCountdown { self.scanCountdown = scan.countdown }
+                let turn = (scan.turn * 20).rounded() / 20
+                if turn != self.scanTurnNow { self.scanTurnNow = turn }
+                next = hint
+                if shoot { self.takeScanPhoto() }
+            }
             guard next != self.hint else { return }
             if next.ready && !self.hint.ready { UIImpactFeedbackGenerator(style: .medium).impactOccurred() }
             withAnimation(.easeOut(duration: 0.2)) { self.hint = next }
@@ -175,17 +256,39 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     // MARK: Photo
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard let data = photo.fileDataRepresentation(), let image = UIImage(data: data) else { return }
+        let data = photo.fileDataRepresentation()
+        let image = data.flatMap { UIImage(data: $0) }
         // The depth map is stored in the file beside the picture, turned the same way.
-        let depth = FaceDepth.read(from: data)
+        let depth = image == nil ? nil : data.flatMap { FaceDepth.read(from: $0) }
         DispatchQueue.main.async {
-            self.onPhoto?(image, depth)
+            let done = self.onPhoto
             self.onPhoto = nil
+            done?(image, depth)
         }
     }
 }
 
-private struct CameraPreview: UIViewRepresentable {
+/// Shown over a camera screen when the app isn't allowed to use the camera.
+struct CameraDeniedCard: View {
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("Camera access is off").font(.party(24))
+                .foregroundStyle(Theme.ink)
+            Text("Allow camera access for Big Head Party in Settings, or choose a photo instead.")
+                .multilineTextAlignment(.center)
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+            }
+            .buttonStyle(CandyButtonStyle())
+        }
+        .foregroundStyle(Theme.ink)
+        .padding(30)
+        .card(Theme.surface, cornerRadius: 24)
+        .padding()
+    }
+}
+
+struct CameraPreview: UIViewRepresentable {
     let session: AVCaptureSession
 
     final class PreviewView: UIView {
@@ -265,22 +368,7 @@ struct GuidedCameraView: View {
             }
             .padding(.top, 8)
 
-            if camera.denied {
-                VStack(spacing: 14) {
-                    Text("Camera access is off").font(.party(24))
-                        .foregroundStyle(Theme.ink)
-                    Text("Allow camera access for Big Head Party in Settings, or choose a photo instead.")
-                        .multilineTextAlignment(.center)
-                    Button("Open Settings") {
-                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
-                    }
-                    .buttonStyle(CandyButtonStyle())
-                }
-                .foregroundStyle(Theme.ink)
-                .padding(30)
-                .card(Theme.surface, cornerRadius: 24)
-                .padding()
-            }
+            if camera.denied { CameraDeniedCard() }
         }
         .onAppear {
             camera.sideMode = sideMode
