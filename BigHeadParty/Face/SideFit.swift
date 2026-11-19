@@ -132,7 +132,7 @@ enum SideFit {
         lo = simd_max(lo - pad, .zero)
         hi = simd_min(hi + pad, SIMD2(view.size[0], view.size[1]))
         guard hi.x - lo.x > 32, hi.y - lo.y > 32 else { throw SideFitError.noMatch }
-        let k = min(1, 1280 / max(hi.x - lo.x, hi.y - lo.y))
+        let k = min(1, 2048 / max(hi.x - lo.x, hi.y - lo.y))
 
         let full = CGRect(x: 0, y: 0, width: capture.image.width, height: capture.image.height)
         var photo = FaceTextureBuilder.touchUp(CIImage(cgImage: capture.image), pupils: [capture.eyes.0, capture.eyes.1])

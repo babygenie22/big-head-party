@@ -1,8 +1,8 @@
 import CoreGraphics
 
 /// The Face ID-style scan: one camera session that takes the front photo and a photo of each
-/// side with no button. Center your face and a short countdown takes the front photo; then
-/// turn your head slowly one way and the other, and each side is taken as the head passes
+/// side with no button. Hold your face in the frame for a moment and the front photo is taken;
+/// then turn your head slowly one way and the other, and each side is taken as the head passes
 /// through the right angle, without stopping. Pure bookkeeping, no camera: `GuidedCamera`
 /// feeds it readings and takes the photos.
 struct FaceScan {
@@ -21,8 +21,8 @@ struct FaceScan {
     /// Which way the head was turned for the first side photo (+1: nose to the right of the
     /// picture). The second side photo must be turned the other way.
     private(set) var firstTurn = 0.0
-    /// 3, 2, 1 while the face is centered and the front photo is about to be taken.
-    private(set) var countdown: Int?
+    /// 0…1 while the face is in place and the front photo is about to be taken.
+    private(set) var hold = 0.0
     /// How far the head is turned toward a side photo right now: −1 (far enough, to the left
     /// of the picture) … 0 (facing the camera) … +1 (far enough, to the right).
     private(set) var turn = 0.0
@@ -30,11 +30,10 @@ struct FaceScan {
     /// How far a side photo is turned (Vision's yaw, radians): far enough to show the cheek and
     /// jaw, not so far that the far eye disappears and the photo can't be lined up.
     static let turnRange = 0.5...1.0
-    /// Seconds per countdown number, and how many numbers.
-    static let countStep = 0.7
-    static let counts = 3
-    /// The countdown survives the face slipping out of place for this long (a blink, a wobble).
-    static let grace = 0.5
+    /// How long the face must be in place before the front photo is taken.
+    static let holdTime = 0.9
+    /// The hold survives the face slipping out of place for this long (a blink, a wobble).
+    static let grace = 0.4
     /// Turning faster than this (radians a second) would blur the photo.
     static let tooFast = 1.0
     /// A photo that never comes back (camera interrupted) stops blocking the scan after this.
@@ -67,15 +66,14 @@ struct FaceScan {
                 centeredSince = nil
             }
             guard let since = centeredSince else {
-                countdown = nil
-                return (problem ?? Hint(text: "Put your face in the oval", symbol: "face.dashed"), false)
+                hold = 0
+                return (problem ?? Hint(text: "Put your face in the circle", symbol: "face.dashed"), false)
             }
-            let passed = Int((now - since) / Self.countStep)
-            if passed >= Self.counts {
+            hold = min(1, (now - since) / Self.holdTime)
+            if hold >= 1 {
                 begin(turn: 0, now: now)
                 return (Hint(text: "Hold still…", symbol: "camera.fill", ready: true), true)
             }
-            countdown = Self.counts - passed
             return (Hint(text: "Hold still…", symbol: "checkmark.circle.fill", ready: true), false)
         }
 
@@ -83,7 +81,7 @@ struct FaceScan {
         guard let box = r.box, box.width > 0.2 else { return (Hint(text: "Keep your face in view", symbol: "face.dashed"), false) }
         let oval = GuidedCamera.oval
         if abs(box.midX - oval.midX) > 0.2 || abs(box.midY - (oval.minY + oval.height * 0.55)) > 0.2 {
-            return (Hint(text: "Keep your face in the oval", symbol: "viewfinder"), false)
+            return (Hint(text: "Keep your face in the circle", symbol: "viewfinder"), false)
         }
         let want = wantedTurn(yaw: r.yaw)
         let amount = r.yaw * want
@@ -99,16 +97,10 @@ struct FaceScan {
         return (Hint(text: "Got it…", symbol: "camera.fill", ready: true), true)
     }
 
-    /// The backup shutter button: take the current step's photo now, whatever the pose.
-    mutating func force(now: Double) -> Bool {
-        guard step != .done, now >= busyUntil else { return false }
-        begin(turn: step == .front ? 0 : wantedTurn(yaw: lastYaw), now: now)
-        return true
-    }
-
     /// The photo arrived: on to the next pose.
     mutating func shot() {
         busyUntil = 0
+        hold = 0
         switch step {
         case .front: step = .firstSide
         case .firstSide: firstTurn = pendingTurn; step = .secondSide
@@ -119,11 +111,11 @@ struct FaceScan {
     /// The photo failed: same pose again.
     mutating func missed() {
         busyUntil = 0
+        hold = 0
     }
 
     private mutating func begin(turn: Double, now: Double) {
         pendingTurn = turn
-        countdown = nil
         centeredSince = nil
         busyUntil = now + Self.photoTimeout
     }
@@ -137,12 +129,12 @@ struct FaceScan {
     /// scan should start counting as soon as the face is roughly in place.
     private func frontProblem(_ r: Reading) -> GuidedCamera.Hint? {
         typealias Hint = GuidedCamera.Hint
-        guard let box = r.box else { return Hint(text: "Put your face in the oval", symbol: "face.dashed") }
+        guard let box = r.box else { return Hint(text: "Put your face in the circle", symbol: "face.dashed") }
         if box.width < 0.3 { return Hint(text: "Move closer", symbol: "plus.magnifyingglass") }
         if box.width > 0.72 { return Hint(text: "Back up a little", symbol: "minus.magnifyingglass") }
         let oval = GuidedCamera.oval
         if abs(box.midX - oval.midX) > 0.13 || abs(box.midY - (oval.minY + oval.height * 0.55)) > 0.13 {
-            return Hint(text: "Center your face in the oval", symbol: "viewfinder")
+            return Hint(text: "Center your face in the circle", symbol: "viewfinder")
         }
         if abs(r.yaw) > 0.3 { return Hint(text: "Look straight at the camera", symbol: "eye") }
         if abs(r.roll) > 0.3 { return Hint(text: "Keep your head level", symbol: "level") }

@@ -344,12 +344,12 @@ struct FaceStudioView: View {
                 Button { showScan = true } label: { Label("Scan My Face", systemImage: "faceid") }
                     .buttonStyle(CandyButtonStyle(color: Theme.coral))
                 Button { showCamera = true } label: { Label("Take a Photo", systemImage: "camera.fill") }
-                    .buttonStyle(CandyButtonStyle())
+                    .buttonStyle(CandyButtonStyle(color: Theme.surface))
             }
             PhotosPicker(selection: $pickerItem, matching: .images) {
                 Label("Choose a Photo", systemImage: "photo.on.rectangle")
             }
-            .buttonStyle(CandyButtonStyle())
+            .buttonStyle(CandyButtonStyle(color: Theme.surface))
         }
         .padding(.horizontal, 28)
         .padding(.bottom, 30)

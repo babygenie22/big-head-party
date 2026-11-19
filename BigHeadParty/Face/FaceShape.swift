@@ -42,8 +42,10 @@ struct FaceShape: Codable, Equatable {
 enum FaceLayout {
     /// Texture resolution for generated faces.
     static let textureSize: CGFloat = 1024
-    /// Photo faces get twice the resolution so skin, eyes and hair keep their detail.
-    static let photoTextureSize: CGFloat = 2048
+    /// Photo faces get three times the resolution: at 3072² the face is drawn at about the
+    /// size a 12-megapixel selfie holds it, so no pores, lashes or stubble are thrown away.
+    /// (2048² shrank the photo, and looked soft once the head filled the screen.)
+    static let photoTextureSize: CGFloat = 3072
     /// Canonical eye positions. Every face texture is rotated/scaled so the eyes land here.
     static let leftEye = CGPoint(x: 0.36, y: 0.40)
     static let rightEye = CGPoint(x: 0.64, y: 0.40)

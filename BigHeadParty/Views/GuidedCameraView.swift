@@ -33,9 +33,12 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     @Published private(set) var scanStep: FaceScan.Step = .front
     /// Which way the first side photo was turned (+1: toward the right of the picture).
     @Published private(set) var scanTurn = 0.0
-    /// 3, 2, 1 before the front photo; and how far the head is turned toward a side (−1…1).
-    @Published private(set) var scanCountdown: Int?
+    /// How long the face has been held in place for the front photo (0…1), and how far the
+    /// head is turned toward a side (−1…1).
+    @Published private(set) var scanHold = 0.0
     @Published private(set) var scanTurnNow = 0.0
+    /// Small copies of the photos taken so far, for the screen.
+    @Published private(set) var scanThumbs: [UIImage] = []
     private var scanning = false   // set before the camera starts, read on the camera queue
     private(set) var scanFront: (image: UIImage, depth: FaceDepth?)?
     private(set) var scanSides: [UIImage] = []
@@ -44,12 +47,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
     func beginScan() {
         tracker = FaceScan()
         scanning = true
-    }
-
-    /// The scan's shutter button: take the current step's photo now.
-    func scanShutter() {
-        guard tracker?.force(now: CACurrentMediaTime()) == true else { return }
-        takeScanPhoto()
+        hint = Hint(text: "Put your face in the circle", symbol: "face.dashed")
     }
 
     #if DEBUG
@@ -58,8 +56,11 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
         guard step > 0 else { return }
         scanTurn = 1
         scanStep = FaceScan.Step(rawValue: min(step, 2)) ?? .front
-        scanCountdown = step == 0 ? 2 : nil
         scanTurnNow = step == 1 ? -0.6 : 0
+        let blank = UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40)).image { ctx in
+            UIColor.systemTeal.setFill(); ctx.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        }
+        scanThumbs = Array(repeating: blank, count: min(step, 2))
     }
     #endif
 
@@ -69,13 +70,14 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
             guard let self, var scan = self.tracker else { return }
             if let image {
                 if self.scanFront == nil { self.scanFront = (image, depth) } else { self.scanSides.append(image) }
+                self.scanThumbs.append(image.preparingThumbnail(of: CGSize(width: 240, height: 320)) ?? image)
                 scan.shot()
             } else {
                 scan.missed()
             }
             self.tracker = scan
             self.scanTurn = scan.firstTurn
-            self.scanCountdown = scan.countdown
+            self.scanHold = scan.hold
             self.scanStep = scan.step
         }
     }
@@ -132,6 +134,7 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
             }
             let settings = AVCapturePhotoSettings()
             settings.photoQualityPrioritization = fast ? .balanced : .quality
+            settings.maxPhotoDimensions = self.photoOutput.maxPhotoDimensions
             settings.isDepthDataDeliveryEnabled = self.photoOutput.isDepthDataDeliveryEnabled
             self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
@@ -159,6 +162,10 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
         if !session.outputs.contains(photoOutput), session.canAddOutput(photoOutput) {
             session.addOutput(photoOutput)
             photoOutput.maxPhotoQualityPrioritization = .quality
+        }
+        // Every pixel the camera has: the photo becomes the head's skin, so resolution is detail.
+        if let largest = device.activeFormat.supportedMaxPhotoDimensions.max(by: { Int($0.width) * Int($0.height) < Int($1.width) * Int($1.height) }) {
+            photoOutput.maxPhotoDimensions = largest
         }
         photoOutput.isDepthDataDeliveryEnabled = photoOutput.isDepthDataDeliverySupported
         usingFront = front
@@ -194,7 +201,8 @@ final class GuidedCamera: NSObject, ObservableObject, AVCaptureVideoDataOutputSa
             if var scan = self.tracker {
                 let (hint, shoot) = scan.look(reading, now: CACurrentMediaTime())
                 self.tracker = scan
-                if scan.countdown != self.scanCountdown { self.scanCountdown = scan.countdown }
+                let hold = (scan.hold * 20).rounded() / 20
+                if hold != self.scanHold { self.scanHold = hold }
                 let turn = (scan.turn * 20).rounded() / 20
                 if turn != self.scanTurnNow { self.scanTurnNow = turn }
                 next = hint
